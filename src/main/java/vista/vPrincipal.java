@@ -321,10 +321,12 @@ public class vPrincipal extends javax.swing.JFrame {
     }
 
     // Método para centrar una ventana interna
-    public void centrar(JInternalFrame internalFrame) {
-        int x = (jDesktopPane2.getWidth() / 2) - internalFrame.getWidth() / 2;
-        int y = (jDesktopPane2.getHeight() / 2) - internalFrame.getHeight() / 2;
-        internalFrame.setLocation(x, y);
+    public void centrar(JInternalFrame frame) {
+        int x = (jDesktopPane2.getWidth() / 2) - frame.getWidth() / 2;
+        int y = (jDesktopPane2.getHeight() / 2) - frame.getHeight() / 2;
+        if (x < 0) x = 0;
+        if (y < 0) y = 0;
+        frame.setLocation(x, y);
     }
 
     // Método para mostrar una ventana interna
@@ -941,71 +943,45 @@ public class vPrincipal extends javax.swing.JFrame {
     }
 
     private void mRepInventActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRepInventActionPerformed
+        mostrarReporte("inventario_productos", "filtroInventario");
+    }//GEN-LAST:event_mRepInventActionPerformed
+
+    // Método para mostrar un reporte en el JDesktopPane
+    private void mostrarReporte(String nombreReporte, String filtro) {
         try {
-            // Crear directorio para los reportes si no existe
-            File reportesDir = new File("reportes");
-            if (!reportesDir.exists()) {
-                reportesDir.mkdirs();
-            }
+            // Buscar si ya existe una ventana con este reporte
+            boolean encontrado = false;
+            for (JInternalFrame frame : jDesktopPane2.getAllFrames()) {
+                if (frame instanceof vReport && frame.getTitle().contains(nombreReporte)) {
+                    frame.setSelected(true);
+                    frame.toFront();
+                    encontrado = true;
 
-            // Generar nombre de archivo con formato de fecha más legible
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss");
-            String outputPath = "reportes/inventario_" + sdf.format(new Date()) + ".pdf";
+                    // Opcionalmente, actualizar el reporte
+                    if (frame instanceof vReport) {
+                        ((vReport) frame).imFiltrar();
+                    }
 
-            // Mostrar indicador de progreso (opcional)
-            setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-
-            ReporteService reporteService = new ReporteService();
-            reporteService.generarReporteInventario(outputPath);
-
-            // Restaurar cursor
-            setCursor(Cursor.getDefaultCursor());
-
-            // Verificar que el archivo se haya creado correctamente
-            File reporteFile = new File(outputPath);
-            if (!reporteFile.exists() || reporteFile.length() == 0) {
-                throw new Exception("El archivo PDF no se generó correctamente");
-            }
-
-            // Intentar abrir el archivo PDF generado
-            try {
-                if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.OPEN)) {
-                    Desktop.getDesktop().open(reporteFile);
+                    break;
                 }
-            } catch (Exception e) {
-                System.err.println("No se pudo abrir el archivo automáticamente: " + e.getMessage());
-                // No es necesario interrumpir el flujo si no se puede abrir
             }
 
-            JOptionPane.showMessageDialog(this,
-                    "Reporte generado exitosamente en:\n" + reporteFile.getAbsolutePath(),
-                    "Éxito",
-                    JOptionPane.INFORMATION_MESSAGE);
-
-        } catch (Exception ex) {
-            setCursor(Cursor.getDefaultCursor()); // Restaurar cursor en caso de error
-
-            // Preparar mensaje de error detallado
-            StringBuilder errorMsg = new StringBuilder("Error al generar reporte: ");
-            errorMsg.append(ex.getMessage());
-
-            // Agregar información sobre la causa raíz si existe
-            Throwable causa = ex.getCause();
-            if (causa != null) {
-                errorMsg.append("\n\nCausa: ").append(causa.getMessage());
+            // Si no se encontró, crear una nueva instancia
+            if (!encontrado) {
+                vReport reporteFrame = new vReport(nombreReporte, filtro);
+                jDesktopPane2.add(reporteFrame);
+                centrar(reporteFrame);
+                reporteFrame.setVisible(true);
+                reporteFrame.imFiltrar();
             }
-
-            // Mostrar mensaje al usuario
+        } catch (Exception e) {
             JOptionPane.showMessageDialog(this,
-                    errorMsg.toString(),
+                    "Error al abrir el reporte: " + e.getMessage(),
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
-
-            // Imprimir la pila completa de errores para depuración
-            System.err.println("Error detallado al generar reporte:");
-            ex.printStackTrace();
+            e.printStackTrace();
         }
-    }//GEN-LAST:event_mRepInventActionPerformed
+    }
 
     private void mProveedoresActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mProveedoresActionPerformed
         try {
@@ -1126,7 +1102,7 @@ public class vPrincipal extends javax.swing.JFrame {
                     JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
-    }//GEN-LAST:event_mClientesActionPerformed
+    }                                         
 
     private vClientes buscarVentanaClientesAbierta() {
         for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
