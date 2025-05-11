@@ -324,8 +324,12 @@ public class vPrincipal extends javax.swing.JFrame {
     public void centrar(JInternalFrame frame) {
         int x = (jDesktopPane2.getWidth() / 2) - frame.getWidth() / 2;
         int y = (jDesktopPane2.getHeight() / 2) - frame.getHeight() / 2;
-        if (x < 0) x = 0;
-        if (y < 0) y = 0;
+        if (x < 0) {
+            x = 0;
+        }
+        if (y < 0) {
+            y = 0;
+        }
         frame.setLocation(x, y);
     }
 
@@ -806,9 +810,25 @@ public class vPrincipal extends javax.swing.JFrame {
     private void mBuscarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mBuscarActionPerformed
         JInternalFrame frameActivo = jDesktopPane2.getSelectedFrame();
 
-        if (frameActivo == null || !(frameActivo instanceof myInterface)) {
+        if (frameActivo == null) {
             JOptionPane.showMessageDialog(this,
-                    "Abra una ventana compatible (ej: Roles) y selecciónela",
+                    "No hay ventana activa para realizar la búsqueda",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Verificar si la ventana activa es un reporte
+        if (frameActivo instanceof vReport) {
+            vReport reporteActivo = (vReport) frameActivo;
+            reporteActivo.abrirDialogoFiltro();
+            return;
+        }
+
+        // Si no es un reporte, continuar con el proceso normal de búsqueda
+        if (!(frameActivo instanceof myInterface)) {
+            JOptionPane.showMessageDialog(this,
+                    "La ventana activa no es compatible con la función de búsqueda",
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
             return;
@@ -816,13 +836,11 @@ public class vPrincipal extends javax.swing.JFrame {
 
         try {
             vBusqueda busqueda = new vBusqueda(this, false, (myInterface) frameActivo);
-
             busqueda.setTitle("Buscar en " + frameActivo.getTitle());
             jDesktopPane2.add(busqueda);
             busqueda.setVisible(true);
             busqueda.pack();
             centrar(busqueda);
-
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this,
                     "Error al abrir búsqueda: " + e.getMessage(),
@@ -943,36 +961,50 @@ public class vPrincipal extends javax.swing.JFrame {
     }
 
     private void mRepInventActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRepInventActionPerformed
-        mostrarReporte("inventario_productos", "filtroInventario");
+        // Buscar si ya existe una ventana con este reporte
+        vReport reporteExistente = buscarVentanaReporteAbierta("inventario_productos");
+
+        if (reporteExistente != null) {
+            try {
+                reporteExistente.setSelected(true);
+                reporteExistente.toFront();
+                if (reporteExistente.isIcon()) {
+                    reporteExistente.setIcon(false);
+                }
+            } catch (Exception e) {
+                System.err.println("Error al activar ventana de reporte: " + e.getMessage());
+            }
+        } else {
+            // Si no existe, crear nueva instancia
+            mostrarReporte("inventario_productos", "filtroInventario");
+        }
+    }
+
+// Método auxiliar para buscar una ventana de reporte por nombre (agregar a vPrincipal.java)
+    private vReport buscarVentanaReporteAbierta(String nombreReporte) {
+        for (JInternalFrame frame : jDesktopPane2.getAllFrames()) {
+            if (frame instanceof vReport && frame.getTitle().contains(nombreReporte)) {
+                return (vReport) frame;
+            }
+        }
+        return null;
     }//GEN-LAST:event_mRepInventActionPerformed
 
     // Método para mostrar un reporte en el JDesktopPane
     private void mostrarReporte(String nombreReporte, String filtro) {
         try {
-            // Buscar si ya existe una ventana con este reporte
-            boolean encontrado = false;
-            for (JInternalFrame frame : jDesktopPane2.getAllFrames()) {
-                if (frame instanceof vReport && frame.getTitle().contains(nombreReporte)) {
-                    frame.setSelected(true);
-                    frame.toFront();
-                    encontrado = true;
+            // Crear una nueva instancia del visor de reportes
+            vReport reporteFrame = new vReport(nombreReporte, filtro);
+            jDesktopPane2.add(reporteFrame);
+            centrar(reporteFrame);
+            reporteFrame.setVisible(true);
+            reporteFrame.imFiltrar();
 
-                    // Opcionalmente, actualizar el reporte
-                    if (frame instanceof vReport) {
-                        ((vReport) frame).imFiltrar();
-                    }
-
-                    break;
-                }
-            }
-
-            // Si no se encontró, crear una nueva instancia
-            if (!encontrado) {
-                vReport reporteFrame = new vReport(nombreReporte, filtro);
-                jDesktopPane2.add(reporteFrame);
-                centrar(reporteFrame);
-                reporteFrame.setVisible(true);
-                reporteFrame.imFiltrar();
+            // Seleccionar el reporte recién creado
+            try {
+                reporteFrame.setSelected(true);
+            } catch (Exception e) {
+                System.err.println("Error al seleccionar ventana: " + e.getMessage());
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this,

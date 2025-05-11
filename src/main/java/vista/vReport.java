@@ -14,7 +14,16 @@ import java.awt.Component;
 import java.awt.Dimension;
 import modelo.DatabaseConnection;
 import modelo.service.ReporteService;
+import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.swing.JRViewer;
+import net.sf.jasperreports.view.JasperViewer;
+import net.sf.jasperreports.view.save.JRPdfSaveContributor;
+import net.sf.jasperreports.view.save.JRSingleSheetXlsSaveContributor;
+import net.sf.jasperreports.view.save.JRDocxSaveContributor;
+import net.sf.jasperreports.view.save.JRMultipleSheetsXlsSaveContributor;
+import net.sf.jasperreports.view.save.JRRtfSaveContributor;
+import net.sf.jasperreports.view.save.JRHtmlSaveContributor;
+import net.sf.jasperreports.view.save.JRCsvSaveContributor;
 
 public class vReport extends JInternalFrame implements myInterface {
 
@@ -35,8 +44,8 @@ public class vReport extends JInternalFrame implements myInterface {
         this.filtroVista = filtroVista;
 
         // Configuración inicial del frame
-        setPreferredSize(new Dimension(800, 600));
-        
+        setPreferredSize(new Dimension(1024, 768));
+
         // Inicializar el panel de reporte con layout BorderLayout
         jpReporte = new JPanel(new BorderLayout());
         getContentPane().add(jpReporte, BorderLayout.CENTER);
@@ -49,7 +58,7 @@ public class vReport extends JInternalFrame implements myInterface {
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
         }
-        
+
         // Ajustar el tamaño
         pack();
     }
@@ -75,10 +84,13 @@ public class vReport extends JInternalFrame implements myInterface {
         }
 
         try {
-            // Utilizar el servicio de reportes para generar y mostrar el reporte
-            JRViewer visorReporte = reporteService.generarVisorReporte(reporteNombre, parametros);
+            // Utilizar el servicio de reportes para generar el JasperPrint
+            JasperPrint jasperPrint = reporteService.generarJasperPrint(reporteNombre, parametros);
 
-            if (visorReporte != null) {
+            if (jasperPrint != null) {
+                // Crear un visor mejorado con opciones de exportación
+                JRViewer visorReporte = crearVisorMejorado(jasperPrint);
+
                 // Actualizar el panel con el visor de reportes
                 jpReporte.removeAll();
                 jpReporte.add(visorReporte, BorderLayout.CENTER);
@@ -97,6 +109,46 @@ public class vReport extends JInternalFrame implements myInterface {
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    /**
+     * Crea un visor de JasperReports mejorado con opciones de exportación
+     *
+     * @param jasperPrint El reporte generado
+     * @return JRViewer configurado con opciones de exportación
+     */
+    private JRViewer crearVisorMejorado(JasperPrint jasperPrint) {
+        JRViewer viewer = new JRViewer(jasperPrint);
+
+        // Agregar más formatos de exportación al visor
+        try {
+            // Obtener el objeto JRSaveContributor del visor
+            java.lang.reflect.Field field = JRViewer.class.getDeclaredField("saveContributors");
+            field.setAccessible(true);
+            Object[] saveContributors = (Object[]) field.get(viewer);
+
+            // Crear un nuevo array con más contribuidores
+            Object[] newContributors = new Object[7];
+
+            // El constructor correcto recibe un Locale, no un JasperPrint
+            java.util.Locale locale = java.util.Locale.getDefault();
+
+            // Agregar contribuidores para diferentes formatos
+            newContributors[0] = new JRPdfSaveContributor(locale, null);           // PDF
+            newContributors[1] = new JRSingleSheetXlsSaveContributor(locale, null); // Excel (hoja única)
+            newContributors[2] = new JRMultipleSheetsXlsSaveContributor(locale, null); // Excel (múltiples hojas)
+            newContributors[3] = new JRDocxSaveContributor(locale, null);          // Word
+            newContributors[4] = new JRRtfSaveContributor(locale, null);           // RTF
+            newContributors[5] = new JRHtmlSaveContributor(locale, null);          // HTML
+            newContributors[6] = new JRCsvSaveContributor(locale, null);           // CSV
+
+            // Establecer los nuevos contribuidores
+            field.set(viewer, newContributors);
+        } catch (Exception e) {
+            System.err.println("No se pudieron agregar formatos de exportación: " + e.getMessage());
+        }
+
+        return viewer;
     }
 
     /**
@@ -205,6 +257,60 @@ public class vReport extends JInternalFrame implements myInterface {
         }
     }
 
+    /**
+     * Abre el diálogo de filtro correspondiente al reporte actual y regenera el
+     * reporte con los nuevos parámetros si el usuario acepta.
+     */
+    public void abrirDialogoFiltro() {
+        // Mapa para almacenar los parámetros del reporte
+        Map<String, Object> parametros = new LinkedHashMap<>();
+
+        // Añadir parámetros básicos por defecto
+        parametros.put("REPORT_TITLE", "Reporte de " + reporteNombre);
+        parametros.put("FECHA_GENERACION", new Date());
+
+        // Si hay un filtro definido, mostrar diálogo para configurar parámetros
+        if (filtroVista != null && !filtroVista.isEmpty()) {
+            boolean parametrosConfigurados = configurarParametrosFiltro(parametros);
+            if (!parametrosConfigurados) {
+                // Si el usuario canceló la configuración de parámetros, no continuar
+                return;
+            }
+
+            try {
+                // Utilizar el servicio de reportes para generar el JasperPrint con los nuevos parámetros
+                JasperPrint jasperPrint = reporteService.generarJasperPrint(reporteNombre, parametros);
+
+                if (jasperPrint != null) {
+                    // Crear un visor mejorado con opciones de exportación
+                    JRViewer visorReporte = crearVisorMejorado(jasperPrint);
+
+                    // Actualizar el panel con el visor de reportes
+                    jpReporte.removeAll();
+                    jpReporte.add(visorReporte, BorderLayout.CENTER);
+                    jpReporte.revalidate();
+                    jpReporte.repaint();
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                            "No se pudo generar el reporte.",
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this,
+                        "Error al generar el reporte: " + e.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            JOptionPane.showMessageDialog(this,
+                    "No hay filtros disponibles para este reporte",
+                    "Información",
+                    JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
     @Override
     public void imInsDet() {
         // No aplicable para reportes
@@ -261,11 +367,11 @@ public class vReport extends JInternalFrame implements myInterface {
         jpReporte1.setLayout(jpReporte1Layout);
         jpReporte1Layout.setHorizontalGroup(
             jpReporte1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 799, Short.MAX_VALUE)
+            .addGap(0, 1067, Short.MAX_VALUE)
         );
         jpReporte1Layout.setVerticalGroup(
             jpReporte1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 583, Short.MAX_VALUE)
+            .addGap(0, 757, Short.MAX_VALUE)
         );
 
         getContentPane().add(jpReporte1, java.awt.BorderLayout.CENTER);

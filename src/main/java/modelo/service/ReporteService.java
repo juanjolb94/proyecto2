@@ -79,6 +79,47 @@ public class ReporteService {
     }
 
     /**
+     * Genera un objeto JasperPrint con el reporte procesado
+     *
+     * @param reporteNombre Nombre del reporte
+     * @param parametros Parámetros del reporte
+     * @return JasperPrint generado
+     * @throws Exception Si ocurre algún error
+     */
+    public JasperPrint generarJasperPrint(String reporteNombre, Map<String, Object> parametros) throws Exception {
+        System.out.println("Generando reporte: " + reporteNombre);
+
+        try {
+            // Preparar los parámetros para evitar errores de tipos
+            prepararParametros(parametros);
+
+            // Verificar existencia del directorio de reportes
+            File outputDir = new File(REPORTES_DIR);
+            if (!outputDir.exists()) {
+                outputDir.mkdirs();
+                System.out.println("Creado directorio de reportes: " + outputDir.getAbsolutePath());
+            }
+
+            // Compilar el reporte si es necesario
+            compilarReporteSiEsNecesario(reporteNombre);
+
+            // Obtener datos específicos según el reporte
+            if (reporteNombre.equals("inventario_productos")) {
+                return generarReporteInventario(parametros);
+            } else {
+                // Reporte genérico usando la conexión a base de datos
+                JasperReport jasperReport = obtenerReporteCompilado(reporteNombre);
+                Connection connection = DatabaseConnection.getConnection();
+                return JasperFillManager.fillReport(jasperReport, parametros, connection);
+            }
+        } catch (JRException | SQLException e) {
+            System.err.println("Error al generar reporte: " + e.getMessage());
+            e.printStackTrace();
+            throw new Exception("Error al generar el reporte: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Prepara los parámetros para evitar errores de tipos
      *
      * @param parametros Mapa de parámetros a preparar
