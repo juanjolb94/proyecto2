@@ -567,6 +567,11 @@ public class vPrincipal extends javax.swing.JFrame {
         mVentas.setText("Ventas");
 
         mClientes.setText("Gestionar Clientes");
+        mClientes.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mClientesActionPerformed(evt);
+            }
+        });
         mVentas.add(mClientes);
         mVentas.add(jSeparator3);
 
@@ -1078,6 +1083,59 @@ public class vPrincipal extends javax.swing.JFrame {
             ex.printStackTrace();
         }
     }//GEN-LAST:event_mRegComprasActionPerformed
+
+    private void mClientesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mClientesActionPerformed
+        try {
+            vClientes clientesForm = buscarVentanaClientesAbierta();
+
+            if (clientesForm != null) {
+                // Si la ventana ya está abierta, traerla al frente
+                clientesForm.toFront();
+                clientesForm.setSelected(true);
+                try {
+                    clientesForm.setIcon(false); // Restaurarla si está minimizada
+                } catch (Exception e) {
+                    System.err.println("Error al restaurar ventana: " + e.getMessage());
+                }
+                return;
+            }
+
+            // Si no está abierta, crear una nueva instancia
+            try {
+                clientesForm = new vClientes();
+                clientesForm.setTitle("Gestión de Clientes");
+
+                jDesktopPane2.add(clientesForm);
+                centrar(clientesForm);
+                clientesForm.setVisible(true);
+
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this,
+                        "Error al conectar con la base de datos:\n" + ex.getMessage(),
+                        "Error de Conexión",
+                        JOptionPane.ERROR_MESSAGE);
+                if (clientesForm != null) {
+                    clientesForm.dispose();
+                }
+            }
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error inesperado al abrir gestión de clientes:\n" + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }//GEN-LAST:event_mClientesActionPerformed
+
+    private vClientes buscarVentanaClientesAbierta() {
+        for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
+            if (frame instanceof vClientes) {
+                return (vClientes) frame;
+            }
+        }
+        return null;
+    }//GEN-LAST:event_mClientesActionPerformed
 
     // Método auxiliar para buscar si la ventana de Compras ya está abierta
     private vRegCompras buscarVentanaComprasAbierta() {

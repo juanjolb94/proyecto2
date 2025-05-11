@@ -1,6 +1,6 @@
 package vista;
 
-import controlador.cProveedores;
+import controlador.cClientes;
 import interfaces.myInterface;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -8,23 +8,23 @@ import javax.swing.*;
 import javax.swing.event.PopupMenuEvent;
 import javax.swing.event.PopupMenuListener;
 import javax.swing.table.DefaultTableModel;
- import modelo.PersonasDAO;
+import modelo.PersonasDAO;
 
-public class vProveedores extends javax.swing.JInternalFrame implements myInterface{
-    private cProveedores controlador;
+public class vClientes extends javax.swing.JInternalFrame implements myInterface {
+    private cClientes controlador;
     private DefaultTableModel modeloTabla;
     private boolean editando = false;
 
-    public vProveedores() throws SQLException{
+    public vClientes() throws SQLException {
         initComponents();
         setClosable(true);
         setMaximizable(true);
-        setTitle("Gestión de Proveedores");
+        setTitle("Gestión de Clientes");
         
         configurarSeleccionAutomatica();
         configurarComboBoxPersonas();
         
-        controlador = new cProveedores(this);
+        controlador = new cClientes(this);
         
         txtId.setText("0");
         limpiarFormulario();
@@ -35,7 +35,7 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
             @Override
             public void keyPressed(java.awt.event.KeyEvent evt) {
                 if (evt.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER) {
-                    buscarProveedorPorId();
+                    buscarClientePorId();
                 }
             }
         });    
@@ -106,7 +106,7 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
         }
     }
     
-    // Método para autocompletar datos del proveedor basado en la persona seleccionada
+    // Método para autocompletar datos del cliente basado en la persona seleccionada
     private void autocompletarDatosPersona(int idPersona) {
         if (idPersona <= 0) {
             return; // No hacer nada si no hay selección válida
@@ -118,9 +118,9 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
             String[] datosPersona = personasDAO.buscarPersonaPorId(idPersona);
             
             if (datosPersona != null) {
-                // Autocompletar campos del proveedor con datos de la persona
-                txtRazonSocial.setText(datosPersona[1] + " " + datosPersona[2]); // Nombre + Apellido
-                txtRuc.setText(datosPersona[3]); // CI/RUC
+                // Autocompletar campos del cliente con datos de la persona
+                txtNombre.setText(datosPersona[1] + " " + datosPersona[2]); // Nombre + Apellido
+                txtCI.setText(datosPersona[3]); // CI/RUC
                 txtTelefono.setText(datosPersona[4]); // Teléfono
                 txtEmail.setText(datosPersona[5]); // Correo
             }
@@ -138,8 +138,8 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
     
     public void limpiarFormulario() {
         txtId.setText("0");
-        txtRazonSocial.setText("");
-        txtRuc.setText("");
+        txtNombre.setText("");
+        txtCI.setText("");
         txtTelefono.setText("");
         txtDireccion.setText("");
         txtEmail.setText("");
@@ -153,12 +153,12 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
         editando = false;
         
         // Habilitar campos
-        txtRazonSocial.setEnabled(true);
-        txtRuc.setEnabled(true);
+        txtNombre.setEnabled(true);
+        txtCI.setEnabled(true);
         comboPersonas.setEnabled(true);
     }
     
-    private void buscarProveedorPorId() {
+    private void buscarClientePorId() {
         try {
             int id = Integer.parseInt(txtId.getText());
             
@@ -167,15 +167,15 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
                 return;
             }
             
-            // Llamar al controlador para buscar el proveedor
-            Object[] proveedor = controlador.buscarProveedorPorId(id);
+            // Llamar al controlador para buscar el cliente
+            Object[] cliente = controlador.buscarClientePorId(id);
             
-            if (proveedor != null) {
+            if (cliente != null) {
                 // Autocompletar campos del formulario
-                cargarDatosEnFormulario(proveedor);
+                cargarDatosEnFormulario(cliente);
             } else {
                 JOptionPane.showMessageDialog(this, 
-                        "No se encontró ningún proveedor con el ID especificado.", 
+                        "No se encontró ningún cliente con el ID especificado.", 
                         "Advertencia", 
                         JOptionPane.WARNING_MESSAGE);
                 limpiarFormulario();
@@ -189,36 +189,36 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
         }
     }
     
-    private void cargarProveedorEnFormulario(int id) {
+    private void cargarClienteEnFormulario(int id) {
         try {
-            Object[] proveedor = controlador.buscarProveedorPorId(id);
-            if (proveedor != null) {
-                cargarDatosEnFormulario(proveedor);
+            Object[] cliente = controlador.buscarClientePorId(id);
+            if (cliente != null) {
+                cargarDatosEnFormulario(cliente);
             }
         } catch (Exception e) {
-            mostrarError("Error al cargar el proveedor: " + e.getMessage());
+            mostrarError("Error al cargar el cliente: " + e.getMessage());
         }
     }
     
-    private void cargarDatosEnFormulario(Object[] proveedor) {
-        txtId.setText(proveedor[0].toString());
-        txtRazonSocial.setText(proveedor[1].toString());
-        txtRuc.setText(proveedor[2].toString());
-        txtTelefono.setText(proveedor[3].toString());
-        txtDireccion.setText(proveedor[4].toString());
-        txtEmail.setText(proveedor[5].toString());
-        chkEstado.setSelected(proveedor[6].toString().equals("1"));
+    private void cargarDatosEnFormulario(Object[] cliente) {
+        txtId.setText(cliente[0].toString());
+        txtNombre.setText(cliente[1].toString());
+        txtCI.setText(cliente[2].toString());
+        txtTelefono.setText(cliente[3].toString());
+        txtDireccion.setText(cliente[4].toString());
+        txtEmail.setText(cliente[5].toString());
+        chkEstado.setSelected(cliente[6].toString().equals("1"));
         
         // También actualizar el ComboBox de personas si está disponible el ID de persona
-        if (proveedor.length > 7 && proveedor[7] != null) {
-            int idPersona = Integer.parseInt(proveedor[7].toString());
+        if (cliente.length > 7 && cliente[7] != null) {
+            int idPersona = Integer.parseInt(cliente[7].toString());
             seleccionarPersonaEnComboBox(idPersona);
         }
         
         editando = true;
         
         // Deshabilitar campos que no deberían cambiar una vez creados
-        txtRuc.setEnabled(false);
+        txtCI.setEnabled(false);
         // En modo de edición, también podríamos decidir si queremos permitir cambiar la persona asociada
         comboPersonas.setEnabled(false); 
     }
@@ -269,15 +269,15 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
     public void imGrabar() {
         try {
             // Validar campos obligatorios
-            if (txtRazonSocial.getText().trim().isEmpty()) {
-                mostrarError("La Razón Social es obligatoria");
-                txtRazonSocial.requestFocus();
+            if (txtNombre.getText().trim().isEmpty()) {
+                mostrarError("El Nombre es obligatorio");
+                txtNombre.requestFocus();
                 return;
             }
             
-            if (txtRuc.getText().trim().isEmpty()) {
-                mostrarError("El RUC es obligatorio");
-                txtRuc.requestFocus();
+            if (txtCI.getText().trim().isEmpty()) {
+                mostrarError("El CI/RUC es obligatorio");
+                txtCI.requestFocus();
                 return;
             }
             
@@ -292,8 +292,8 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
             // Obtener valores de los campos
             int id = Integer.parseInt(txtId.getText());
             int idPersona = personaSeleccionada.getId();
-            String razonSocial = txtRazonSocial.getText().trim();
-            String ruc = txtRuc.getText().trim();
+            String nombre = txtNombre.getText().trim();
+            String ci = txtCI.getText().trim();
             String telefono = txtTelefono.getText().trim();
             String direccion = txtDireccion.getText().trim();
             String email = txtEmail.getText().trim();
@@ -302,14 +302,14 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
             // Llamar al controlador para guardar/actualizar
             boolean exito;
             if (id > 0) { // Si el ID es mayor que 0, actualizamos
-                exito = controlador.actualizarProveedor(id, razonSocial, ruc, telefono, direccion, email, estado, idPersona);
+                exito = controlador.actualizarCliente(id, nombre, ci, telefono, direccion, email, estado, idPersona);
                 if (exito) {
-                    mostrarMensaje("Proveedor actualizado correctamente");
+                    mostrarMensaje("Cliente actualizado correctamente");
                 }
             } else { // Si el ID es 0, insertamos un nuevo registro
-                exito = controlador.insertarProveedor(razonSocial, ruc, telefono, direccion, email, estado, idPersona);
+                exito = controlador.insertarCliente(nombre, ci, telefono, direccion, email, estado, idPersona);
                 if (exito) {
-                    mostrarMensaje("Proveedor guardado correctamente");
+                    mostrarMensaje("Cliente guardado correctamente");
                 }
             }
             
@@ -327,23 +327,23 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
         try {
             int id = Integer.parseInt(txtId.getText());
             if (id <= 0) {
-                mostrarError("Seleccione un proveedor para eliminar");
+                mostrarError("Seleccione un cliente para eliminar");
                 return;
             }
             
             int confirmacion = JOptionPane.showConfirmDialog(
                     this,
-                    "¿Está seguro de que desea eliminar este proveedor?",
+                    "¿Está seguro de que desea eliminar este cliente?",
                     "Confirmar eliminación",
                     JOptionPane.YES_NO_OPTION);
             
             if (confirmacion == JOptionPane.YES_OPTION) {
-                boolean exito = controlador.eliminarProveedor(id);
+                boolean exito = controlador.eliminarCliente(id);
                 if (exito) {
-                    mostrarMensaje("Proveedor eliminado correctamente");
+                    mostrarMensaje("Cliente eliminado correctamente");
                     limpiarFormulario();
                 } else {
-                    mostrarError("No se pudo eliminar el proveedor");
+                    mostrarError("No se pudo eliminar el cliente");
                 }
             }
         } catch (Exception e) {
@@ -358,48 +358,48 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
     
     @Override
     public void imBuscar() {
-        buscarProveedorPorId();
+        buscarClientePorId();
     }
     
     @Override
     public void imPrimero() {
-        Object[] proveedor = controlador.obtenerPrimerProveedor();
-        if (proveedor != null) {
-            cargarDatosEnFormulario(proveedor);
+        Object[] cliente = controlador.obtenerPrimerCliente();
+        if (cliente != null) {
+            cargarDatosEnFormulario(cliente);
         } else {
-            mostrarMensaje("No hay proveedores registrados");
+            mostrarMensaje("No hay clientes registrados");
         }
     }
     
     @Override
     public void imSiguiente() {
         int idActual = Integer.parseInt(txtId.getText());
-        Object[] proveedor = controlador.obtenerSiguienteProveedor(idActual);
-        if (proveedor != null) {
-            cargarDatosEnFormulario(proveedor);
+        Object[] cliente = controlador.obtenerSiguienteCliente(idActual);
+        if (cliente != null) {
+            cargarDatosEnFormulario(cliente);
         } else {
-            mostrarMensaje("No hay más proveedores siguientes");
+            mostrarMensaje("No hay más clientes siguientes");
         }
     }
     
     @Override
     public void imAnterior() {
         int idActual = Integer.parseInt(txtId.getText());
-        Object[] proveedor = controlador.obtenerAnteriorProveedor(idActual);
-        if (proveedor != null) {
-            cargarDatosEnFormulario(proveedor);
+        Object[] cliente = controlador.obtenerAnteriorCliente(idActual);
+        if (cliente != null) {
+            cargarDatosEnFormulario(cliente);
         } else {
-            mostrarMensaje("No hay más proveedores anteriores");
+            mostrarMensaje("No hay más clientes anteriores");
         }
     }
     
     @Override
     public void imUltimo() {
-        Object[] proveedor = controlador.obtenerUltimoProveedor();
-        if (proveedor != null) {
-            cargarDatosEnFormulario(proveedor);
+        Object[] cliente = controlador.obtenerUltimoCliente();
+        if (cliente != null) {
+            cargarDatosEnFormulario(cliente);
         } else {
-            mostrarMensaje("No hay proveedores registrados");
+            mostrarMensaje("No hay clientes registrados");
         }
     }
     
@@ -429,12 +429,12 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
     
     @Override
     public void imInsDet() {
-        // No aplicable para proveedores simples
+        // No aplicable para clientes simples
     }
     
     @Override
     public void imDelDet() {
-        // No aplicable para proveedores simples
+        // No aplicable para clientes simples
     }
     
     @Override
@@ -454,33 +454,35 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
     
     @Override
     public String getTablaActual() {
-        return "proveedores";
+        return "clientes";
     }
     
     @Override
     public String[] getCamposBusqueda() {
-        return new String[]{"id_proveedor", "razon_social", "ruc"};
+        return new String[]{"id_cliente", "nombre", "ci_ruc"};
     }
     
     @Override
     public void setRegistroSeleccionado(int id) {
         txtId.setText(String.valueOf(id));
-        buscarProveedorPorId();
+        buscarClientePorId();
     }
-     
+
+
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
         pnlDatos = new javax.swing.JPanel();
+        pnlDatos1 = new javax.swing.JPanel();
         jLabel1 = new javax.swing.JLabel();
         jLabel2 = new javax.swing.JLabel();
         jLabel3 = new javax.swing.JLabel();
         jLabel6 = new javax.swing.JLabel();
         jLabel7 = new javax.swing.JLabel();
         txtId = new javax.swing.JTextField();
-        txtRazonSocial = new javax.swing.JTextField();
-        txtRuc = new javax.swing.JTextField();
+        txtNombre = new javax.swing.JTextField();
+        txtCI = new javax.swing.JTextField();
         jLabel4 = new javax.swing.JLabel();
         jLabel5 = new javax.swing.JLabel();
         txtTelefono = new javax.swing.JTextField();
@@ -490,7 +492,7 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
         comboPersonas = new javax.swing.JComboBox<>();
         jLabel8 = new javax.swing.JLabel();
 
-        jLabel1.setText("id Proveedor:");
+        jLabel1.setText("id Cliente:");
 
         jLabel2.setText("Nombre/Razón Social:");
 
@@ -506,80 +508,94 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
 
         jLabel8.setText("Persona:");
 
-        javax.swing.GroupLayout pnlDatosLayout = new javax.swing.GroupLayout(pnlDatos);
-        pnlDatos.setLayout(pnlDatosLayout);
-        pnlDatosLayout.setHorizontalGroup(
-            pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(pnlDatosLayout.createSequentialGroup()
+        javax.swing.GroupLayout pnlDatos1Layout = new javax.swing.GroupLayout(pnlDatos1);
+        pnlDatos1.setLayout(pnlDatos1Layout);
+        pnlDatos1Layout.setHorizontalGroup(
+            pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(pnlDatos1Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 121, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel1)
                     .addComponent(jLabel3)
                     .addComponent(jLabel4))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, pnlDatosLayout.createSequentialGroup()
-                            .addGroup(pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                .addGroup(pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, pnlDatos1Layout.createSequentialGroup()
+                            .addGroup(pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
                                 .addComponent(txtTelefono, javax.swing.GroupLayout.DEFAULT_SIZE, 130, Short.MAX_VALUE)
-                                .addComponent(txtRuc))
+                                .addComponent(txtCI))
                             .addGap(51, 51, 51))
-                        .addGroup(pnlDatosLayout.createSequentialGroup()
-                            .addComponent(txtRazonSocial, javax.swing.GroupLayout.PREFERRED_SIZE, 165, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGroup(pnlDatos1Layout.createSequentialGroup()
+                            .addComponent(txtNombre, javax.swing.GroupLayout.PREFERRED_SIZE, 165, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addGap(16, 16, 16)))
-                    .addGroup(pnlDatosLayout.createSequentialGroup()
+                    .addGroup(pnlDatos1Layout.createSequentialGroup()
                         .addComponent(txtId, javax.swing.GroupLayout.PREFERRED_SIZE, 30, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addGap(151, 151, 151)))
-                .addGroup(pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addGroup(pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel8)
                     .addComponent(jLabel6)
                     .addComponent(jLabel7)
                     .addComponent(jLabel5))
                 .addGap(18, 18, Short.MAX_VALUE)
-                .addGroup(pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(comboPersonas, 0, 178, Short.MAX_VALUE)
-                    .addGroup(pnlDatosLayout.createSequentialGroup()
+                .addGroup(pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(comboPersonas, 0, 170, Short.MAX_VALUE)
+                    .addGroup(pnlDatos1Layout.createSequentialGroup()
                         .addComponent(chkEstado)
                         .addGap(0, 0, Short.MAX_VALUE))
                     .addComponent(txtDireccion, javax.swing.GroupLayout.Alignment.TRAILING)
                     .addComponent(txtEmail, javax.swing.GroupLayout.Alignment.TRAILING))
                 .addContainerGap())
         );
-        pnlDatosLayout.setVerticalGroup(
-            pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(pnlDatosLayout.createSequentialGroup()
+        pnlDatos1Layout.setVerticalGroup(
+            pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(pnlDatos1Layout.createSequentialGroup()
                 .addGap(18, 18, 18)
-                .addGroup(pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel1)
                     .addComponent(txtId, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(comboPersonas, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel8))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addGroup(pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(txtRazonSocial, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(txtNombre, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel2)
                     .addComponent(jLabel5)
                     .addComponent(txtDireccion, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addGroup(pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(pnlDatosLayout.createSequentialGroup()
-                        .addGroup(pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                .addGroup(pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(pnlDatos1Layout.createSequentialGroup()
+                        .addGroup(pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jLabel3)
-                            .addComponent(txtRuc, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                            .addComponent(txtCI, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addGroup(pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addGroup(pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jLabel4)
                             .addComponent(txtTelefono, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addGroup(pnlDatosLayout.createSequentialGroup()
-                        .addGroup(pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addGroup(pnlDatos1Layout.createSequentialGroup()
+                        .addGroup(pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                             .addComponent(jLabel6)
                             .addComponent(txtEmail, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                        .addGroup(pnlDatos1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                             .addComponent(jLabel7)
                             .addComponent(chkEstado))))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout pnlDatosLayout = new javax.swing.GroupLayout(pnlDatos);
+        pnlDatos.setLayout(pnlDatosLayout);
+        pnlDatosLayout.setHorizontalGroup(
+            pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(pnlDatosLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(pnlDatos1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap())
+        );
+        pnlDatosLayout.setVerticalGroup(
+            pnlDatosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(pnlDatos1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -593,7 +609,10 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(pnlDatos, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(pnlDatos, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         pack();
@@ -612,11 +631,12 @@ public class vProveedores extends javax.swing.JInternalFrame implements myInterf
     private javax.swing.JLabel jLabel7;
     private javax.swing.JLabel jLabel8;
     private javax.swing.JPanel pnlDatos;
+    private javax.swing.JPanel pnlDatos1;
+    private javax.swing.JTextField txtCI;
     private javax.swing.JTextField txtDireccion;
     private javax.swing.JTextField txtEmail;
     private javax.swing.JTextField txtId;
-    private javax.swing.JTextField txtRazonSocial;
-    private javax.swing.JTextField txtRuc;
+    private javax.swing.JTextField txtNombre;
     private javax.swing.JTextField txtTelefono;
     // End of variables declaration//GEN-END:variables
 }
