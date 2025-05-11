@@ -13,7 +13,6 @@ public class vFiltroInventario extends JDialog {
     // Variables para el estado
     private boolean aceptado = false;
 
-
     /**
      * Constructor para el diálogo de filtro de inventario
      *
@@ -34,7 +33,51 @@ public class vFiltroInventario extends JDialog {
                     JOptionPane.ERROR_MESSAGE);
         }
 
+        // Inicializar los spinners con valores predeterminados
+        spinnerStockDesde.setValue(0);
+        spinnerStockHasta.setValue(999999);
+
+        // Configurar los manejadores de eventos para los botones
+        configurarBotones();
+
         setLocationRelativeTo(parent);
+    }
+
+    /**
+     * Configura los eventos de los botones
+     */
+    private void configurarBotones() {
+        // Botón Aceptar
+        btnAceptar.addActionListener(e -> {
+            if (validarFiltros()) {
+                aceptado = true;
+                dispose(); // Cierra el diálogo
+            }
+        });
+
+        // Botón Cancelar
+        btnCancelar.addActionListener(e -> {
+            aceptado = false;
+            dispose(); // Cierra el diálogo sin aplicar filtros
+        });
+
+        // Botón Limpiar
+        btnLimpiar.addActionListener(e -> {
+            limpiarFiltros();
+        });
+
+        // También cerrar con ESC (cancelar)
+        getRootPane().registerKeyboardAction(
+                e -> {
+                    aceptado = false;
+                    dispose();
+                },
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+
+        // Configurar Enter para aceptar
+        getRootPane().setDefaultButton(btnAceptar);
     }
 
     /**

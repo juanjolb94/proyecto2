@@ -4,6 +4,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +49,9 @@ public class ReporteService {
         System.out.println("Generando reporte: " + reporteNombre);
 
         try {
+            // Preparar los parámetros para evitar errores de tipos
+            prepararParametros(parametros);
+
             // Verificar existencia del directorio de reportes
             File outputDir = new File(REPORTES_DIR);
             if (!outputDir.exists()) {
@@ -63,12 +68,59 @@ public class ReporteService {
             } else {
                 // Reporte genérico usando la conexión a base de datos
                 JasperReport jasperReport = obtenerReporteCompilado(reporteNombre);
-                return JasperFillManager.fillReport(jasperReport, parametros, DatabaseConnection.getConnection());
+                Connection connection = DatabaseConnection.getConnection();
+                return JasperFillManager.fillReport(jasperReport, parametros, connection);
             }
         } catch (JRException | SQLException e) {
             System.err.println("Error al generar reporte: " + e.getMessage());
             e.printStackTrace();
             throw new Exception("Error al generar el reporte: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Prepara los parámetros para evitar errores de tipos
+     *
+     * @param parametros Mapa de parámetros a preparar
+     */
+    private void prepararParametros(Map<String, Object> parametros) {
+        // Asegurar que FECHA_GENERACION sea un objeto java.util.Date
+        if (parametros.containsKey("FECHA_GENERACION")) {
+            Object fechaObj = parametros.get("FECHA_GENERACION");
+            if (!(fechaObj instanceof java.util.Date)) {
+                parametros.put("FECHA_GENERACION", new java.util.Date());
+            }
+        } else {
+            parametros.put("FECHA_GENERACION", new java.util.Date());
+        }
+
+        // Añadir formato de fecha como parámetro adicional
+        parametros.put("FECHA_FORMATO", new SimpleDateFormat("dd/MM/yyyy HH:mm:ss"));
+
+        // Convertir a tipos correctos los parámetros numéricos
+        for (String key : parametros.keySet()) {
+            Object valor = parametros.get(key);
+
+            // Garantizar que los IDs sean Integer
+            if (key.endsWith("_id") && valor instanceof String) {
+                try {
+                    parametros.put(key, Integer.parseInt((String) valor));
+                } catch (NumberFormatException e) {
+                    parametros.put(key, 0);
+                }
+            }
+
+            // Garantizar que los booleanos sean Boolean
+            if (valor instanceof String && ("true".equalsIgnoreCase((String) valor) || "false".equalsIgnoreCase((String) valor))) {
+                parametros.put(key, Boolean.valueOf((String) valor));
+            }
+        }
+
+        // Imprimir los parámetros para depuración
+        System.out.println("Parámetros del reporte:");
+        for (Map.Entry<String, Object> entry : parametros.entrySet()) {
+            System.out.println(entry.getKey() + ": " + entry.getValue()
+                    + " (Tipo: " + (entry.getValue() != null ? entry.getValue().getClass().getName() : "null") + ")");
         }
     }
 
@@ -161,6 +213,21 @@ public class ReporteService {
                     .toList();
         }
 
+        // Aplicar filtros de stock si existen
+        if (parametros.containsKey("stock_minimo")) {
+            Integer stockMinimo = (Integer) parametros.get("stock_minimo");
+            productos = productos.stream()
+                    .filter(p -> p.getStock() >= stockMinimo)
+                    .toList();
+        }
+
+        if (parametros.containsKey("stock_maximo")) {
+            Integer stockMaximo = (Integer) parametros.get("stock_maximo");
+            productos = productos.stream()
+                    .filter(p -> p.getStock() <= stockMaximo)
+                    .toList();
+        }
+
         // Convertir a datos para el reporte
         List<Map<String, Object>> datosReporte = prepararDatosProductos(productos);
 
@@ -186,7 +253,11 @@ public class ReporteService {
         return productos.stream().map(producto -> {
             Map<String, Object> fila = new HashMap<>();
             fila.put("idProducto", producto.getIdProducto());
+            fila.put("codigo", producto.getCodigo());
             fila.put("nombre", producto.getNombre());
+            fila.put("descripcion", producto.getDescripcion());
+            fila.put("stock", producto.getStock());
+            fila.put("precio", producto.getPrecio());
             fila.put("categoria", obtenerNombreCategoria(producto.getIdCategoria()));
             fila.put("marca", obtenerNombreMarca(producto.getIdMarca()));
             fila.put("iva", producto.getIva());

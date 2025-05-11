@@ -2,22 +2,32 @@ package modelo;
 
 public class mProducto {
     private int idProducto;
+    private String codigo;
     private String nombre;
+    private String descripcion;
     private int idCategoria;
     private int idMarca;
     private double iva;
+    private int stock;
+    private double precio;
     private boolean estado;
     
     public mProducto(){
         
     }
     
-    public mProducto(int idProducto, String nombre, int idCategoria, int idMarca, double iva, boolean estado) {
+    public mProducto(int idProducto, String codigo, String nombre, String descripcion, 
+                     int idCategoria, int idMarca, double iva, int stock, 
+                     double precio, boolean estado) {
         this.idProducto = idProducto;
+        this.codigo = codigo;
         this.nombre = nombre;
+        this.descripcion = descripcion;
         this.idCategoria = idCategoria;
         this.idMarca = idMarca;
         this.iva = iva;
+        this.stock = stock;
+        this.precio = precio;
         this.estado = estado;
     }
     
@@ -29,6 +39,14 @@ public class mProducto {
         this.idProducto = idProducto; 
     }
     
+    public String getCodigo() {
+        return codigo;
+    }
+    
+    public void setCodigo(String codigo) {
+        this.codigo = codigo;
+    }
+    
     public String getNombre() {
         return nombre;
     }
@@ -38,6 +56,14 @@ public class mProducto {
             throw new IllegalArgumentException("El nombre no puede estar vacío");
         }
         this.nombre = nombre;
+    }
+    
+    public String getDescripcion() {
+        return descripcion;
+    }
+    
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion;
     }
     
     public int getIdCategoria() {
@@ -73,6 +99,28 @@ public class mProducto {
         this.iva = iva;
     }
     
+    public int getStock() {
+        return stock;
+    }
+    
+    public void setStock(int stock) {
+        if (stock < 0) {
+            throw new IllegalArgumentException("El stock no puede ser negativo");
+        }
+        this.stock = stock;
+    }
+    
+    public double getPrecio() {
+        return precio;
+    }
+    
+    public void setPrecio(double precio) {
+        if (precio < 0) {
+            throw new IllegalArgumentException("El precio no puede ser negativo");
+        }
+        this.precio = precio;
+    }
+    
     public boolean isEstado() {
         return estado;
     }
@@ -83,8 +131,10 @@ public class mProducto {
     
     @Override
     public String toString() {
-        return String.format("Producto [ID: %d, Nombre: %s, Categoría: %d, Marca: %d, IVA: %.2f, Estado: %s]",
-                idProducto, nombre, idCategoria, idMarca, iva, estado ? "Activo" : "Inactivo");
+        return String.format("Producto [ID: %d, Código: %s, Nombre: %s, Categoría: %d, Marca: %d, " +
+                "Stock: %d, Precio: %.2f, IVA: %.2f, Estado: %s]",
+                idProducto, codigo, nombre, idCategoria, idMarca, stock, precio, iva, 
+                estado ? "Activo" : "Inactivo");
     }
     
     public String toShortString() {
@@ -108,6 +158,6 @@ public class mProducto {
     public boolean validar() {
         return nombre != null && !nombre.trim().isEmpty() &&
                idCategoria > 0 && idMarca > 0 &&
-               iva >= 0;
+               precio >= 0 && stock >= 0 && iva >= 0;
     }
 }
