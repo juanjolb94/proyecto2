@@ -582,6 +582,11 @@ public class vPrincipal extends javax.swing.JFrame {
         mVentas.add(jSeparator3);
 
         mRegVentas.setText("Registrar Ventas");
+        mRegVentas.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mRegVentasActionPerformed(evt);
+            }
+        });
         mVentas.add(mRegVentas);
         mVentas.add(jSeparator4);
 
@@ -1144,6 +1149,45 @@ public class vPrincipal extends javax.swing.JFrame {
         }
         return null;
     }//GEN-LAST:event_mClientesActionPerformed
+
+    private void mRegVentasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRegVentasActionPerformed
+        try {
+            vSeleccionMesa seleccionMesaForm = buscarVentanaSeleccionMesaAbierta();
+
+            if (seleccionMesaForm != null) {
+                // Si la ventana ya está abierta, traerla al frente
+                seleccionMesaForm.toFront();
+                seleccionMesaForm.setSelected(true);
+                try {
+                    seleccionMesaForm.setIcon(false); // Restaurar si está minimizada
+                } catch (Exception e) {
+                    System.err.println("Error al restaurar ventana: " + e.getMessage());
+                }
+                return;
+            }
+
+            // Si no está abierta, crear una nueva instancia
+            seleccionMesaForm = new vSeleccionMesa();
+            jDesktopPane2.add(seleccionMesaForm);
+            centrar(seleccionMesaForm);
+            seleccionMesaForm.setVisible(true);
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error inesperado al abrir selección de mesas:\n" + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }//GEN-LAST:event_mRegVentasActionPerformed
+
+    private vSeleccionMesa buscarVentanaSeleccionMesaAbierta() {
+        for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
+            if (frame instanceof vSeleccionMesa) {
+                return (vSeleccionMesa) frame;
+            }
+        }
+        return null;
+    }
 
     // Método auxiliar para buscar si la ventana de Compras ya está abierta
     private vRegCompras buscarVentanaComprasAbierta() {
