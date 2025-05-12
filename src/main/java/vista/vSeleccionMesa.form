@@ -69,7 +69,6 @@
                           <Group type="103" groupAlignment="0" attributes="0">
                               <Component id="btnNuevaMesa" max="32767" attributes="0"/>
                               <Component id="btnEliminarMesa" alignment="0" max="32767" attributes="0"/>
-                              <Component id="btnEditarMesas" alignment="0" max="32767" attributes="0"/>
                               <Component id="btnGuardarCambios" pref="134" max="32767" attributes="0"/>
                               <Component id="btnCambiarFondo" alignment="0" max="32767" attributes="0"/>
                           </Group>
@@ -82,9 +81,7 @@
                           <Component id="btnNuevaMesa" min="-2" pref="40" max="-2" attributes="0"/>
                           <EmptySpace max="-2" attributes="0"/>
                           <Component id="btnEliminarMesa" min="-2" pref="40" max="-2" attributes="0"/>
-                          <EmptySpace max="-2" attributes="0"/>
-                          <Component id="btnEditarMesas" min="-2" pref="40" max="-2" attributes="0"/>
-                          <EmptySpace max="-2" attributes="0"/>
+                          <EmptySpace min="-2" pref="52" max="-2" attributes="0"/>
                           <Component id="btnGuardarCambios" min="-2" pref="40" max="-2" attributes="0"/>
                           <EmptySpace max="-2" attributes="0"/>
                           <Component id="btnCambiarFondo" min="-2" pref="50" max="-2" attributes="0"/>
@@ -102,11 +99,6 @@
                 <Component class="javax.swing.JButton" name="btnEliminarMesa">
                   <Properties>
                     <Property name="text" type="java.lang.String" value="Eliminar Mesa"/>
-                  </Properties>
-                </Component>
-                <Component class="javax.swing.JButton" name="btnEditarMesas">
-                  <Properties>
-                    <Property name="text" type="java.lang.String" value="Editar Mesas"/>
                   </Properties>
                 </Component>
                 <Component class="javax.swing.JButton" name="btnGuardarCambios">

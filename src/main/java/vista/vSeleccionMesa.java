@@ -5,6 +5,7 @@ import modelo.Mesa;
 import modelo.MesasDAO;
 import java.awt.*;
 import java.awt.event.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
@@ -13,8 +14,6 @@ import java.util.List;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
-import java.awt.image.BufferedImage;
-import javax.swing.JComponent;
 
 public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInterface {
 
@@ -26,6 +25,15 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
     private boolean modoEdicion = false;
     private Mesa mesaEnArrastre = null;
     private Point initialClick;
+
+    // Constantes para la cuadrícula
+    private final int COLUMNAS_POR_FILA = 5;
+    private final int ESPACIO_ENTRE_MESAS = 10;
+    private final int TAMANO_MESA_DEFAULT = 100;
+
+    // Para controlar el estado de los botones
+    private JButton btnEditarMesas;
+    private Color colorOriginalBoton;
 
     public vSeleccionMesa() {
         initComponents();
@@ -61,47 +69,75 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                // Dibujar imagen de fondo si existe
+                // Dibujar imagen de fondo con transparencia si existe
                 if (backgroundImage != null) {
-                    g.drawImage(backgroundImage, 0, 0, this.getWidth(), this.getHeight(), this);
+                    Graphics2D g2d = (Graphics2D) g;
+                    // Guardar la configuración original
+                    Composite originalComposite = g2d.getComposite();
+
+                    // Aplicar transparencia (0.3f = 30% de opacidad)
+                    g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.3f));
+                    g2d.drawImage(backgroundImage, 0, 0, this.getWidth(), this.getHeight(), this);
+
+                    // Restaurar la configuración original
+                    g2d.setComposite(originalComposite);
                 }
             }
         };
 
         panelMesas.setLayout(null); // Layout absoluto para posicionar las mesas libremente
-        panelMesas.setPreferredSize(new Dimension(800, 600)); // Tamaño inicial
+
+        // Establecer un tamaño preferido para tener suficiente espacio
+        panelMesas.setPreferredSize(new Dimension(
+                COLUMNAS_POR_FILA * (TAMANO_MESA_DEFAULT + ESPACIO_ENTRE_MESAS) + ESPACIO_ENTRE_MESAS,
+                400)); // Altura inicial, se ajustará según las mesas
 
         scrollPane.setViewportView(panelMesas);
 
-        // Panel de controles
+        // Panel de controles con botones más grandes y uno debajo del otro
         JPanel panelControles = new JPanel();
         panelControles.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createEtchedBorder(), "Controles",
                 TitledBorder.DEFAULT_JUSTIFICATION,
                 TitledBorder.DEFAULT_POSITION,
                 new Font("Dialog", Font.BOLD, 12),
-                Color.BLACK));
+                Color.WHITE));
+        panelControles.setBackground(new Color(60, 63, 65)); // Color oscuro para el panel de controles
 
         // Botones para gestionar mesas
-        JButton btnNuevaMesa = new JButton("Nueva Mesa");
-        JButton btnEliminarMesa = new JButton("Eliminar Mesa");
-        JButton btnEditarMesas = new JButton("Editar Mesas");
-        JButton btnGuardarCambios = new JButton("Guardar Cambios");
-        JButton btnCambiarFondo = new JButton("Cambiar Fondo");
+        JButton btnNuevaMesa = crearBotonControl("Nueva Mesa");
+        JButton btnEliminarMesa = crearBotonControl("Eliminar Mesa");
+        btnEditarMesas = crearBotonControl("Editar Mesas");
+        colorOriginalBoton = btnEditarMesas.getBackground();
+        JButton btnGuardarCambios = crearBotonControl("Guardar Cambios");
+        JButton btnCambiarFondo = crearBotonControl("Cambiar Fondo");
 
         // Configurar panel de leyenda (estados de mesas)
         JPanel panelLeyenda = new JPanel();
-        panelLeyenda.setBorder(BorderFactory.createTitledBorder("Leyenda"));
+        panelLeyenda.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createEtchedBorder(),
+                "Leyenda",
+                TitledBorder.DEFAULT_JUSTIFICATION,
+                TitledBorder.DEFAULT_POSITION,
+                new Font("Dialog", Font.BOLD, 12),
+                Color.WHITE));
+        panelLeyenda.setBackground(new Color(60, 63, 65)); // Color oscuro para el panel de leyenda
         panelLeyenda.setLayout(new GridLayout(0, 1, 5, 5));
 
         // Agregar leyenda para cada estado
         for (Mesa.EstadoMesa estado : Mesa.EstadoMesa.values()) {
             JPanel panelEstado = new JPanel(new BorderLayout());
+            panelEstado.setBackground(new Color(60, 63, 65)); // Para mantener consistencia
+
             JPanel colorBox = new JPanel();
             colorBox.setBackground(estado.getColor());
             colorBox.setPreferredSize(new Dimension(20, 20));
+
+            JLabel labelEstado = new JLabel(" " + estado.getDescripcion());
+            labelEstado.setForeground(Color.WHITE); // Texto en blanco para mejor legibilidad
+
             panelEstado.add(colorBox, BorderLayout.WEST);
-            panelEstado.add(new JLabel(" " + estado.getDescripcion()), BorderLayout.CENTER);
+            panelEstado.add(labelEstado, BorderLayout.CENTER);
             panelLeyenda.add(panelEstado);
         }
 
@@ -112,35 +148,20 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
         btnGuardarCambios.addActionListener(e -> guardarCambios());
         btnCambiarFondo.addActionListener(e -> cambiarImagenFondo());
 
-        // Agregar botones al panel de controles
-        panelControles.setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(5, 5, 5, 5);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        panelControles.add(btnNuevaMesa, gbc);
-
-        gbc.gridx = 1;
-        panelControles.add(btnEliminarMesa, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        panelControles.add(btnEditarMesas, gbc);
-
-        gbc.gridx = 1;
-        panelControles.add(btnGuardarCambios, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        gbc.gridwidth = 2;
-        panelControles.add(btnCambiarFondo, gbc);
-
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        gbc.gridwidth = 2;
-        panelControles.add(panelLeyenda, gbc);
+        // Layout de botones verticalmente (uno debajo del otro)
+        panelControles.setLayout(new BoxLayout(panelControles, BoxLayout.Y_AXIS));
+        panelControles.add(Box.createVerticalStrut(10)); // Espacio
+        panelControles.add(btnNuevaMesa);
+        panelControles.add(Box.createVerticalStrut(10)); // Espacio
+        panelControles.add(btnEliminarMesa);
+        panelControles.add(Box.createVerticalStrut(10)); // Espacio
+        panelControles.add(btnEditarMesas);
+        panelControles.add(Box.createVerticalStrut(10)); // Espacio
+        panelControles.add(btnGuardarCambios);
+        panelControles.add(Box.createVerticalStrut(10)); // Espacio
+        panelControles.add(btnCambiarFondo);
+        panelControles.add(Box.createVerticalStrut(20)); // Espacio mayor antes de la leyenda
+        panelControles.add(panelLeyenda);
 
         // Configurar el layout principal
         setLayout(new BorderLayout());
@@ -150,55 +171,130 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
         pack();
     }
 
+    // Método para crear botones de control con estilo unificado
+    private JButton crearBotonControl(String texto) {
+        JButton boton = new JButton(texto);
+        boton.setFont(new Font("Dialog", Font.BOLD, 14));
+        boton.setAlignmentX(Component.CENTER_ALIGNMENT); // Centrar horizontalmente
+        boton.setMaximumSize(new Dimension(200, 50)); // Ancho máximo y altura fija
+        boton.setPreferredSize(new Dimension(180, 50)); // Tamaño preferido
+        boton.setBackground(new Color(59, 89, 152)); // Azul tipo Facebook
+        boton.setForeground(Color.WHITE); // Texto blanco
+        boton.setFocusPainted(false); // Quitar borde de foco
+        boton.setBorderPainted(true);
+        boton.setCursor(new Cursor(Cursor.HAND_CURSOR)); // Cursor de mano al pasar sobre el botón
+        return boton;
+    }
+
     private void cargarMesas() throws SQLException {
         mesas = mesasDAO.listarTodas();
         panelMesas.removeAll();
 
+        // Ordenar mesas por número para asegurar que se muestren en orden
+        mesas.sort((m1, m2) -> {
+            try {
+                int num1 = Integer.parseInt(m1.getNumero());
+                int num2 = Integer.parseInt(m2.getNumero());
+                return Integer.compare(num1, num2);
+            } catch (NumberFormatException e) {
+                return m1.getNumero().compareTo(m2.getNumero());
+            }
+        });
+
+        // Calcular posiciones en cuadrícula
+        calcularPosicionesCuadricula();
+
+        // Crear y agregar los paneles de mesa
         for (Mesa mesa : mesas) {
             JPanel mesaPanel = crearPanelMesa(mesa);
             panelMesas.add(mesaPanel);
         }
 
+        // Ajustar el tamaño del panel según las filas necesarias
+        ajustarTamanoPanelMesas();
+
         panelMesas.revalidate();
         panelMesas.repaint();
     }
 
+    private void calcularPosicionesCuadricula() {
+        int totalMesas = mesas.size();
+        int filas = (totalMesas + COLUMNAS_POR_FILA - 1) / COLUMNAS_POR_FILA; // Redondear hacia arriba
+
+        for (int i = 0; i < mesas.size(); i++) {
+            Mesa mesa = mesas.get(i);
+
+            // Calcular fila y columna
+            int fila = i / COLUMNAS_POR_FILA;
+            int columna = i % COLUMNAS_POR_FILA;
+
+            // Calcular posición X,Y
+            int x = ESPACIO_ENTRE_MESAS + columna * (TAMANO_MESA_DEFAULT + ESPACIO_ENTRE_MESAS);
+            int y = ESPACIO_ENTRE_MESAS + fila * (TAMANO_MESA_DEFAULT + ESPACIO_ENTRE_MESAS);
+
+            // Actualizar la posición de la mesa
+            mesa.setPosicion(new Point(x, y));
+
+            // Asegurar que el tamaño es el estándar
+            mesa.setAncho(TAMANO_MESA_DEFAULT);
+            mesa.setAlto(TAMANO_MESA_DEFAULT);
+        }
+    }
+
+    private void ajustarTamanoPanelMesas() {
+        int totalMesas = mesas.size();
+        int filas = (totalMesas + COLUMNAS_POR_FILA - 1) / COLUMNAS_POR_FILA; // Redondear hacia arriba
+
+        int altura = (filas * (TAMANO_MESA_DEFAULT + ESPACIO_ENTRE_MESAS)) + ESPACIO_ENTRE_MESAS;
+        int anchura = (COLUMNAS_POR_FILA * (TAMANO_MESA_DEFAULT + ESPACIO_ENTRE_MESAS)) + ESPACIO_ENTRE_MESAS;
+
+        panelMesas.setPreferredSize(new Dimension(anchura, altura));
+        panelMesas.revalidate();
+    }
+
     private JPanel crearPanelMesa(Mesa mesa) {
-        // Crear panel para representar la mesa
+        // Crear panel para representar la mesa como un botón cuadrado
         JPanel mesaPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2d = (Graphics2D) g;
 
+                // Antialiasing para bordes más suaves
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON);
+
                 // Establecer color según el estado
                 g2d.setColor(mesa.getEstado().getColor());
 
-                // Dibujar la forma de la mesa
-                if ("CIRCULAR".equals(mesa.getForma())) {
-                    g2d.fillOval(0, 0, getWidth() - 1, getHeight() - 1);
-                } else {
-                    g2d.fillRect(0, 0, getWidth() - 1, getHeight() - 1);
-                }
+                // Dibujar la forma de la mesa (cuadrado redondeado)
+                g2d.fillRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
 
                 // Dibujar borde
                 g2d.setColor(Color.BLACK);
-                if ("CIRCULAR".equals(mesa.getForma())) {
-                    g2d.drawOval(0, 0, getWidth() - 1, getHeight() - 1);
-                } else {
-                    g2d.drawRect(0, 0, getWidth() - 1, getHeight() - 1);
-                }
+                g2d.setStroke(new BasicStroke(2));
+                g2d.drawRoundRect(2, 2, getWidth() - 4, getHeight() - 4, 15, 15);
 
                 // Dibujar número de mesa
                 g2d.setColor(Color.WHITE);
-                Font font = new Font("Dialog", Font.BOLD, 16);
+                Font font = new Font("Dialog", Font.BOLD, 32); // Fuente más grande
                 g2d.setFont(font);
                 FontMetrics fm = g2d.getFontMetrics();
                 String text = mesa.getNumero();
                 int textWidth = fm.stringWidth(text);
                 int textHeight = fm.getHeight();
                 g2d.drawString(text, (getWidth() - textWidth) / 2,
-                        (getHeight() + textHeight / 2) / 2);
+                        (getHeight() + textHeight / 2) / 2 - 10); // Ajuste para centrar mejor
+
+                // Dibujar capacidad
+                Font smallFont = new Font("Dialog", Font.PLAIN, 14);
+                g2d.setFont(smallFont);
+                FontMetrics fmSmall = g2d.getFontMetrics();
+                String capacidadText = mesa.getCapacidad() + " personas";
+                int smallTextWidth = fmSmall.stringWidth(capacidadText);
+                g2d.drawString(capacidadText,
+                        (getWidth() - smallTextWidth) / 2,
+                        getHeight() - 15);
             }
         };
 
@@ -208,6 +304,24 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
         mesaPanel.setToolTipText("Mesa " + mesa.getNumero() + " - "
                 + mesa.getEstado().getDescripcion()
                 + " - Capacidad: " + mesa.getCapacidad());
+
+        // Agregar efecto de hover
+        mesaPanel.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                if (!modoEdicion) {
+                    mesaPanel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+                    mesaPanel.setBorder(BorderFactory.createLineBorder(Color.YELLOW, 2));
+                }
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (!modoEdicion && mesaSeleccionada != mesa) {
+                    mesaPanel.setBorder(null);
+                }
+            }
+        });
 
         // Agregar eventos de mouse
         mesaPanel.addMouseListener(new MouseAdapter() {
@@ -249,12 +363,16 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
                 if (modoEdicion) {
                     mesaEnArrastre = mesa;
                     initialClick = e.getPoint();
+                    mesaPanel.setCursor(new Cursor(Cursor.MOVE_CURSOR));
                 }
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                mesaEnArrastre = null;
+                if (modoEdicion) {
+                    mesaEnArrastre = null;
+                    mesaPanel.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+                }
             }
 
             @Override
@@ -309,7 +427,7 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
     }
 
     private Image createDefaultBackground() {
-        // Crear una imagen de fondo por defecto (cuadrícula)
+        // Crear una imagen de fondo por defecto (cuadrícula sutil)
         BufferedImage img = new BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB);
         Graphics2D g2d = img.createGraphics();
 
@@ -367,15 +485,16 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
         // Diálogo para ingresar datos de la nueva mesa
         JTextField numeroField = new JTextField();
         JSpinner capacidadSpinner = new JSpinner(new SpinnerNumberModel(4, 1, 20, 1));
-        JComboBox<String> formaCombo = new JComboBox<>(new String[]{"CIRCULAR", "RECTANGULAR", "CUADRADA"});
+
+        // Obtener el siguiente número de mesa disponible
+        int siguienteNumero = obtenerSiguienteNumeroMesa();
+        numeroField.setText(String.valueOf(siguienteNumero));
 
         JPanel panel = new JPanel(new GridLayout(0, 2, 5, 5));
         panel.add(new JLabel("Número:"));
         panel.add(numeroField);
         panel.add(new JLabel("Capacidad:"));
         panel.add(capacidadSpinner);
-        panel.add(new JLabel("Forma:"));
-        panel.add(formaCombo);
 
         int result = JOptionPane.showConfirmDialog(this, panel,
                 "Nueva Mesa", JOptionPane.OK_CANCEL_OPTION);
@@ -385,22 +504,32 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
                 // Crear nueva mesa
                 String numero = numeroField.getText();
                 int capacidad = (Integer) capacidadSpinner.getValue();
-                String forma = (String) formaCombo.getSelectedItem();
 
-                // Encontrar una posición disponible
-                Point posicion = encontrarPosicionDisponible();
+                // Calcular la posición para la nueva mesa
+                Point posicion = calcularPosicionParaNuevaMesa();
 
                 Mesa nuevaMesa = new Mesa(0, numero, Mesa.EstadoMesa.DISPONIBLE,
-                        posicion, capacidad, 60, 60, forma);
+                        posicion, capacidad, TAMANO_MESA_DEFAULT, TAMANO_MESA_DEFAULT, "RECTANGULAR");
 
                 // Guardar en la base de datos
                 int id = mesasDAO.guardar(nuevaMesa);
                 nuevaMesa.setId(id);
 
-                // Agregar a la lista y panel
+                // Agregar a la lista
                 mesas.add(nuevaMesa);
-                JPanel mesaPanel = crearPanelMesa(nuevaMesa);
-                panelMesas.add(mesaPanel);
+
+                // Recalcular todas las posiciones
+                calcularPosicionesCuadricula();
+
+                // Actualizar el panel con todas las mesas
+                panelMesas.removeAll();
+                for (Mesa mesa : mesas) {
+                    JPanel mesaPanel = crearPanelMesa(mesa);
+                    panelMesas.add(mesaPanel);
+                }
+
+                // Ajustar el tamaño del panel según las filas necesarias
+                ajustarTamanoPanelMesas();
 
                 panelMesas.revalidate();
                 panelMesas.repaint();
@@ -412,32 +541,32 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
         }
     }
 
-    private Point encontrarPosicionDisponible() {
-        // Recorrer el panel en busca de un espacio disponible
-        boolean[][] ocupado = new boolean[panelMesas.getWidth() / 50][panelMesas.getHeight() / 50];
-
-        // Marcar las posiciones ocupadas
+    private int obtenerSiguienteNumeroMesa() {
+        int mayor = 0;
         for (Mesa mesa : mesas) {
-            int gridX = mesa.getPosicion().x / 50;
-            int gridY = mesa.getPosicion().y / 50;
-
-            if (gridX < ocupado.length && gridY < ocupado[0].length) {
-                ocupado[gridX][gridY] = true;
-            }
-        }
-
-        // Buscar la primera celda disponible
-        for (int y = 1; y < ocupado[0].length - 1; y++) {
-            for (int x = 1; x < ocupado.length - 1; x++) {
-                if (!ocupado[x][y]) {
-                    return new Point(x * 50, y * 50);
+            try {
+                int numeroMesa = Integer.parseInt(mesa.getNumero());
+                if (numeroMesa > mayor) {
+                    mayor = numeroMesa;
                 }
+            } catch (NumberFormatException e) {
+                // Ignorar si no es un número
             }
         }
+        return mayor + 1;
+    }
 
-        // Si no hay disponibles, usar una posición aleatoria
-        int x = (int) (Math.random() * (panelMesas.getWidth() - 100) + 50);
-        int y = (int) (Math.random() * (panelMesas.getHeight() - 100) + 50);
+    private Point calcularPosicionParaNuevaMesa() {
+        int totalMesas = mesas.size();
+
+        // Calcular fila y columna para la próxima mesa
+        int fila = totalMesas / COLUMNAS_POR_FILA;
+        int columna = totalMesas % COLUMNAS_POR_FILA;
+
+        // Calcular posición X,Y
+        int x = ESPACIO_ENTRE_MESAS + columna * (TAMANO_MESA_DEFAULT + ESPACIO_ENTRE_MESAS);
+        int y = ESPACIO_ENTRE_MESAS + fila * (TAMANO_MESA_DEFAULT + ESPACIO_ENTRE_MESAS);
+
         return new Point(x, y);
     }
 
@@ -458,19 +587,22 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
                 // Eliminar de la base de datos
                 mesasDAO.eliminar(mesaSeleccionada.getId());
 
-                // Eliminar de la interfaz gráfica
-                for (Component comp : panelMesas.getComponents()) {
-                    if (comp instanceof JPanel
-                            && comp.getBounds().x == mesaSeleccionada.getPosicion().x
-                            && comp.getBounds().y == mesaSeleccionada.getPosicion().y) {
-                        panelMesas.remove(comp);
-                        break;
-                    }
-                }
-
                 // Eliminar de la lista en memoria
                 mesas.remove(mesaSeleccionada);
                 mesaSeleccionada = null;
+
+                // Recalcular posiciones
+                calcularPosicionesCuadricula();
+
+                // Actualizar la vista
+                panelMesas.removeAll();
+                for (Mesa mesa : mesas) {
+                    JPanel mesaPanel = crearPanelMesa(mesa);
+                    panelMesas.add(mesaPanel);
+                }
+
+                // Ajustar el tamaño del panel
+                ajustarTamanoPanelMesas();
 
                 panelMesas.revalidate();
                 panelMesas.repaint();
@@ -485,14 +617,42 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
     private void toggleModoEdicion() {
         modoEdicion = !modoEdicion;
 
-        // Cambiar el cursor según el modo
+        // Cambiar el cursor y el color del botón según el modo
         if (modoEdicion) {
             panelMesas.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+            // Cambiar el color del botón a un rojo intenso para indicar que está activo
+            btnEditarMesas.setBackground(new Color(204, 0, 0));
+            btnEditarMesas.setText("Finalizar Edición");
             JOptionPane.showMessageDialog(this,
-                    "Modo edición activado. Puede arrastrar las mesas o hacer clic derecho para editar sus propiedades.",
+                    "Modo edición activado. Puede arrastrar las mesas o hacer clic en ellas para editar sus propiedades.",
                     "Modo Edición", JOptionPane.INFORMATION_MESSAGE);
         } else {
             panelMesas.setCursor(Cursor.getDefaultCursor());
+            // Restaurar el color original del botón
+            btnEditarMesas.setBackground(colorOriginalBoton);
+            btnEditarMesas.setText("Editar Mesas");
+
+            // Al salir del modo edición, preguntar si se quiere reorganizar
+            if (JOptionPane.showConfirmDialog(this,
+                    "¿Desea reorganizar las mesas en una cuadrícula ordenada?",
+                    "Reorganizar mesas",
+                    JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+
+                calcularPosicionesCuadricula();
+
+                // Actualizar la vista
+                panelMesas.removeAll();
+                for (Mesa mesa : mesas) {
+                    JPanel mesaPanel = crearPanelMesa(mesa);
+                    panelMesas.add(mesaPanel);
+                }
+
+                // Ajustar el tamaño del panel
+                ajustarTamanoPanelMesas();
+
+                panelMesas.revalidate();
+                panelMesas.repaint();
+            }
         }
     }
 
@@ -515,9 +675,10 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
 
     private JPopupMenu crearMenuContextual(Mesa mesa, JPanel mesaPanel) {
         JPopupMenu popup = new JPopupMenu();
+        popup.setBackground(new Color(60, 63, 65)); // Fondo oscuro
 
         // Opción para cambiar el número
-        JMenuItem itemNumero = new JMenuItem("Cambiar Número");
+        JMenuItem itemNumero = crearItemMenu("Cambiar Número");
         itemNumero.addActionListener(e -> {
             String nuevoNumero = JOptionPane.showInputDialog(this,
                     "Ingrese el nuevo número:", mesa.getNumero());
@@ -529,8 +690,10 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
 
         // Opción para cambiar el estado
         JMenu submenuEstado = new JMenu("Cambiar Estado");
+        submenuEstado.setForeground(Color.WHITE);
         for (Mesa.EstadoMesa estado : Mesa.EstadoMesa.values()) {
-            JMenuItem itemEstado = new JMenuItem(estado.getDescripcion());
+            JMenuItem itemEstado = crearItemMenu(estado.getDescripcion());
+            itemEstado.setIcon(createColorIcon(estado.getColor(), 12, 12));
             itemEstado.addActionListener(e -> {
                 mesa.setEstado(estado);
                 mesaPanel.repaint();
@@ -542,7 +705,7 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
         }
 
         // Opción para cambiar la capacidad
-        JMenuItem itemCapacidad = new JMenuItem("Cambiar Capacidad");
+        JMenuItem itemCapacidad = crearItemMenu("Cambiar Capacidad");
         itemCapacidad.addActionListener(e -> {
             SpinnerNumberModel model = new SpinnerNumberModel(
                     mesa.getCapacidad(), 1, 20, 1);
@@ -556,54 +719,36 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
                 mesaPanel.setToolTipText("Mesa " + mesa.getNumero() + " - "
                         + mesa.getEstado().getDescripcion()
                         + " - Capacidad: " + mesa.getCapacidad());
-            }
-        });
-
-        // Opción para cambiar el tamaño
-        JMenuItem itemTamano = new JMenuItem("Cambiar Tamaño");
-        itemTamano.addActionListener(e -> {
-            JSpinner spinnerAncho = new JSpinner(new SpinnerNumberModel(
-                    mesa.getAncho(), 40, 150, 5));
-            JSpinner spinnerAlto = new JSpinner(new SpinnerNumberModel(
-                    mesa.getAlto(), 40, 150, 5));
-
-            JPanel panel = new JPanel(new GridLayout(0, 2, 5, 5));
-            panel.add(new JLabel("Ancho:"));
-            panel.add(spinnerAncho);
-            panel.add(new JLabel("Alto:"));
-            panel.add(spinnerAlto);
-
-            int option = JOptionPane.showConfirmDialog(this, panel,
-                    "Tamaño de la mesa", JOptionPane.OK_CANCEL_OPTION);
-
-            if (option == JOptionPane.OK_OPTION) {
-                mesa.setAncho((Integer) spinnerAncho.getValue());
-                mesa.setAlto((Integer) spinnerAlto.getValue());
-                mesaPanel.setSize(mesa.getAncho(), mesa.getAlto());
                 mesaPanel.repaint();
             }
         });
-
-        // Opción para cambiar la forma
-        JMenu submenuForma = new JMenu("Cambiar Forma");
-        String[] formas = {"CIRCULAR", "RECTANGULAR", "CUADRADA"};
-        for (String forma : formas) {
-            JMenuItem itemForma = new JMenuItem(forma);
-            itemForma.addActionListener(e -> {
-                mesa.setForma(forma);
-                mesaPanel.repaint();
-            });
-            submenuForma.add(itemForma);
-        }
 
         // Agregar items al popup
         popup.add(itemNumero);
         popup.add(submenuEstado);
         popup.add(itemCapacidad);
-        popup.add(itemTamano);
-        popup.add(submenuForma);
 
         return popup;
+    }
+
+    // Método para crear ítem de menú con estilo unificado
+    private JMenuItem crearItemMenu(String texto) {
+        JMenuItem item = new JMenuItem(texto);
+        item.setForeground(Color.WHITE);
+        item.setBackground(new Color(60, 63, 65)); // Fondo oscuro
+        return item;
+    }
+
+    // Método para crear íconos de color
+    private ImageIcon createColorIcon(Color color, int width, int height) {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = image.createGraphics();
+        g2d.setColor(color);
+        g2d.fillRect(0, 0, width, height);
+        g2d.setColor(Color.BLACK);
+        g2d.drawRect(0, 0, width - 1, height - 1);
+        g2d.dispose();
+        return new ImageIcon(image);
     }
 
     private void abrirVentanaVentas(Mesa mesa) {
@@ -637,90 +782,6 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
             }
         }
     }
-
-    @SuppressWarnings("unchecked")
-    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
-    private void initComponents() {
-
-        jScrollPane1 = new javax.swing.JScrollPane();
-        jPanel1 = new javax.swing.JPanel();
-        jPanel2 = new javax.swing.JPanel();
-        btnNuevaMesa = new javax.swing.JButton();
-        btnEliminarMesa = new javax.swing.JButton();
-        btnEditarMesas = new javax.swing.JButton();
-        btnGuardarCambios = new javax.swing.JButton();
-        btnCambiarFondo = new javax.swing.JButton();
-
-        setClosable(true);
-        setIconifiable(true);
-        setMaximizable(true);
-        setResizable(true);
-        setTitle("Selección de Mesa");
-
-        jPanel1.setLayout(null);
-
-        btnNuevaMesa.setText("Nueva Mesa");
-
-        btnEliminarMesa.setText("Eliminar Mesa");
-
-        btnEditarMesas.setText("Editar Mesas");
-
-        btnGuardarCambios.setText("Guardar Cambios");
-
-        btnCambiarFondo.setText("Cambiar Fondo");
-
-        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
-        jPanel2.setLayout(jPanel2Layout);
-        jPanel2Layout.setHorizontalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addContainerGap()
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(btnNuevaMesa, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(btnEliminarMesa, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(btnEditarMesas, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addComponent(btnGuardarCambios, javax.swing.GroupLayout.DEFAULT_SIZE, 134, Short.MAX_VALUE)
-                    .addComponent(btnCambiarFondo, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-        );
-        jPanel2Layout.setVerticalGroup(
-            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel2Layout.createSequentialGroup()
-                .addComponent(btnNuevaMesa, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(btnEliminarMesa, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(btnEditarMesas, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(btnGuardarCambios, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(btnCambiarFondo, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(16, Short.MAX_VALUE))
-        );
-
-        jPanel1.add(jPanel2);
-        jPanel2.setBounds(610, 0, 140, 250);
-
-        jScrollPane1.setViewportView(jPanel1);
-
-        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-        getContentPane().setLayout(layout);
-        layout.setHorizontalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPane1)
-                .addContainerGap())
-        );
-        layout.setVerticalGroup(
-            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(layout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jScrollPane1)
-                .addContainerGap())
-        );
-
-        pack();
-    }// </editor-fold>//GEN-END:initComponents
 
     // Implementación de los métodos de la interfaz myInterface
     @Override
@@ -845,9 +906,87 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
         }
     }
 
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        jScrollPane1 = new javax.swing.JScrollPane();
+        jPanel1 = new javax.swing.JPanel();
+        jPanel2 = new javax.swing.JPanel();
+        btnNuevaMesa = new javax.swing.JButton();
+        btnEliminarMesa = new javax.swing.JButton();
+        btnGuardarCambios = new javax.swing.JButton();
+        btnCambiarFondo = new javax.swing.JButton();
+
+        setClosable(true);
+        setIconifiable(true);
+        setMaximizable(true);
+        setResizable(true);
+        setTitle("Selección de Mesa");
+
+        jPanel1.setLayout(null);
+
+        btnNuevaMesa.setText("Nueva Mesa");
+
+        btnEliminarMesa.setText("Eliminar Mesa");
+
+        btnGuardarCambios.setText("Guardar Cambios");
+
+        btnCambiarFondo.setText("Cambiar Fondo");
+
+        javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
+        jPanel2.setLayout(jPanel2Layout);
+        jPanel2Layout.setHorizontalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(btnNuevaMesa, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(btnEliminarMesa, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(btnGuardarCambios, javax.swing.GroupLayout.DEFAULT_SIZE, 134, Short.MAX_VALUE)
+                    .addComponent(btnCambiarFondo, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+        );
+        jPanel2Layout.setVerticalGroup(
+            jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(jPanel2Layout.createSequentialGroup()
+                .addComponent(btnNuevaMesa, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(btnEliminarMesa, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(52, 52, 52)
+                .addComponent(btnGuardarCambios, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(btnCambiarFondo, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(16, Short.MAX_VALUE))
+        );
+
+        jPanel1.add(jPanel2);
+        jPanel2.setBounds(610, 0, 140, 250);
+
+        jScrollPane1.setViewportView(jPanel1);
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane1)
+                .addContainerGap())
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane1)
+                .addContainerGap())
+        );
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnCambiarFondo;
-    private javax.swing.JButton btnEditarMesas;
     private javax.swing.JButton btnEliminarMesa;
     private javax.swing.JButton btnGuardarCambios;
     private javax.swing.JButton btnNuevaMesa;
