@@ -1,0 +1,1119 @@
+package vista;
+
+import interfaces.myInterface;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Font;
+import java.math.BigDecimal;
+import java.sql.SQLException;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JFormattedTextField;
+import javax.swing.JOptionPane;
+import javax.swing.SwingConstants;
+import javax.swing.UIManager;
+import javax.swing.border.TitledBorder;
+import javax.swing.text.NumberFormatter;
+import modelo.CajaDAO;
+import modelo.mCaja;
+import org.kordamp.ikonli.Ikon;
+
+public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements myInterface{
+    private CajaDAO cajaDAO;
+    private mCaja cajaActual;
+    private boolean cajaAbierta = false;
+    private boolean modoEdicion = false;
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+    
+    // Variables para las diferentes denominaciones de moneda
+    private final int[] BILLETES = {100000, 50000, 20000, 10000, 5000, 2000};
+    private final int[] MONEDAS = {1000, 500, 100, 50, 10};
+    private JFormattedTextField[] txtBilletes;
+    private JFormattedTextField[] txtMonedas;
+
+    /**
+     * Constructor de la ventana de apertura y cierre de caja
+     */
+    public vAperturaCierreCaja() {
+        initComponents();
+        try {
+            cajaDAO = new CajaDAO();
+            configurarComponentes();
+            verificarEstadoCaja();
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, 
+                    "Error al inicializar: " + ex.getMessage(), 
+                    "Error", 
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    /**
+     * Configura los componentes visuales de la ventana
+     */
+    private void configurarComponentes() {
+        // Configurar formateadores para campos numéricos
+        configurarFormateadorMoneda((JFormattedTextField) txtMontoApertura);
+        configurarFormateadorMoneda((JFormattedTextField) txtMontoCierre);
+        configurarFormateadorMoneda((JFormattedTextField) txtMontoVentas);
+        configurarFormateadorMoneda((JFormattedTextField) txtMontoGastos);
+        configurarFormateadorMoneda((JFormattedTextField) txtMontoTotal);
+        
+        // Configurar campos de billetes y monedas
+        txtBilletes = new JFormattedTextField[BILLETES.length];
+        txtMonedas = new JFormattedTextField[MONEDAS.length];
+        
+        for (int i = 0; i < BILLETES.length; i++) {
+            JFormattedTextField txt = new JFormattedTextField();
+            configurarFormateadorEntero(txt);
+            txt.setHorizontalAlignment(SwingConstants.RIGHT);
+            txt.setValue(0);
+            txt.setColumns(5);
+            panelDetalles.add(new javax.swing.JLabel("₲" + formatearValor(BILLETES[i]) + ":"));
+            panelDetalles.add(txt);
+            txtBilletes[i] = txt;
+            
+            // Agregar listener para actualizar el total
+            txt.addPropertyChangeListener("value", evt -> actualizarTotalCalculo());
+        }
+        
+        for (int i = 0; i < MONEDAS.length; i++) {
+            JFormattedTextField txt = new JFormattedTextField();
+            configurarFormateadorEntero(txt);
+            txt.setHorizontalAlignment(SwingConstants.RIGHT);
+            txt.setValue(0);
+            txt.setColumns(5);
+            panelMonedas.add(new javax.swing.JLabel("₲" + formatearValor(MONEDAS[i]) + ":"));
+            panelMonedas.add(txt);
+            txtMonedas[i] = txt;
+            
+            // Agregar listener para actualizar el total
+            txt.addPropertyChangeListener("value", evt -> actualizarTotalCalculo());
+        }
+        
+        // Configurar bordes con título       
+        panelDetalles.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createEtchedBorder(), 
+                "Detalles y Cálculo",
+                TitledBorder.DEFAULT_JUSTIFICATION,
+                TitledBorder.DEFAULT_POSITION,
+                new Font("Dialog", Font.BOLD, 12),
+                Color.WHITE));
+        
+        // Deshabilitar campos inicialmente
+        habilitarCampos(false);
+    }
+    
+    /**
+     * Configura un botón con icono y estilo consistente
+     */
+    private void configurarBoton(JButton boton, String texto, org.kordamp.ikonli.IkonProvider icono) {
+        boton.setText(texto);
+        
+        org.kordamp.ikonli.swing.FontIcon icon = new org.kordamp.ikonli.swing.FontIcon();
+        icon.setIkon((Ikon) icono);
+        icon.setIconSize(16);
+        icon.setIconColor(java.awt.Color.WHITE);
+        boton.setIcon(icon);
+        
+        boton.setFont(new Font("Dialog", Font.BOLD, 12));
+        boton.setBackground(new Color(59, 89, 152)); // Azul tipo Facebook
+        boton.setForeground(Color.WHITE);
+        boton.setFocusPainted(false);
+        boton.setBorderPainted(true);
+        boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+    }
+
+    /**
+     * Configura un formateador de moneda para un JFormattedTextField
+     */
+    private void configurarFormateadorMoneda(JFormattedTextField textField) {
+        NumberFormat format = NumberFormat.getInstance();
+        format.setGroupingUsed(true);
+        format.setMinimumFractionDigits(0);
+        format.setMaximumFractionDigits(0);
+        
+        NumberFormatter formatter = new NumberFormatter(format) {
+            @Override
+            public Object stringToValue(String text) throws ParseException {
+                if (text.isEmpty()) {
+                    return 0;
+                }
+                return super.stringToValue(text);
+            }
+        };
+        
+        formatter.setValueClass(Long.class);
+        formatter.setAllowsInvalid(false);
+        formatter.setMinimum(0L);
+        
+        textField.setFormatterFactory(new javax.swing.text.DefaultFormatterFactory(formatter));
+        textField.setHorizontalAlignment(SwingConstants.RIGHT);
+        textField.setValue(0L);
+    }
+    
+    /**
+     * Configura un formateador de enteros para un JFormattedTextField
+     */
+    private void configurarFormateadorEntero(JFormattedTextField textField) {
+        NumberFormat format = NumberFormat.getInstance();
+        format.setGroupingUsed(true);
+        format.setParseIntegerOnly(true);
+        
+        NumberFormatter formatter = new NumberFormatter(format) {
+            @Override
+            public Object stringToValue(String text) throws ParseException {
+                if (text.isEmpty()) {
+                    return 0;
+                }
+                return super.stringToValue(text);
+            }
+        };
+        
+        formatter.setValueClass(Integer.class);
+        formatter.setAllowsInvalid(false);
+        formatter.setMinimum(0);
+        
+        textField.setFormatterFactory(new javax.swing.text.DefaultFormatterFactory(formatter));
+        textField.setValue(0);
+    }
+    
+    /**
+     * Verifica el estado actual de la caja
+     */
+    private void verificarEstadoCaja() throws SQLException {
+        cajaActual = cajaDAO.obtenerCajaActual();
+        
+        if (cajaActual != null && cajaActual.isEstadoAbierto()) {
+            // La caja está abierta
+            cajaAbierta = true;
+            lblEstadoCaja.setText("CAJA ABIERTA");
+            lblEstadoCaja.setForeground(new Color(0, 153, 0)); // Verde
+            
+            txtFechaApertura.setText(dateFormat.format(cajaActual.getFechaApertura()));
+            txtMontoApertura.setValue(cajaActual.getMontoApertura());
+            txtUsuarioApertura.setText(cajaActual.getUsuarioApertura());
+            
+            // Habilitar campos de cierre
+            panelDatosCierre.setEnabled(true);
+            txtFechaCierre.setText(dateFormat.format(new Date()));
+            txtMontoCierre.setEnabled(true);
+            txtMontoVentas.setEnabled(true);
+            txtMontoGastos.setEnabled(true);
+            
+            // Cargar montos actuales de ventas y gastos
+            try {
+                long totalVentas = cajaDAO.obtenerTotalVentasCajaActual();
+                long totalGastos = cajaDAO.obtenerTotalGastosCajaActual();
+                
+                txtMontoVentas.setValue(totalVentas);
+                txtMontoGastos.setValue(totalGastos);
+                
+                // Calcular total esperado
+                long totalEsperado = cajaActual.getMontoApertura() + totalVentas - totalGastos;
+                txtMontoTotal.setValue(totalEsperado);
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(this, 
+                        "Error al obtener datos de ventas y gastos: " + ex.getMessage(), 
+                        "Error", 
+                        JOptionPane.ERROR_MESSAGE);
+            }
+            
+            // Configurar botones
+            btnAbrirCaja.setEnabled(false);
+            btnCerrarCaja.setEnabled(true);
+            btnCalcular.setEnabled(true);
+            panelDetalles.setEnabled(true);
+            habilitarPanelCalculo(true);
+        } else {
+            // La caja está cerrada
+            cajaAbierta = false;
+            lblEstadoCaja.setText("CAJA CERRADA");
+            lblEstadoCaja.setForeground(new Color(204, 0, 0)); // Rojo
+            
+            // Limpiar y deshabilitar campos de apertura
+            txtFechaApertura.setText(dateFormat.format(new Date()));
+            txtMontoApertura.setValue(0L);
+            txtMontoApertura.setEnabled(true);
+            txtUsuarioApertura.setText(System.getProperty("user.name")); // O el usuario actual del sistema
+            
+            // Deshabilitar campos de cierre
+            panelDatosCierre.setEnabled(false);
+            txtFechaCierre.setText("");
+            txtMontoCierre.setEnabled(false);
+            txtMontoVentas.setEnabled(false);
+            txtMontoGastos.setEnabled(false);
+            txtMontoTotal.setValue(0L);
+            
+            // Configurar botones
+            btnAbrirCaja.setEnabled(true);
+            btnCerrarCaja.setEnabled(false);
+            btnCalcular.setEnabled(false);
+            panelDetalles.setEnabled(false);
+            habilitarPanelCalculo(false);
+        }
+    }
+    
+    /**
+     * Habilita o deshabilita los campos de entrada
+     */
+    private void habilitarCampos(boolean habilitar) {
+        txtMontoApertura.setEnabled(habilitar && !cajaAbierta);
+        txtMontoCierre.setEnabled(habilitar && cajaAbierta);
+        txtMontoVentas.setEnabled(false); // Siempre deshabilitado (calculado)
+        txtMontoGastos.setEnabled(false); // Siempre deshabilitado (calculado)
+        txtMontoTotal.setEnabled(false); // Siempre deshabilitado (calculado)
+    }
+    
+    /**
+     * Habilita o deshabilita el panel de cálculo de billetes y monedas
+     */
+    private void habilitarPanelCalculo(boolean habilitar) {
+        for (JFormattedTextField txt : txtBilletes) {
+            txt.setEnabled(habilitar);
+        }
+        
+        for (JFormattedTextField txt : txtMonedas) {
+            txt.setEnabled(habilitar);
+        }
+    }
+    
+    /**
+     * Actualiza el total calculado a partir de billetes y monedas
+     */
+    private void actualizarTotalCalculo() {
+        long total = 0;
+        
+        // Sumar billetes
+        for (int i = 0; i < BILLETES.length; i++) {
+            int cantidad = ((Number)txtBilletes[i].getValue()).intValue();
+            total += (long)BILLETES[i] * cantidad;
+        }
+        
+        // Sumar monedas
+        for (int i = 0; i < MONEDAS.length; i++) {
+            int cantidad = ((Number)txtMonedas[i].getValue()).intValue();
+            total += (long)MONEDAS[i] * cantidad;
+        }
+        
+        // Actualizar monto de cierre
+        txtMontoCierre.setValue(total);
+        
+        // Actualizar diferencia
+        if (cajaAbierta) {
+            long esperado = ((Number)txtMontoTotal.getValue()).longValue();
+            long diferencia = total - esperado;
+            
+            // Mostrar diferencia
+            if (diferencia > 0) {
+                lblDiferencia.setText("Sobrante: ₲" + formatearValor(diferencia));
+                lblDiferencia.setForeground(new Color(0, 153, 0)); // Verde
+            } else if (diferencia < 0) {
+                lblDiferencia.setText("Faltante: ₲" + formatearValor(Math.abs(diferencia)));
+                lblDiferencia.setForeground(new Color(204, 0, 0)); // Rojo
+            } else {
+                lblDiferencia.setText("Sin diferencia");
+                lblDiferencia.setForeground(Color.BLACK);
+            }
+        }
+    }
+    
+    /**
+     * Formatea un valor numérico para mostrar
+     */
+    private String formatearValor(long valor) {
+        return DecimalFormat.getNumberInstance().format(valor);
+    }
+    
+    /**
+     * Abre la caja con los datos ingresados
+     */
+    private void abrirCaja() {
+        if (cajaAbierta) {
+            JOptionPane.showMessageDialog(this,
+                    "La caja ya está abierta",
+                    "Información",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
+        // Validar monto de apertura
+        long montoApertura = ((Number)txtMontoApertura.getValue()).longValue();
+        if (montoApertura <= 0) {
+            JOptionPane.showMessageDialog(this,
+                    "El monto de apertura debe ser mayor a cero",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            txtMontoApertura.requestFocus();
+            return;
+        }
+        
+        // Confirmar apertura
+        int confirmacion = JOptionPane.showConfirmDialog(this,
+                "¿Está seguro de abrir la caja con un monto de ₲" + formatearValor(montoApertura) + "?",
+                "Confirmar Apertura",
+                JOptionPane.YES_NO_OPTION);
+        
+        if (confirmacion != JOptionPane.YES_OPTION) {
+            return;
+        }
+        
+        try {
+            // Crear objeto de caja
+            mCaja nuevaCaja = new mCaja();
+            nuevaCaja.setFechaApertura(new Date());
+            nuevaCaja.setMontoApertura(montoApertura);
+            nuevaCaja.setUsuarioApertura(txtUsuarioApertura.getText());
+            nuevaCaja.setEstadoAbierto(true);
+            
+            // Guardar en la base de datos
+            cajaDAO.abrirCaja(nuevaCaja);
+            
+            // Actualizar estado
+            verificarEstadoCaja();
+            
+            JOptionPane.showMessageDialog(this,
+                    "Caja abierta correctamente",
+                    "Éxito",
+                    JOptionPane.INFORMATION_MESSAGE);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al abrir la caja: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    /**
+     * Cierra la caja con los datos ingresados
+     */
+    private void cerrarCaja() {
+        if (!cajaAbierta) {
+            JOptionPane.showMessageDialog(this,
+                    "La caja ya está cerrada",
+                    "Información",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        
+        // Validar monto de cierre
+        long montoCierre = ((Number)txtMontoCierre.getValue()).longValue();
+        if (montoCierre <= 0) {
+            JOptionPane.showMessageDialog(this,
+                    "El monto de cierre debe ser mayor a cero",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            txtMontoCierre.requestFocus();
+            return;
+        }
+        
+        // Obtener montos
+        long montoApertura = ((Number)txtMontoApertura.getValue()).longValue();
+        long montoVentas = ((Number)txtMontoVentas.getValue()).longValue();
+        long montoGastos = ((Number)txtMontoGastos.getValue()).longValue();
+        long montoEsperado = montoApertura + montoVentas - montoGastos;
+        long diferencia = montoCierre - montoEsperado;
+        
+        String mensajeDiferencia = "";
+        if (diferencia > 0) {
+            mensajeDiferencia = "Hay un sobrante de ₲" + formatearValor(diferencia);
+        } else if (diferencia < 0) {
+            mensajeDiferencia = "Hay un faltante de ₲" + formatearValor(Math.abs(diferencia));
+        } else {
+            mensajeDiferencia = "No hay diferencia entre el monto esperado y el monto real";
+        }
+        
+        // Confirmar cierre
+        int confirmacion = JOptionPane.showConfirmDialog(this,
+                "¿Está seguro de cerrar la caja?\n\n" +
+                "Monto Apertura: ₲" + formatearValor(montoApertura) + "\n" +
+                "Ventas: ₲" + formatearValor(montoVentas) + "\n" +
+                "Gastos: ₲" + formatearValor(montoGastos) + "\n" +
+                "Monto Esperado: ₲" + formatearValor(montoEsperado) + "\n" +
+                "Monto Real: ₲" + formatearValor(montoCierre) + "\n\n" +
+                mensajeDiferencia,
+                "Confirmar Cierre",
+                JOptionPane.YES_NO_OPTION);
+        
+        if (confirmacion != JOptionPane.YES_OPTION) {
+            return;
+        }
+        
+        try {
+            // Actualizar datos de la caja
+            cajaActual.setFechaCierre(new Date());
+            cajaActual.setMontoCierre(montoCierre);
+            cajaActual.setMontoVentas(montoVentas);
+            cajaActual.setMontoGastos(montoGastos);
+            cajaActual.setDiferencia(diferencia);
+            cajaActual.setUsuarioCierre(System.getProperty("user.name")); // O el usuario actual del sistema
+            cajaActual.setEstadoAbierto(false);
+            
+            // Guardar en la base de datos
+            cajaDAO.cerrarCaja(cajaActual);
+            
+            // Actualizar estado
+            verificarEstadoCaja();
+            
+            JOptionPane.showMessageDialog(this,
+                    "Caja cerrada correctamente",
+                    "Éxito",
+                    JOptionPane.INFORMATION_MESSAGE);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al cerrar la caja: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    /**
+     * Calcula los billetes y monedas para un monto dado
+     */
+    private void calcularBilletesMonedas() {
+        // Obtener monto a distribuir (monto de cierre)
+        long monto = ((Number)txtMontoCierre.getValue()).longValue();
+        
+        // Reiniciar cantidades
+        for (JFormattedTextField txt : txtBilletes) {
+            txt.setValue(0);
+        }
+        
+        for (JFormattedTextField txt : txtMonedas) {
+            txt.setValue(0);
+        }
+        
+        // Distribuir billetes (de mayor a menor)
+        for (int i = 0; i < BILLETES.length; i++) {
+            int cantidad = (int) (monto / BILLETES[i]);
+            if (cantidad > 0) {
+                txtBilletes[i].setValue(cantidad);
+                monto %= BILLETES[i];
+            }
+        }
+        
+        // Distribuir monedas (de mayor a menor)
+        for (int i = 0; i < MONEDAS.length; i++) {
+            int cantidad = (int) (monto / MONEDAS[i]);
+            if (cantidad > 0) {
+                txtMonedas[i].setValue(cantidad);
+                monto %= MONEDAS[i];
+            }
+        }
+    }
+    
+    /**
+     * Imprime el reporte de apertura/cierre de caja
+     */
+    private void imprimirReporte() {
+        try {
+            if (cajaAbierta) {
+                cajaDAO.imprimirReporteApertura(cajaActual.getId());
+            } else {
+                // Imprimir último reporte de cierre
+                mCaja ultimaCajaCerrada = cajaDAO.obtenerUltimaCajaCerrada();
+                if (ultimaCajaCerrada != null) {
+                    cajaDAO.imprimirReporteCierre(ultimaCajaCerrada.getId());
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                            "No hay registros de caja cerrada para imprimir",
+                            "Información",
+                            JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al imprimir reporte: " + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    // Implementación de métodos de la interfaz myInterface
+    @Override
+    public void imGrabar() {
+        if (cajaAbierta) {
+            cerrarCaja();
+        } else {
+            abrirCaja();
+        }
+    }
+
+    @Override
+    public void imFiltrar() {
+        // No aplicable
+    }
+
+    @Override
+    public void imActualizar() {
+        try {
+            verificarEstadoCaja();
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, 
+                    "Error al actualizar estado: " + ex.getMessage(), 
+                    "Error", 
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    @Override
+    public void imBorrar() {
+        // No aplicable
+    }
+
+    @Override
+    public void imNuevo() {
+        // No aplicable
+    }
+
+    @Override
+    public void imBuscar() {
+        // No aplicable
+    }
+
+    @Override
+    public void imPrimero() {
+        // No aplicable
+    }
+
+    @Override
+    public void imSiguiente() {
+        // No aplicable
+    }
+
+    @Override
+    public void imAnterior() {
+        // No aplicable
+    }
+
+    @Override
+    public void imUltimo() {
+        // No aplicable
+    }
+
+    @Override
+    public void imImprimir() {
+        imprimirReporte();
+    }
+
+    @Override
+    public void imInsDet() {
+        // No aplicable
+    }
+
+    @Override
+    public void imDelDet() {
+        // No aplicable
+    }
+
+    @Override
+    public void imCerrar() {
+        this.dispose();
+    }
+
+    @Override
+    public boolean imAbierto() {
+        return this.isVisible();
+    }
+
+    @Override
+    public void imAbrir() {
+        this.setVisible(true);
+    }
+
+    @Override
+    public String getTablaActual() {
+        return "cajas";
+    }
+
+    @Override
+    public String[] getCamposBusqueda() {
+        return new String[]{"id", "fecha_apertura"};
+    }
+
+    @Override
+    public void setRegistroSeleccionado(int id) {
+        // No aplicable
+    }
+
+    @SuppressWarnings("unchecked")
+    // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
+    private void initComponents() {
+
+        jPanel1 = new javax.swing.JPanel();
+        lblEstadoCaja = new javax.swing.JLabel();
+        panelDatosApertura = new javax.swing.JPanel();
+        jLabel1 = new javax.swing.JLabel();
+        jLabel2 = new javax.swing.JLabel();
+        jLabel3 = new javax.swing.JLabel();
+        txtFechaApertura = new javax.swing.JTextField();
+        txtUsuarioApertura = new javax.swing.JTextField();
+        btnAbrirCaja = new javax.swing.JButton();
+        txtMontoApertura = new javax.swing.JFormattedTextField();
+        panelDatosCierre = new javax.swing.JPanel();
+        jLabel4 = new javax.swing.JLabel();
+        jLabel5 = new javax.swing.JLabel();
+        jLabel6 = new javax.swing.JLabel();
+        jLabel7 = new javax.swing.JLabel();
+        jLabel8 = new javax.swing.JLabel();
+        txtFechaCierre = new javax.swing.JTextField();
+        btnCerrarCaja = new javax.swing.JButton();
+        lblDiferencia = new javax.swing.JLabel();
+        txtMontoCierre = new javax.swing.JFormattedTextField();
+        txtMontoVentas = new javax.swing.JFormattedTextField();
+        txtMontoGastos = new javax.swing.JFormattedTextField();
+        txtMontoTotal = new javax.swing.JFormattedTextField();
+        panelDetalles = new javax.swing.JPanel();
+        jLabel9 = new javax.swing.JLabel();
+        btnCalcular = new javax.swing.JButton();
+        panelCalculo = new javax.swing.JPanel();
+        panelBilletes = new javax.swing.JPanel();
+        jLabel10 = new javax.swing.JLabel();
+        jLabel11 = new javax.swing.JLabel();
+        jLabel12 = new javax.swing.JLabel();
+        jLabel13 = new javax.swing.JLabel();
+        jLabel14 = new javax.swing.JLabel();
+        jLabel15 = new javax.swing.JLabel();
+        txt100000 = new javax.swing.JFormattedTextField();
+        txt50000 = new javax.swing.JFormattedTextField();
+        txt20000 = new javax.swing.JFormattedTextField();
+        txt10000 = new javax.swing.JFormattedTextField();
+        txt5000 = new javax.swing.JFormattedTextField();
+        txt2000 = new javax.swing.JFormattedTextField();
+        panelMonedas = new javax.swing.JPanel();
+        jLabel16 = new javax.swing.JLabel();
+        jLabel17 = new javax.swing.JLabel();
+        jLabel18 = new javax.swing.JLabel();
+        txt500 = new javax.swing.JFormattedTextField();
+        txt100 = new javax.swing.JFormattedTextField();
+        txt50 = new javax.swing.JFormattedTextField();
+        panelBotones = new javax.swing.JPanel();
+        btnImprimir = new javax.swing.JButton();
+        btnGuardar = new javax.swing.JButton();
+        btnSalir = new javax.swing.JButton();
+
+        jPanel1.setLayout(new java.awt.BorderLayout());
+
+        lblEstadoCaja.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+
+        jLabel1.setText("Fecha Apertura:");
+
+        jLabel2.setText("Monto Apertura:");
+
+        jLabel3.setText("Usuario:");
+
+        btnAbrirCaja.setText("Abrir Caja");
+
+        javax.swing.GroupLayout panelDatosAperturaLayout = new javax.swing.GroupLayout(panelDatosApertura);
+        panelDatosApertura.setLayout(panelDatosAperturaLayout);
+        panelDatosAperturaLayout.setHorizontalGroup(
+            panelDatosAperturaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panelDatosAperturaLayout.createSequentialGroup()
+                .addContainerGap(125, Short.MAX_VALUE)
+                .addGroup(panelDatosAperturaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel2, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jLabel1, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jLabel3, javax.swing.GroupLayout.Alignment.TRAILING))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panelDatosAperturaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(btnAbrirCaja, javax.swing.GroupLayout.PREFERRED_SIZE, 85, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txtFechaApertura, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(panelDatosAperturaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                        .addComponent(txtMontoApertura, javax.swing.GroupLayout.Alignment.LEADING)
+                        .addComponent(txtUsuarioApertura, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 100, Short.MAX_VALUE)))
+                .addGap(55, 55, 55))
+        );
+        panelDatosAperturaLayout.setVerticalGroup(
+            panelDatosAperturaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panelDatosAperturaLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(panelDatosAperturaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel1)
+                    .addComponent(txtFechaApertura, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panelDatosAperturaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel2)
+                    .addComponent(txtMontoApertura, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addGap(12, 12, 12)
+                .addGroup(panelDatosAperturaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel3)
+                    .addComponent(txtUsuarioApertura, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 12, Short.MAX_VALUE)
+                .addComponent(btnAbrirCaja, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
+        );
+
+        jLabel4.setText("Fecha Cierre:");
+
+        jLabel5.setText("Monto Cierre:");
+
+        jLabel6.setText("Ventas del día:");
+
+        jLabel7.setText("Gastos del día:");
+
+        jLabel8.setText("Total Esperado:");
+
+        btnCerrarCaja.setText("Cerrar Caja");
+
+        javax.swing.GroupLayout panelDatosCierreLayout = new javax.swing.GroupLayout(panelDatosCierre);
+        panelDatosCierre.setLayout(panelDatosCierreLayout);
+        panelDatosCierreLayout.setHorizontalGroup(
+            panelDatosCierreLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panelDatosCierreLayout.createSequentialGroup()
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGroup(panelDatosCierreLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel5, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jLabel4, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jLabel6, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jLabel7, javax.swing.GroupLayout.Alignment.TRAILING)
+                    .addComponent(jLabel8, javax.swing.GroupLayout.Alignment.TRAILING))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panelDatosCierreLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(btnCerrarCaja, javax.swing.GroupLayout.PREFERRED_SIZE, 85, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(panelDatosCierreLayout.createSequentialGroup()
+                        .addGroup(panelDatosCierreLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                            .addComponent(txtMontoGastos, javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(txtMontoVentas, javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(txtMontoCierre, javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(txtFechaCierre, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 100, Short.MAX_VALUE)
+                            .addComponent(txtMontoTotal))
+                        .addGap(24, 24, 24)
+                        .addComponent(lblDiferencia, javax.swing.GroupLayout.PREFERRED_SIZE, 70, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addGap(18, 18, 18))
+        );
+        panelDatosCierreLayout.setVerticalGroup(
+            panelDatosCierreLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panelDatosCierreLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(panelDatosCierreLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel4)
+                    .addComponent(txtFechaCierre, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panelDatosCierreLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel5)
+                    .addComponent(txtMontoCierre, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panelDatosCierreLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel6)
+                    .addComponent(txtMontoVentas, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panelDatosCierreLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel7)
+                    .addComponent(txtMontoGastos, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panelDatosCierreLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(panelDatosCierreLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(jLabel8)
+                        .addComponent(lblDiferencia, javax.swing.GroupLayout.PREFERRED_SIZE, 24, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(txtMontoTotal, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(btnCerrarCaja, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(19, Short.MAX_VALUE))
+        );
+
+        jLabel9.setText("Calculo de Billetes y Monedas:");
+
+        btnCalcular.setText("Calcular");
+
+        panelBilletes.setToolTipText("");
+
+        jLabel10.setText("100.000:");
+
+        jLabel11.setText("50.000:");
+
+        jLabel12.setText("20.000:");
+
+        jLabel13.setText("10.000:");
+
+        jLabel14.setText("5.000:");
+
+        jLabel15.setText("2.000:");
+
+        javax.swing.GroupLayout panelBilletesLayout = new javax.swing.GroupLayout(panelBilletes);
+        panelBilletes.setLayout(panelBilletesLayout);
+        panelBilletesLayout.setHorizontalGroup(
+            panelBilletesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panelBilletesLayout.createSequentialGroup()
+                .addGroup(panelBilletesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addGroup(panelBilletesLayout.createSequentialGroup()
+                        .addComponent(jLabel10)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(txt100000, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(panelBilletesLayout.createSequentialGroup()
+                        .addComponent(jLabel11)
+                        .addGap(18, 18, 18)
+                        .addComponent(txt50000))
+                    .addGroup(panelBilletesLayout.createSequentialGroup()
+                        .addComponent(jLabel12)
+                        .addGap(18, 18, 18)
+                        .addComponent(txt20000))
+                    .addGroup(panelBilletesLayout.createSequentialGroup()
+                        .addComponent(jLabel13)
+                        .addGap(18, 18, 18)
+                        .addComponent(txt10000))
+                    .addGroup(panelBilletesLayout.createSequentialGroup()
+                        .addComponent(jLabel14)
+                        .addGap(25, 25, 25)
+                        .addComponent(txt5000))
+                    .addGroup(panelBilletesLayout.createSequentialGroup()
+                        .addComponent(jLabel15)
+                        .addGap(25, 25, 25)
+                        .addComponent(txt2000)))
+                .addGap(0, 226, Short.MAX_VALUE))
+        );
+        panelBilletesLayout.setVerticalGroup(
+            panelBilletesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panelBilletesLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(panelBilletesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel10)
+                    .addComponent(txt100000, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panelBilletesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel11)
+                    .addComponent(txt50000, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panelBilletesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel12)
+                    .addComponent(txt20000, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panelBilletesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel13)
+                    .addComponent(txt10000, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panelBilletesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel14)
+                    .addComponent(txt5000, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panelBilletesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel15)
+                    .addComponent(txt2000, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
+        jLabel16.setText("500:");
+
+        jLabel17.setText("100:");
+
+        jLabel18.setText("50:");
+
+        javax.swing.GroupLayout panelMonedasLayout = new javax.swing.GroupLayout(panelMonedas);
+        panelMonedas.setLayout(panelMonedasLayout);
+        panelMonedasLayout.setHorizontalGroup(
+            panelMonedasLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panelMonedasLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(panelMonedasLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                    .addGroup(panelMonedasLayout.createSequentialGroup()
+                        .addComponent(jLabel18)
+                        .addGap(18, 18, 18)
+                        .addComponent(txt50))
+                    .addGroup(panelMonedasLayout.createSequentialGroup()
+                        .addComponent(jLabel17)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(txt100))
+                    .addGroup(panelMonedasLayout.createSequentialGroup()
+                        .addComponent(jLabel16)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(txt500, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        panelMonedasLayout.setVerticalGroup(
+            panelMonedasLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panelMonedasLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(panelMonedasLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel16)
+                    .addComponent(txt500, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panelMonedasLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel17)
+                    .addComponent(txt100, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addGroup(panelMonedasLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel18)
+                    .addComponent(txt50, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
+        btnImprimir.setText("Imprimir");
+
+        btnGuardar.setText("Guardar");
+
+        btnSalir.setText("Salir");
+
+        javax.swing.GroupLayout panelBotonesLayout = new javax.swing.GroupLayout(panelBotones);
+        panelBotones.setLayout(panelBotonesLayout);
+        panelBotonesLayout.setHorizontalGroup(
+            panelBotonesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panelBotonesLayout.createSequentialGroup()
+                .addGap(70, 70, 70)
+                .addComponent(btnImprimir)
+                .addGap(26, 26, 26)
+                .addComponent(btnGuardar)
+                .addGap(29, 29, 29)
+                .addComponent(btnSalir)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        panelBotonesLayout.setVerticalGroup(
+            panelBotonesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panelBotonesLayout.createSequentialGroup()
+                .addGap(20, 20, 20)
+                .addGroup(panelBotonesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(btnImprimir)
+                    .addComponent(btnGuardar)
+                    .addComponent(btnSalir))
+                .addContainerGap(26, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout panelCalculoLayout = new javax.swing.GroupLayout(panelCalculo);
+        panelCalculo.setLayout(panelCalculoLayout);
+        panelCalculoLayout.setHorizontalGroup(
+            panelCalculoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panelCalculoLayout.createSequentialGroup()
+                .addGroup(panelCalculoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(panelBotones, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addComponent(panelMonedas, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(panelCalculoLayout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(panelBilletes, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(0, 0, Short.MAX_VALUE)))
+                .addContainerGap())
+        );
+        panelCalculoLayout.setVerticalGroup(
+            panelCalculoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panelCalculoLayout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(panelBilletes, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(panelMonedas, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(panelBotones, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+
+        javax.swing.GroupLayout panelDetallesLayout = new javax.swing.GroupLayout(panelDetalles);
+        panelDetalles.setLayout(panelDetallesLayout);
+        panelDetallesLayout.setHorizontalGroup(
+            panelDetallesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panelDetallesLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(panelDetallesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(panelCalculo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addGroup(panelDetallesLayout.createSequentialGroup()
+                        .addComponent(jLabel9)
+                        .addGap(34, 34, 34)
+                        .addComponent(btnCalcular, javax.swing.GroupLayout.PREFERRED_SIZE, 85, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+        );
+        panelDetallesLayout.setVerticalGroup(
+            panelDetallesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(panelDetallesLayout.createSequentialGroup()
+                .addContainerGap()
+                .addGroup(panelDetallesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                    .addComponent(jLabel9)
+                    .addComponent(btnCalcular, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(panelCalculo, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap())
+        );
+
+        javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+        getContentPane().setLayout(layout);
+        layout.setHorizontalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(layout.createSequentialGroup()
+                        .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(lblEstadoCaja, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(layout.createSequentialGroup()
+                        .addContainerGap()
+                        .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(panelDetalles, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addGroup(layout.createSequentialGroup()
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                    .addComponent(panelDatosApertura, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                    .addComponent(panelDatosCierre, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addGap(0, 0, Short.MAX_VALUE)))))
+                .addContainerGap())
+        );
+        layout.setVerticalGroup(
+            layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addGroup(layout.createSequentialGroup()
+                .addComponent(lblEstadoCaja, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(panelDatosApertura, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(panelDatosCierre, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(panelDetalles, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addContainerGap())
+        );
+
+        pack();
+    }// </editor-fold>//GEN-END:initComponents
+
+
+    // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnAbrirCaja;
+    private javax.swing.JButton btnCalcular;
+    private javax.swing.JButton btnCerrarCaja;
+    private javax.swing.JButton btnGuardar;
+    private javax.swing.JButton btnImprimir;
+    private javax.swing.JButton btnSalir;
+    private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel10;
+    private javax.swing.JLabel jLabel11;
+    private javax.swing.JLabel jLabel12;
+    private javax.swing.JLabel jLabel13;
+    private javax.swing.JLabel jLabel14;
+    private javax.swing.JLabel jLabel15;
+    private javax.swing.JLabel jLabel16;
+    private javax.swing.JLabel jLabel17;
+    private javax.swing.JLabel jLabel18;
+    private javax.swing.JLabel jLabel2;
+    private javax.swing.JLabel jLabel3;
+    private javax.swing.JLabel jLabel4;
+    private javax.swing.JLabel jLabel5;
+    private javax.swing.JLabel jLabel6;
+    private javax.swing.JLabel jLabel7;
+    private javax.swing.JLabel jLabel8;
+    private javax.swing.JLabel jLabel9;
+    private javax.swing.JPanel jPanel1;
+    private javax.swing.JLabel lblDiferencia;
+    private javax.swing.JLabel lblEstadoCaja;
+    private javax.swing.JPanel panelBilletes;
+    private javax.swing.JPanel panelBotones;
+    private javax.swing.JPanel panelCalculo;
+    private javax.swing.JPanel panelDatosApertura;
+    private javax.swing.JPanel panelDatosCierre;
+    private javax.swing.JPanel panelDetalles;
+    private javax.swing.JPanel panelMonedas;
+    private javax.swing.JFormattedTextField txt100;
+    private javax.swing.JFormattedTextField txt10000;
+    private javax.swing.JFormattedTextField txt100000;
+    private javax.swing.JFormattedTextField txt2000;
+    private javax.swing.JFormattedTextField txt20000;
+    private javax.swing.JFormattedTextField txt50;
+    private javax.swing.JFormattedTextField txt500;
+    private javax.swing.JFormattedTextField txt5000;
+    private javax.swing.JFormattedTextField txt50000;
+    private javax.swing.JTextField txtFechaApertura;
+    private javax.swing.JTextField txtFechaCierre;
+    private javax.swing.JFormattedTextField txtMontoApertura;
+    private javax.swing.JFormattedTextField txtMontoCierre;
+    private javax.swing.JFormattedTextField txtMontoGastos;
+    private javax.swing.JFormattedTextField txtMontoTotal;
+    private javax.swing.JFormattedTextField txtMontoVentas;
+    private javax.swing.JTextField txtUsuarioApertura;
+    // End of variables declaration//GEN-END:variables
+}

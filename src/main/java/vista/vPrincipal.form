@@ -273,10 +273,13 @@
             <Property name="text" type="java.lang.String" value="Tesoreria"/>
           </Properties>
           <SubComponents>
-            <MenuItem class="javax.swing.JMenuItem" name="mTipoMov">
+            <MenuItem class="javax.swing.JMenuItem" name="mAperturaCierreCaja">
               <Properties>
-                <Property name="text" type="java.lang.String" value="Gestionar Tipo de Movimientos"/>
+                <Property name="text" type="java.lang.String" value="Apertura / Cierre de caja"/>
               </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="mAperturaCierreCajaActionPerformed"/>
+              </Events>
             </MenuItem>
             <MenuItem class="javax.swing.JPopupMenu$Separator" name="jSeparator7">
             </MenuItem>

@@ -201,7 +201,7 @@ public class vPrincipal extends javax.swing.JFrame {
         iconTipoMov.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignA.ARRANGE_SEND_BACKWARD);
         iconTipoMov.setIconSize(16);
         iconTipoMov.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mTipoMov.setIcon(iconTipoMov);
+        mAperturaCierreCaja.setIcon(iconTipoMov);
 
         org.kordamp.ikonli.swing.FontIcon iconIngCaja = new org.kordamp.ikonli.swing.FontIcon();
         iconIngCaja.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CASH_PLUS);
@@ -391,7 +391,7 @@ public class vPrincipal extends javax.swing.JFrame {
         jSeparator6 = new javax.swing.JPopupMenu.Separator();
         mRepInvent = new javax.swing.JMenuItem();
         mTesoreria = new javax.swing.JMenu();
-        mTipoMov = new javax.swing.JMenuItem();
+        mAperturaCierreCaja = new javax.swing.JMenuItem();
         jSeparator7 = new javax.swing.JPopupMenu.Separator();
         mIngCaja = new javax.swing.JMenuItem();
         mEgrCaja = new javax.swing.JMenuItem();
@@ -625,8 +625,13 @@ public class vPrincipal extends javax.swing.JFrame {
 
         mTesoreria.setText("Tesoreria");
 
-        mTipoMov.setText("Gestionar Tipo de Movimientos");
-        mTesoreria.add(mTipoMov);
+        mAperturaCierreCaja.setText("Apertura / Cierre de caja");
+        mAperturaCierreCaja.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mAperturaCierreCajaActionPerformed(evt);
+            }
+        });
+        mTesoreria.add(mAperturaCierreCaja);
         mTesoreria.add(jSeparator7);
 
         mIngCaja.setText("Registrar Ingreso Caja");
@@ -1139,7 +1144,7 @@ public class vPrincipal extends javax.swing.JFrame {
                     JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
-    }                                         
+    }
 
     private vClientes buscarVentanaClientesAbierta() {
         for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
@@ -1179,6 +1184,49 @@ public class vPrincipal extends javax.swing.JFrame {
             ex.printStackTrace();
         }
     }//GEN-LAST:event_mRegVentasActionPerformed
+
+    private void mAperturaCierreCajaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mAperturaCierreCajaActionPerformed
+        try {
+            vAperturaCierreCaja aperturaCierreCajaForm = buscarVentanaAperturaCierreCajaAbierta();
+
+            if (aperturaCierreCajaForm != null) {
+                // Si la ventana ya está abierta, traerla al frente
+                aperturaCierreCajaForm.toFront();
+                aperturaCierreCajaForm.setSelected(true);
+                try {
+                    aperturaCierreCajaForm.setIcon(false);
+                } catch (Exception e) {
+                    System.err.println("Error al restaurar ventana: " + e.getMessage());
+                }
+                return;
+            }
+
+            // Si no está abierta, crear una nueva instancia
+            aperturaCierreCajaForm = new vAperturaCierreCaja();
+            aperturaCierreCajaForm.setTitle("Apertura / Cierre de Caja");
+
+            jDesktopPane2.add(aperturaCierreCajaForm);
+            centrar(aperturaCierreCajaForm);
+            aperturaCierreCajaForm.setVisible(true);
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error inesperado al abrir Apertura / Cierre de Caja:\n" + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }//GEN-LAST:event_mAperturaCierreCajaActionPerformed
+
+    // 3. Método auxiliar para buscar si la ventana ya está abierta
+    private vAperturaCierreCaja buscarVentanaAperturaCierreCajaAbierta() {
+        for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
+            if (frame instanceof vAperturaCierreCaja) {
+                return (vAperturaCierreCaja) frame;
+            }
+        }
+        return null;
+    }
 
     private vSeleccionMesa buscarVentanaSeleccionMesaAbierta() {
         for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
@@ -1253,6 +1301,7 @@ public class vPrincipal extends javax.swing.JFrame {
     private javax.swing.JPopupMenu.Separator jSeparator9;
     private javax.swing.JMenuItem mAjustarStock;
     private javax.swing.JMenuItem mAnterior;
+    private javax.swing.JMenuItem mAperturaCierreCaja;
     private javax.swing.JMenu mArchivo;
     private javax.swing.JMenuItem mBorrar;
     private javax.swing.JMenuItem mBuscar;
@@ -1286,7 +1335,6 @@ public class vPrincipal extends javax.swing.JFrame {
     private javax.swing.JMenuItem mSiguiente;
     private javax.swing.JMenu mStock;
     private javax.swing.JMenu mTesoreria;
-    private javax.swing.JMenuItem mTipoMov;
     private javax.swing.JMenuItem mUltimo;
     private javax.swing.JMenuItem mUsuarios;
     private javax.swing.JMenu mVentas;
