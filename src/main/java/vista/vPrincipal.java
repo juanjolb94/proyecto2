@@ -5,14 +5,8 @@ import javax.swing.*;
 import interfaces.myInterface;
 import java.awt.event.ActionListener;
 import java.sql.SQLException;
-import modelo.service.ReporteService;
-import java.awt.Cursor;
-import java.awt.Desktop;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
-import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import javax.swing.JOptionPane;
 
 public class vPrincipal extends javax.swing.JFrame {
@@ -303,14 +297,37 @@ public class vPrincipal extends javax.swing.JFrame {
         mSeguridad.setIcon(iconSeguridad);
     }
 
-    private boolean isWindowOpen(JInternalFrame ventana) {
-        w_abiertos = jDesktopPane2.getAllFrames(); // Actualiza el arreglo de ventanas abiertas
-        for (JInternalFrame ventanaAbierta : w_abiertos) {
-            if (ventanaAbierta.getTitle().equals(ventana.getTitle())) {
-                return true; // La ventana ya está abierta
+    /**
+     * Busca una ventana abierta del tipo especificado
+     *
+     * @param <T> Tipo de ventana a buscar (debe extender JInternalFrame)
+     * @param windowClass Clase de la ventana a buscar
+     * @return La ventana abierta del tipo especificado o null si no existe
+     */
+    private <T extends JInternalFrame> T findOpenWindow(Class<T> windowClass) {
+        JInternalFrame[] frames = jDesktopPane2.getAllFrames();
+        for (JInternalFrame frame : frames) {
+            if (windowClass.isInstance(frame)) {
+                return windowClass.cast(frame);
             }
         }
-        return false; // La ventana no está abierta
+        return null;
+    }
+
+    /**
+     * Busca una ventana de reporte por nombre de reporte
+     *
+     * @param nombreReporte Nombre del reporte a buscar
+     * @return La ventana de reporte o null si no existe
+     */
+    private vReport findOpenReport(String nombreReporte) {
+        JInternalFrame[] frames = jDesktopPane2.getAllFrames();
+        for (JInternalFrame frame : frames) {
+            if (frame instanceof vReport && frame.getTitle().contains(nombreReporte)) {
+                return (vReport) frame;
+            }
+        }
+        return null;
     }
 
     // Método para obtener la ventana activa
@@ -339,18 +356,47 @@ public class vPrincipal extends javax.swing.JFrame {
         frame.setLocation(x, y);
     }
 
-    // Método para mostrar una ventana interna
-    void showWindow(JInternalFrame frame) {
-        if (isWindowOpen(frame)) {
-            return; // Si la ventana ya está abierta, no hacer nada
-        }
-        jDesktopPane2.add(frame);
-        centrar(frame);
-        frame.setVisible(true);
+    /**
+     * Abre una ventana si no está abierta, o activa la existente si ya está
+     * abierta
+     *
+     * @param <T> Tipo de ventana (debe extender JInternalFrame)
+     * @param window La ventana a mostrar
+     * @param windowClass Clase de la ventana
+     * @return true si se abrió una nueva ventana, false si se activó una
+     * existente
+     */
+    private <T extends JInternalFrame> boolean showWindowSafely(T window, Class<T> windowClass) {
         try {
-            frame.setSelected(true); // Intentar seleccionar la ventana
+            // Buscar ventana existente
+            T existingWindow = findOpenWindow(windowClass);
+
+            if (existingWindow != null) {
+                // Si ya existe, activarla
+                existingWindow.toFront();
+                existingWindow.setSelected(true);
+                if (existingWindow.isIcon()) {
+                    existingWindow.setIcon(false);
+                }
+                return false;
+            } else {
+                // Si no existe, mostrarla
+                jDesktopPane2.add(window);
+                centrar(window);
+                window.setVisible(true);
+                try {
+                    window.setSelected(true);
+                } catch (Exception e) {
+                    System.err.println("Error al seleccionar ventana: " + e.getMessage());
+                }
+                return true;
+            }
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(null, e.getMessage(), "Error", JOptionPane.OK_OPTION);
+            JOptionPane.showMessageDialog(this,
+                    "Error al abrir ventana: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+            return false;
         }
     }
 
@@ -721,26 +767,36 @@ public class vPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_mSalirActionPerformed
 
     private void mPersonasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mPersonasActionPerformed
-        vPersonas personasForm = new vPersonas(); // Crear una instancia de vPersonas
-        personasForm.setTitle("Personas"); // Asignar un título único a la ventana
-        if (isWindowOpen(personasForm)) {
-            // Si la ventana ya está abierta, mostrar un mensaje de advertencia
-            JOptionPane.showMessageDialog(this, "La ventana ya está abierta.", "Advertencia", JOptionPane.WARNING_MESSAGE);
-        } else {
-            // Si no está abierta, mostrarla
-            showWindow(personasForm);
+        try {
+            vPersonas personasForm = findOpenWindow(vPersonas.class);
+            if (personasForm == null) {
+                personasForm = new vPersonas();
+                personasForm.setTitle("Personas");
+                showWindowSafely(personasForm, vPersonas.class);
+            } else {
+                showWindowSafely(personasForm, vPersonas.class);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al abrir gestión de personas: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_mPersonasActionPerformed
 
     private void mUsuariosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mUsuariosActionPerformed
-        vUsuarios usuariosForm = new vUsuarios(); // Crear una instancia de vUsuarios
-        usuariosForm.setTitle("Usuarios"); // Asignar un título único a la ventana
-        if (isWindowOpen(usuariosForm)) {
-            // Si la ventana ya está abierta, mostrar un mensaje de advertencia
-            JOptionPane.showMessageDialog(this, "La ventana ya está abierta.", "Advertencia", JOptionPane.WARNING_MESSAGE);
-        } else {
-            // Si no está abierta, mostrarla
-            showWindow(usuariosForm);
+        try {
+            vUsuarios usuariosForm = findOpenWindow(vUsuarios.class);
+            if (usuariosForm == null) {
+                usuariosForm = new vUsuarios();
+                usuariosForm.setTitle("Usuarios");
+                showWindowSafely(usuariosForm, vUsuarios.class);
+            } else {
+                showWindowSafely(usuariosForm, vUsuarios.class);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al abrir gestión de usuarios: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_mUsuariosActionPerformed
 
@@ -753,26 +809,36 @@ public class vPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_mGuardarActionPerformed
 
     private void mRolesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRolesActionPerformed
-        vRoles rolesForm = new vRoles(); // Crear una instancia de vRoles
-        rolesForm.setTitle("Roles"); // Asignar un título único a la ventana
-        if (isWindowOpen(rolesForm)) {
-            // Si la ventana ya está abierta, mostrar un mensaje de advertencia
-            JOptionPane.showMessageDialog(this, "La ventana ya está abierta.", "Advertencia", JOptionPane.WARNING_MESSAGE);
-        } else {
-            // Si no está abierta, mostrarla
-            showWindow(rolesForm);
+        try {
+            vRoles rolesForm = findOpenWindow(vRoles.class);
+            if (rolesForm == null) {
+                rolesForm = new vRoles();
+                rolesForm.setTitle("Roles");
+                showWindowSafely(rolesForm, vRoles.class);
+            } else {
+                showWindowSafely(rolesForm, vRoles.class);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al abrir gestión de roles: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_mRolesActionPerformed
 
     private void mPermisosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mPermisosActionPerformed
-        vPermisos permisosForm = new vPermisos();
-        permisosForm.setTitle("Permisos");
-        if (isWindowOpen(permisosForm)) {
-            // Si la ventana ya está abierta, mostrar un mensaje de advertencia
-            JOptionPane.showMessageDialog(this, "La ventana ya está abierta.", "Advertencia", JOptionPane.WARNING_MESSAGE);
-        } else {
-            // Si no está abierta, mostrarla
-            showWindow(permisosForm);
+        try {
+            vPermisos permisosForm = findOpenWindow(vPermisos.class);
+            if (permisosForm == null) {
+                permisosForm = new vPermisos();
+                permisosForm.setTitle("Permisos");
+                showWindowSafely(permisosForm, vPermisos.class);
+            } else {
+                showWindowSafely(permisosForm, vPermisos.class);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al abrir gestión de permisos: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_mPermisosActionPerformed
 
@@ -878,55 +944,28 @@ public class vPrincipal extends javax.swing.JFrame {
 
     private void mProductosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mProductosActionPerformed
         try {
-            vGestProd productosForm = buscarVentanaProductoAbierta();
+            vGestProd productosForm = findOpenWindow(vGestProd.class);
 
             if (productosForm != null) {
-                productosForm.toFront();
-                productosForm.setSelected(true);
-                try {
-                    productosForm.setIcon(false);
-                } catch (Exception e) {
-                    System.err.println("Error al restaurar ventana: " + e.getMessage());
-                }
-                return;
-            }
-
-            try {
+                showWindowSafely(productosForm, vGestProd.class);
+            } else {
                 productosForm = new vGestProd();
                 productosForm.setTitle("Gestión de Productos");
 
-                jDesktopPane2.add(productosForm);
-                centrar(productosForm);
-                productosForm.setVisible(true);
-
-                configurarControladorProductos(productosForm);
-
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this,
-                        "Error al conectar con la base de datos:\n" + ex.getMessage(),
-                        "Error de Conexión",
-                        JOptionPane.ERROR_MESSAGE);
-                if (productosForm != null) {
-                    productosForm.dispose();
+                if (showWindowSafely(productosForm, vGestProd.class)) {
+                    configurarControladorProductos(productosForm);
                 }
             }
-
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al conectar con la base de datos:\n" + ex.getMessage(),
+                    "Error de Conexión", JOptionPane.ERROR_MESSAGE);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                     "Error inesperado al abrir gestión de productos:\n" + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+                    "Error", JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
-    }
-
-    private vGestProd buscarVentanaProductoAbierta() {
-        for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
-            if (frame instanceof vGestProd) {
-                return (vGestProd) frame;
-            }
-        }
-        return null;
     }//GEN-LAST:event_mProductosActionPerformed
 
     private void configurarControladorProductos(vGestProd productosForm) throws SQLException {
@@ -988,34 +1027,45 @@ public class vPrincipal extends javax.swing.JFrame {
     }
 
     private void mRepInventActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRepInventActionPerformed
-        // Buscar si ya existe una ventana con este reporte
-        vReport reporteExistente = buscarVentanaReporteAbierta("inventario_productos");
+        try {
+            vReport reporteForm = findOpenReport("inventario_productos");
 
-        if (reporteExistente != null) {
-            try {
-                reporteExistente.setSelected(true);
-                reporteExistente.toFront();
-                if (reporteExistente.isIcon()) {
-                    reporteExistente.setIcon(false);
-                }
-            } catch (Exception e) {
-                System.err.println("Error al activar ventana de reporte: " + e.getMessage());
+            if (reporteForm != null) {
+                showWindowSafely(reporteForm, vReport.class);
+            } else {
+                mostrarReporteRefactorizado("inventario_productos", "filtroInventario");
             }
-        } else {
-            // Si no existe, crear nueva instancia
-            mostrarReporte("inventario_productos", "filtroInventario");
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error inesperado al abrir reporte de inventario:\n" + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }//GEN-LAST:event_mRepInventActionPerformed
+
+    /**
+     * Método refactorizado para mostrar un reporte en el JDesktopPane
+     *
+     * @param nombreReporte Nombre del reporte a mostrar
+     * @param filtro Filtro a aplicar al reporte
+     */
+    private void mostrarReporteRefactorizado(String nombreReporte, String filtro) {
+        try {
+            // Crear una nueva instancia del visor de reportes
+            vReport reporteFrame = new vReport(nombreReporte, filtro);
+
+            // Usar el método seguro para mostrar la ventana
+            if (showWindowSafely(reporteFrame, vReport.class)) {
+                reporteFrame.imFiltrar();
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al abrir el reporte: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
         }
     }
-
-// Método auxiliar para buscar una ventana de reporte por nombre (agregar a vPrincipal.java)
-    private vReport buscarVentanaReporteAbierta(String nombreReporte) {
-        for (JInternalFrame frame : jDesktopPane2.getAllFrames()) {
-            if (frame instanceof vReport && frame.getTitle().contains(nombreReporte)) {
-                return (vReport) frame;
-            }
-        }
-        return null;
-    }//GEN-LAST:event_mRepInventActionPerformed
 
     // Método para mostrar un reporte en el JDesktopPane
     private void mostrarReporte(String nombreReporte, String filtro) {
@@ -1044,156 +1094,80 @@ public class vPrincipal extends javax.swing.JFrame {
 
     private void mProveedoresActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mProveedoresActionPerformed
         try {
-            vProveedores proveedoresForm = buscarVentanaProveedoresAbierta();
+            vProveedores proveedoresForm = findOpenWindow(vProveedores.class);
 
             if (proveedoresForm != null) {
-                // Si la ventana ya está abierta, traerla al frente
-                proveedoresForm.toFront();
-                proveedoresForm.setSelected(true);
-                try {
-                    proveedoresForm.setIcon(false); // Restaurarla si está minimizada
-                } catch (Exception e) {
-                    System.err.println("Error al restaurar ventana: " + e.getMessage());
-                }
-                return;
-            }
-
-            // Si no está abierta, crear una nueva instancia
-            try {
+                showWindowSafely(proveedoresForm, vProveedores.class);
+            } else {
                 proveedoresForm = new vProveedores();
                 proveedoresForm.setTitle("Gestión de Proveedores");
-
-                jDesktopPane2.add(proveedoresForm);
-                centrar(proveedoresForm);
-                proveedoresForm.setVisible(true);
-
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this,
-                        "Error al conectar con la base de datos:\n" + ex.getMessage(),
-                        "Error de Conexión",
-                        JOptionPane.ERROR_MESSAGE);
-                if (proveedoresForm != null) {
-                    proveedoresForm.dispose();
-                }
+                showWindowSafely(proveedoresForm, vProveedores.class);
             }
-
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al conectar con la base de datos:\n" + ex.getMessage(),
+                    "Error de Conexión", JOptionPane.ERROR_MESSAGE);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                     "Error inesperado al abrir gestión de proveedores:\n" + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+                    "Error", JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
     }//GEN-LAST:event_mProveedoresActionPerformed
 
     private void mRegComprasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRegComprasActionPerformed
         try {
-            vRegCompras comprasForm = buscarVentanaComprasAbierta();
+            vRegCompras comprasForm = findOpenWindow(vRegCompras.class);
 
             if (comprasForm != null) {
-                // Si la ventana ya está abierta, traerla al frente
-                comprasForm.toFront();
-                comprasForm.setSelected(true);
-                try {
-                    comprasForm.setIcon(false);  // Restaurar si está minimizada
-                } catch (Exception e) {
-                    System.err.println("Error al restaurar ventana: " + e.getMessage());
-                }
-                return;
+                showWindowSafely(comprasForm, vRegCompras.class);
+            } else {
+                comprasForm = new vRegCompras();
+                comprasForm.setTitle("Registrar Compra");
+                showWindowSafely(comprasForm, vRegCompras.class);
             }
-
-            // Si no está abierta, crear una nueva instancia
-            comprasForm = new vRegCompras();
-            comprasForm.setTitle("Registrar Compra");
-
-            jDesktopPane2.add(comprasForm);
-            centrar(comprasForm);
-            comprasForm.setVisible(true);
-
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                     "Error inesperado al abrir Registro de Compras:\n" + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+                    "Error", JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
     }//GEN-LAST:event_mRegComprasActionPerformed
 
     private void mClientesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mClientesActionPerformed
         try {
-            vClientes clientesForm = buscarVentanaClientesAbierta();
+            vClientes clientesForm = findOpenWindow(vClientes.class);
 
             if (clientesForm != null) {
-                // Si la ventana ya está abierta, traerla al frente
-                clientesForm.toFront();
-                clientesForm.setSelected(true);
-                try {
-                    clientesForm.setIcon(false); // Restaurarla si está minimizada
-                } catch (Exception e) {
-                    System.err.println("Error al restaurar ventana: " + e.getMessage());
-                }
-                return;
-            }
-
-            // Si no está abierta, crear una nueva instancia
-            try {
+                showWindowSafely(clientesForm, vClientes.class);
+            } else {
                 clientesForm = new vClientes();
                 clientesForm.setTitle("Gestión de Clientes");
-
-                jDesktopPane2.add(clientesForm);
-                centrar(clientesForm);
-                clientesForm.setVisible(true);
-
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this,
-                        "Error al conectar con la base de datos:\n" + ex.getMessage(),
-                        "Error de Conexión",
-                        JOptionPane.ERROR_MESSAGE);
-                if (clientesForm != null) {
-                    clientesForm.dispose();
-                }
+                showWindowSafely(clientesForm, vClientes.class);
             }
-
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al conectar con la base de datos:\n" + ex.getMessage(),
+                    "Error de Conexión", JOptionPane.ERROR_MESSAGE);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                     "Error inesperado al abrir gestión de clientes:\n" + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+                    "Error", JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
-    }
-
-    private vClientes buscarVentanaClientesAbierta() {
-        for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
-            if (frame instanceof vClientes) {
-                return (vClientes) frame;
-            }
-        }
-        return null;
     }//GEN-LAST:event_mClientesActionPerformed
 
     private void mRegVentasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRegVentasActionPerformed
         try {
-            vSeleccionMesa seleccionMesaForm = buscarVentanaSeleccionMesaAbierta();
+            vSeleccionMesa seleccionMesaForm = findOpenWindow(vSeleccionMesa.class);
 
             if (seleccionMesaForm != null) {
-                // Si la ventana ya está abierta, traerla al frente
-                seleccionMesaForm.toFront();
-                seleccionMesaForm.setSelected(true);
-                try {
-                    seleccionMesaForm.setIcon(false); // Restaurar si está minimizada
-                } catch (Exception e) {
-                    System.err.println("Error al restaurar ventana: " + e.getMessage());
-                }
-                return;
+                showWindowSafely(seleccionMesaForm, vSeleccionMesa.class);
+            } else {
+                seleccionMesaForm = new vSeleccionMesa();
+                seleccionMesaForm.setTitle("Selección de Mesas");
+                showWindowSafely(seleccionMesaForm, vSeleccionMesa.class);
             }
-
-            // Si no está abierta, crear una nueva instancia
-            seleccionMesaForm = new vSeleccionMesa();
-            jDesktopPane2.add(seleccionMesaForm);
-            centrar(seleccionMesaForm);
-            seleccionMesaForm.setVisible(true);
-
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                     "Error inesperado al abrir selección de mesas:\n" + ex.getMessage(),
@@ -1204,60 +1178,34 @@ public class vPrincipal extends javax.swing.JFrame {
 
     private void mAperturaCierreCajaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mAperturaCierreCajaActionPerformed
         try {
-            vAperturaCierreCaja aperturaCierreCajaForm = buscarVentanaAperturaCierreCajaAbierta();
+            vAperturaCierreCaja aperturaCierreCajaForm = findOpenWindow(vAperturaCierreCaja.class);
 
             if (aperturaCierreCajaForm != null) {
-                // Si la ventana ya está abierta, traerla al frente
-                aperturaCierreCajaForm.toFront();
-                aperturaCierreCajaForm.setSelected(true);
-                try {
-                    aperturaCierreCajaForm.setIcon(false);
-                } catch (Exception e) {
-                    System.err.println("Error al restaurar ventana: " + e.getMessage());
-                }
-                return;
+                showWindowSafely(aperturaCierreCajaForm, vAperturaCierreCaja.class);
+            } else {
+                aperturaCierreCajaForm = new vAperturaCierreCaja(vLogin.getUsuarioAutenticado());
+                aperturaCierreCajaForm.setTitle("Apertura / Cierre de Caja");
+                showWindowSafely(aperturaCierreCajaForm, vAperturaCierreCaja.class);
             }
-
-            aperturaCierreCajaForm = new vAperturaCierreCaja(vLogin.getUsuarioAutenticado());
-            aperturaCierreCajaForm.setTitle("Apertura / Cierre de Caja");
-
-            jDesktopPane2.add(aperturaCierreCajaForm);
-            centrar(aperturaCierreCajaForm);
-            aperturaCierreCajaForm.setVisible(true);
-
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                     "Error inesperado al abrir Apertura / Cierre de Caja:\n" + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+                    "Error", JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
     }//GEN-LAST:event_mAperturaCierreCajaActionPerformed
 
     private void mTalonariosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mTalonariosActionPerformed
         try {
-            vTalonarios talonariosForm = buscarVentanaTalonariosAbierta();
+            vTalonarios talonariosForm = findOpenWindow(vTalonarios.class);
 
             if (talonariosForm != null) {
-                // Si la ventana ya está abierta, traerla al frente
-                talonariosForm.toFront();
-                talonariosForm.setSelected(true);
-                try {
-                    talonariosForm.setIcon(false); // Restaurarla si está minimizada
-                } catch (Exception e) {
-                    System.err.println("Error al restaurar ventana: " + e.getMessage());
-                }
-                return;
+                showWindowSafely(talonariosForm, vTalonarios.class);
+            } else {
+                talonariosForm = new vTalonarios();
+                talonariosForm.setTitle("Gestión de Talonarios");
+                showWindowSafely(talonariosForm, vTalonarios.class);
             }
-
-            // Si no está abierta, crear una nueva instancia
-            talonariosForm = new vTalonarios();
-            talonariosForm.setTitle("Gestión de Talonarios");
-
-            jDesktopPane2.add(talonariosForm);
-            centrar(talonariosForm);
-            talonariosForm.setVisible(true);
-
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                     "Error inesperado al abrir gestión de talonarios:\n" + ex.getMessage(),
@@ -1265,54 +1213,6 @@ public class vPrincipal extends javax.swing.JFrame {
             ex.printStackTrace();
         }
     }//GEN-LAST:event_mTalonariosActionPerformed
-
-    // Agregar método para buscar si la ventana de talonarios ya está abierta
-    private vTalonarios buscarVentanaTalonariosAbierta() {
-        for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
-            if (frame instanceof vTalonarios) {
-                return (vTalonarios) frame;
-            }
-        }
-        return null;
-    }
-
-    // Método auxiliar para buscar si la ventana ya está abierta
-    private vAperturaCierreCaja buscarVentanaAperturaCierreCajaAbierta() {
-        for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
-            if (frame instanceof vAperturaCierreCaja) {
-                return (vAperturaCierreCaja) frame;
-            }
-        }
-        return null;
-    }
-
-    private vSeleccionMesa buscarVentanaSeleccionMesaAbierta() {
-        for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
-            if (frame instanceof vSeleccionMesa) {
-                return (vSeleccionMesa) frame;
-            }
-        }
-        return null;
-    }
-
-    // Método auxiliar para buscar si la ventana de Compras ya está abierta
-    private vRegCompras buscarVentanaComprasAbierta() {
-        for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
-            if (frame instanceof vRegCompras) {
-                return (vRegCompras) frame;
-            }
-        }
-        return null;
-    }
-
-    private vProveedores buscarVentanaProveedoresAbierta() {
-        for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
-            if (frame instanceof vProveedores) {
-                return (vProveedores) frame;
-            }
-        }
-        return null;
-    }
 
     public static void main(String args[]) {
         try {
