@@ -1201,8 +1201,7 @@ public class vPrincipal extends javax.swing.JFrame {
                 return;
             }
 
-            // Si no está abierta, crear una nueva instancia
-            aperturaCierreCajaForm = new vAperturaCierreCaja();
+            aperturaCierreCajaForm = new vAperturaCierreCaja(vLogin.getUsuarioAutenticado());
             aperturaCierreCajaForm.setTitle("Apertura / Cierre de Caja");
 
             jDesktopPane2.add(aperturaCierreCajaForm);
