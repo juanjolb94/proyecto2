@@ -2,9 +2,7 @@ package vista;
 
 import interfaces.myInterface;
 import java.awt.Color;
-import java.awt.Cursor;
 import java.awt.Font;
-import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -12,26 +10,19 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import javax.swing.BorderFactory;
-import javax.swing.JButton;
 import javax.swing.JFormattedTextField;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
 import javax.swing.SwingConstants;
-import javax.swing.UIManager;
 import javax.swing.border.TitledBorder;
 import javax.swing.text.NumberFormatter;
 import modelo.CajaDAO;
 import modelo.mCaja;
-import org.kordamp.ikonli.Ikon;
 
 public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements myInterface {
 
     private CajaDAO cajaDAO;
     private mCaja cajaActual;
     private boolean cajaAbierta = false;
-    private boolean modoEdicion = false;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
     // Variables para las diferentes denominaciones de moneda
@@ -43,6 +34,7 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
 
     /**
      * Constructor de la ventana de apertura y cierre de caja
+     *
      * @param nombreUsuario El nombre del usuario que inició sesión
      */
     public vAperturaCierreCaja(String nombreUsuario) {
@@ -89,8 +81,6 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
             panelDetalles.add(txt);
             txtBilletes[i] = txt;
 
-            // Agregar listener para actualizar el total durante la apertura o cierre
-            final int index = i;
             txt.addPropertyChangeListener("value", evt -> {
                 actualizarTotalCalculo();
 
@@ -111,8 +101,6 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
             panelMonedas.add(txt);
             txtMonedas[i] = txt;
 
-            // Agregar listener para actualizar el total durante la apertura o cierre
-            final int index = i;
             txt.addPropertyChangeListener("value", evt -> {
                 actualizarTotalCalculo();
 
@@ -177,9 +165,7 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
         // Botón Calcular: siempre calcula el total desde billetes y monedas
         btnCalcular.addActionListener(e -> calcularTotalDesdeTexto());
 
-        btnGuardar.addActionListener(e -> guardarArqueo());
         btnSalir.addActionListener(e -> dispose());
-        btnImprimir.addActionListener(e -> imprimirReporte());
     }
 
     /**
@@ -271,206 +257,6 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
                     "Total calculado: ₲" + formatearValor(total),
                     JOptionPane.INFORMATION_MESSAGE);
 
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error en el cálculo: " + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
-        }
-    }
-
-    /**
-     * Guarda el detalle del arqueo (billetes y monedas)
-     */
-    private void guardarArqueo() {
-        try {
-            if (cajaActual == null || (!cajaAbierta && txtMontoApertura.getValue().equals(0L))) {
-                JOptionPane.showMessageDialog(this,
-                        "No hay datos para guardar",
-                        "Advertencia",
-                        JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-
-            // Preparar arrays de cantidades
-            int[] billetes = new int[BILLETES.length];
-            int[] monedas = new int[MONEDAS.length];
-
-            // Obtener cantidades de billetes y monedas
-            for (int i = 0; i < BILLETES.length; i++) {
-                billetes[i] = ((Number) txtBilletes[i].getValue()).intValue();
-            }
-
-            for (int i = 0; i < MONEDAS.length; i++) {
-                monedas[i] = ((Number) txtMonedas[i].getValue()).intValue();
-            }
-
-            int idCaja = (cajaAbierta) ? cajaActual.getId() : -1;
-
-            if (cajaAbierta) {
-                // Guardar arqueo de cierre
-                cajaDAO.guardarArqueoCompleto(cajaActual.getId(), billetes, BILLETES, monedas, MONEDAS);
-                JOptionPane.showMessageDialog(this,
-                        "Datos del arqueo guardados correctamente",
-                        "Información",
-                        JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                // Solo mostrar mensaje - el arqueo se guardará al abrir la caja
-                JOptionPane.showMessageDialog(this,
-                        "Los datos del arqueo se guardarán al abrir la caja",
-                        "Información",
-                        JOptionPane.INFORMATION_MESSAGE);
-            }
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al guardar arqueo: " + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    /**
-     * Método alternativo para calcular el total
-     */
-    private void calcularTotalAlternativo() {
-        try {
-            // Primero, vamos a solicitar directamente al usuario que confirme las cantidades
-            StringBuilder mensaje = new StringBuilder("Por favor, confirma las cantidades:\n\n");
-            mensaje.append("Billetes:\n");
-
-            // Campos para ingresar las cantidades
-            JTextField[] camposBilletes = new JTextField[BILLETES.length];
-            for (int i = 0; i < BILLETES.length; i++) {
-                camposBilletes[i] = new JTextField(10);
-                // Intentar obtener el texto actual
-                if (txtBilletes[i] != null) {
-                    camposBilletes[i].setText(txtBilletes[i].getText());
-                }
-            }
-
-            JTextField[] camposMonedas = new JTextField[MONEDAS.length];
-            for (int i = 0; i < MONEDAS.length; i++) {
-                camposMonedas[i] = new JTextField(10);
-                // Intentar obtener el texto actual
-                if (txtMonedas[i] != null) {
-                    camposMonedas[i].setText(txtMonedas[i].getText());
-                }
-            }
-
-            // Crear panel para el diálogo
-            JPanel panel = new JPanel();
-            panel.setLayout(new java.awt.GridLayout(BILLETES.length + MONEDAS.length + 2, 2, 5, 5));
-
-            // Agregar título para billetes
-            JLabel lblTituloBilletes = new JLabel("Billetes:");
-            lblTituloBilletes.setFont(new Font("Dialog", Font.BOLD, 12));
-            panel.add(lblTituloBilletes);
-            panel.add(new JLabel()); // Espacio vacío
-
-            // Agregar campos para billetes
-            for (int i = 0; i < BILLETES.length; i++) {
-                panel.add(new JLabel("₲" + formatearValor(BILLETES[i]) + ":"));
-                panel.add(camposBilletes[i]);
-            }
-
-            // Agregar título para monedas
-            JLabel lblTituloMonedas = new JLabel("Monedas:");
-            lblTituloMonedas.setFont(new Font("Dialog", Font.BOLD, 12));
-            panel.add(lblTituloMonedas);
-            panel.add(new JLabel()); // Espacio vacío
-
-            // Agregar campos para monedas
-            for (int i = 0; i < MONEDAS.length; i++) {
-                panel.add(new JLabel("₲" + formatearValor(MONEDAS[i]) + ":"));
-                panel.add(camposMonedas[i]);
-            }
-
-            // Mostrar diálogo
-            int resultado = JOptionPane.showConfirmDialog(this, panel,
-                    "Confirmar Cantidades", JOptionPane.OK_CANCEL_OPTION);
-
-            if (resultado == JOptionPane.OK_OPTION) {
-                // Calcular total basado en las cantidades ingresadas
-                long total = 0;
-
-                // Procesar billetes
-                for (int i = 0; i < BILLETES.length; i++) {
-                    String texto = camposBilletes[i].getText().trim();
-                    int cantidad = 0;
-                    if (!texto.isEmpty()) {
-                        try {
-                            cantidad = Integer.parseInt(texto.replaceAll("[^0-9]", ""));
-                        } catch (NumberFormatException e) {
-                            // Ignorar errores de parseo
-                        }
-                    }
-
-                    // Actualizar el campo visual con el valor confirmado
-                    if (txtBilletes[i] != null) {
-                        txtBilletes[i].setValue(cantidad);
-                    }
-
-                    // Sumar al total
-                    total += (long) BILLETES[i] * cantidad;
-                    System.out.println("Billete " + BILLETES[i] + " - cantidad: " + cantidad + " - subtotal: " + (BILLETES[i] * cantidad));
-                }
-
-                // Procesar monedas
-                for (int i = 0; i < MONEDAS.length; i++) {
-                    String texto = camposMonedas[i].getText().trim();
-                    int cantidad = 0;
-                    if (!texto.isEmpty()) {
-                        try {
-                            cantidad = Integer.parseInt(texto.replaceAll("[^0-9]", ""));
-                        } catch (NumberFormatException e) {
-                            // Ignorar errores de parseo
-                        }
-                    }
-
-                    // Actualizar el campo visual con el valor confirmado
-                    if (txtMonedas[i] != null) {
-                        txtMonedas[i].setValue(cantidad);
-                    }
-
-                    // Sumar al total
-                    total += (long) MONEDAS[i] * cantidad;
-                    System.out.println("Moneda " + MONEDAS[i] + " - cantidad: " + cantidad + " - subtotal: " + (MONEDAS[i] * cantidad));
-                }
-
-                System.out.println("Total calculado: " + total);
-
-                // Actualizar el campo correspondiente según el estado
-                if (cajaAbierta) {
-                    txtMontoCierre.setValue(total);
-
-                    // Actualizar diferencia
-                    long esperado = ((Number) txtMontoTotal.getValue()).longValue();
-                    long diferencia = total - esperado;
-
-                    // Mostrar diferencia
-                    if (diferencia > 0) {
-                        lblDiferencia.setText("Sobrante: ₲" + formatearValor(diferencia));
-                        lblDiferencia.setForeground(new Color(0, 153, 0)); // Verde
-                    } else if (diferencia < 0) {
-                        lblDiferencia.setText("Faltante: ₲" + formatearValor(Math.abs(diferencia)));
-                        lblDiferencia.setForeground(new Color(204, 0, 0)); // Rojo
-                    } else {
-                        lblDiferencia.setText("Sin diferencia");
-                        lblDiferencia.setForeground(Color.BLACK);
-                    }
-                } else {
-                    // Si la caja está cerrada, actualizar monto de apertura
-                    txtMontoApertura.setValue(total);
-                    System.out.println("Monto actualizado: " + total);
-                    System.out.println("Valor en txtMontoApertura después de actualizar: " + txtMontoApertura.getValue());
-                }
-
-                JOptionPane.showMessageDialog(this,
-                        "Total calculado: ₲" + formatearValor(total),
-                        "Información",
-                        JOptionPane.INFORMATION_MESSAGE);
-            }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
                     "Error en el cálculo: " + ex.getMessage(),
@@ -616,17 +402,6 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
                     "Instrucciones",
                     JOptionPane.INFORMATION_MESSAGE);
         }
-    }
-
-    /**
-     * Habilita o deshabilita los campos de entrada
-     */
-    private void habilitarCampos(boolean habilitar) {
-        txtMontoApertura.setEnabled(habilitar && !cajaAbierta);
-        txtMontoCierre.setEnabled(habilitar && cajaAbierta);
-        txtMontoVentas.setEnabled(false); // Siempre deshabilitado (calculado)
-        txtMontoGastos.setEnabled(false); // Siempre deshabilitado (calculado)
-        txtMontoTotal.setEnabled(false); // Siempre deshabilitado (calculado)
     }
 
     /**
@@ -793,39 +568,63 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
             return;
         }
 
-        // Obtener montos
-        long montoApertura = ((Number) txtMontoApertura.getValue()).longValue();
-        long montoVentas = ((Number) txtMontoVentas.getValue()).longValue();
-        long montoGastos = ((Number) txtMontoGastos.getValue()).longValue();
-        long montoEsperado = montoApertura + montoVentas - montoGastos;
-        long diferencia = montoCierre - montoEsperado;
-
-        String mensajeDiferencia = "";
-        if (diferencia > 0) {
-            mensajeDiferencia = "Hay un sobrante de ₲" + formatearValor(diferencia);
-        } else if (diferencia < 0) {
-            mensajeDiferencia = "Hay un faltante de ₲" + formatearValor(Math.abs(diferencia));
-        } else {
-            mensajeDiferencia = "No hay diferencia entre el monto esperado y el monto real";
-        }
-
-        // Confirmar cierre
-        int confirmacion = JOptionPane.showConfirmDialog(this,
-                "¿Está seguro de cerrar la caja?\n\n"
-                + "Monto Apertura: ₲" + formatearValor(montoApertura) + "\n"
-                + "Ventas: ₲" + formatearValor(montoVentas) + "\n"
-                + "Gastos: ₲" + formatearValor(montoGastos) + "\n"
-                + "Monto Esperado: ₲" + formatearValor(montoEsperado) + "\n"
-                + "Monto Real: ₲" + formatearValor(montoCierre) + "\n\n"
-                + mensajeDiferencia,
-                "Confirmar Cierre",
-                JOptionPane.YES_NO_OPTION);
-
-        if (confirmacion != JOptionPane.YES_OPTION) {
-            return;
-        }
-
         try {
+            // Verificar que la caja siga abierta en la base de datos
+            mCaja cajaActualizada = cajaDAO.obtenerCajaActual();
+
+            if (cajaActualizada == null || !cajaActualizada.isEstadoAbierto() || cajaActualizada.getId() != cajaActual.getId()) {
+                JOptionPane.showMessageDialog(this,
+                        "La caja actual ya no está disponible o fue modificada por otro usuario.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                verificarEstadoCaja(); // Actualizar la interfaz
+                return;
+            }
+
+            // Obtener montos
+            long montoApertura = ((Number) txtMontoApertura.getValue()).longValue();
+            long montoVentas = ((Number) txtMontoVentas.getValue()).longValue();
+            long montoGastos = ((Number) txtMontoGastos.getValue()).longValue();
+            long montoEsperado = montoApertura + montoVentas - montoGastos;
+            long diferencia = montoCierre - montoEsperado;
+
+            String mensajeDiferencia = "";
+            if (diferencia > 0) {
+                mensajeDiferencia = "Hay un sobrante de ₲" + formatearValor(diferencia);
+            } else if (diferencia < 0) {
+                mensajeDiferencia = "Hay un faltante de ₲" + formatearValor(Math.abs(diferencia));
+            } else {
+                mensajeDiferencia = "No hay diferencia entre el monto esperado y el monto real";
+            }
+
+            // Confirmar cierre
+            int confirmacion = JOptionPane.showConfirmDialog(this,
+                    "¿Está seguro de cerrar la caja?\n\n"
+                    + "Monto Apertura: ₲" + formatearValor(montoApertura) + "\n"
+                    + "Ventas: ₲" + formatearValor(montoVentas) + "\n"
+                    + "Gastos: ₲" + formatearValor(montoGastos) + "\n"
+                    + "Monto Esperado: ₲" + formatearValor(montoEsperado) + "\n"
+                    + "Monto Real: ₲" + formatearValor(montoCierre) + "\n\n"
+                    + mensajeDiferencia,
+                    "Confirmar Cierre",
+                    JOptionPane.YES_NO_OPTION);
+
+            if (confirmacion != JOptionPane.YES_OPTION) {
+                return;
+            }
+
+            // Verificar nuevamente que la caja siga abierta
+            cajaActualizada = cajaDAO.obtenerCajaActual();
+
+            if (cajaActualizada == null || !cajaActualizada.isEstadoAbierto() || cajaActualizada.getId() != cajaActual.getId()) {
+                JOptionPane.showMessageDialog(this,
+                        "La caja actual ya no está disponible o fue modificada por otro usuario mientras confirmaba el cierre.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                verificarEstadoCaja(); // Actualizar la interfaz
+                return;
+            }
+
             // Actualizar datos de la caja
             cajaActual.setFechaCierre(new Date());
             cajaActual.setMontoCierre(montoCierre);
@@ -836,15 +635,22 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
             cajaActual.setEstadoAbierto(false);
 
             // Guardar en la base de datos
-            cajaDAO.cerrarCaja(cajaActual);
+            boolean resultado = cajaDAO.cerrarCaja(cajaActual);
 
-            // Actualizar estado
-            verificarEstadoCaja();
+            if (resultado) {
+                JOptionPane.showMessageDialog(this,
+                        "Caja cerrada correctamente",
+                        "Éxito",
+                        JOptionPane.INFORMATION_MESSAGE);
 
-            JOptionPane.showMessageDialog(this,
-                    "Caja cerrada correctamente",
-                    "Éxito",
-                    JOptionPane.INFORMATION_MESSAGE);
+                // Actualizar estado
+                verificarEstadoCaja();
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "No se pudo cerrar la caja. Intente nuevamente.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(this,
                     "Error al cerrar la caja: " + ex.getMessage(),
@@ -1039,8 +845,6 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
         txt100 = new javax.swing.JFormattedTextField();
         txt50 = new javax.swing.JFormattedTextField();
         panelBotones = new javax.swing.JPanel();
-        btnImprimir = new javax.swing.JButton();
-        btnGuardar = new javax.swing.JButton();
         btnSalir = new javax.swing.JButton();
 
         jPanel1.setLayout(new java.awt.BorderLayout());
@@ -1067,10 +871,15 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
                     .addComponent(jLabel3))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(panelDatosAperturaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(btnAbrirCaja, javax.swing.GroupLayout.PREFERRED_SIZE, 85, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(txtUsuarioApertura, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(txtMontoApertura, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(txtFechaApertura, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                    .addGroup(panelDatosAperturaLayout.createSequentialGroup()
+                        .addGroup(panelDatosAperturaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                            .addComponent(txtUsuarioApertura, javax.swing.GroupLayout.DEFAULT_SIZE, 100, Short.MAX_VALUE)
+                            .addComponent(txtMontoApertura, javax.swing.GroupLayout.DEFAULT_SIZE, 100, Short.MAX_VALUE)
+                            .addComponent(btnAbrirCaja, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addGap(30, 30, 30))
+                    .addGroup(panelDatosAperturaLayout.createSequentialGroup()
+                        .addComponent(txtFechaApertura)
+                        .addContainerGap())))
         );
         panelDatosAperturaLayout.setVerticalGroup(
             panelDatosAperturaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1088,7 +897,7 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
                     .addComponent(jLabel3))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(btnAbrirCaja, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(28, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         jLabel4.setText("Fecha Cierre:");
@@ -1117,13 +926,13 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
                     .addComponent(jLabel8, javax.swing.GroupLayout.Alignment.TRAILING))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(panelDatosCierreLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(btnCerrarCaja, javax.swing.GroupLayout.PREFERRED_SIZE, 85, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(txtFechaCierre, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(panelDatosCierreLayout.createSequentialGroup()
                         .addGroup(panelDatosCierreLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                            .addComponent(txtMontoGastos, javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(btnCerrarCaja, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                            .addComponent(txtMontoGastos, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 100, Short.MAX_VALUE)
                             .addComponent(txtMontoVentas, javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(txtMontoCierre, javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(txtFechaCierre, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 100, Short.MAX_VALUE)
                             .addComponent(txtMontoTotal))
                         .addGap(24, 24, 24)
                         .addComponent(lblDiferencia, javax.swing.GroupLayout.PREFERRED_SIZE, 70, javax.swing.GroupLayout.PREFERRED_SIZE)))
@@ -1156,10 +965,10 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
                     .addComponent(txtMontoTotal, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(btnCerrarCaja, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(19, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
-        jLabel9.setText("Calculo de Billetes y Monedas:");
+        jLabel9.setText("Cálculo de Billetes y Monedas:");
 
         btnCalcular.setText("Calcular");
 
@@ -1207,7 +1016,7 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
                         .addComponent(jLabel15)
                         .addGap(25, 25, 25)
                         .addComponent(txt2000)))
-                .addGap(0, 99, Short.MAX_VALUE))
+                .addGap(0, 0, Short.MAX_VALUE))
         );
         panelBilletesLayout.setVerticalGroup(
             panelBilletesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1251,18 +1060,18 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
             panelMonedasLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(panelMonedasLayout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(panelMonedasLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                .addGroup(panelMonedasLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(panelMonedasLayout.createSequentialGroup()
-                        .addComponent(jLabel18)
-                        .addGap(18, 18, 18)
-                        .addComponent(txt50))
-                    .addGroup(panelMonedasLayout.createSequentialGroup()
-                        .addComponent(jLabel17)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(txt100))
+                        .addGroup(panelMonedasLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(jLabel18)
+                            .addComponent(jLabel17))
+                        .addGap(36, 36, 36)
+                        .addGroup(panelMonedasLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(txt50, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(txt100, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
                     .addGroup(panelMonedasLayout.createSequentialGroup()
                         .addComponent(jLabel16)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addGap(36, 36, 36)
                         .addComponent(txt500, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
@@ -1284,34 +1093,22 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
-        btnImprimir.setText("Imprimir");
-
-        btnGuardar.setText("Guardar");
-
         btnSalir.setText("Salir");
 
         javax.swing.GroupLayout panelBotonesLayout = new javax.swing.GroupLayout(panelBotones);
         panelBotones.setLayout(panelBotonesLayout);
         panelBotonesLayout.setHorizontalGroup(
             panelBotonesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(panelBotonesLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(btnImprimir)
-                .addGap(18, 18, 18)
-                .addComponent(btnGuardar)
-                .addGap(18, 18, 18)
-                .addComponent(btnSalir)
-                .addContainerGap(89, Short.MAX_VALUE))
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panelBotonesLayout.createSequentialGroup()
+                .addContainerGap(157, Short.MAX_VALUE)
+                .addComponent(btnSalir, javax.swing.GroupLayout.PREFERRED_SIZE, 80, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(23, 23, 23))
         );
         panelBotonesLayout.setVerticalGroup(
             panelBotonesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(panelBotonesLayout.createSequentialGroup()
-                .addGap(20, 20, 20)
-                .addGroup(panelBotonesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(btnImprimir)
-                    .addComponent(btnGuardar)
-                    .addComponent(btnSalir))
-                .addContainerGap(16, Short.MAX_VALUE))
+                .addComponent(btnSalir, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 12, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout panelCalculoLayout = new javax.swing.GroupLayout(panelCalculo);
@@ -1319,40 +1116,40 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
         panelCalculoLayout.setHorizontalGroup(
             panelCalculoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(panelCalculoLayout.createSequentialGroup()
-                .addGroup(panelCalculoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(panelBotones, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                    .addGroup(panelCalculoLayout.createSequentialGroup()
-                        .addGroup(panelCalculoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                            .addComponent(panelMonedas, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addGroup(panelCalculoLayout.createSequentialGroup()
-                                .addContainerGap()
-                                .addComponent(panelBilletes, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                        .addGap(0, 0, Short.MAX_VALUE)))
-                .addContainerGap())
+                .addGroup(panelCalculoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, panelCalculoLayout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(panelBilletes, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                    .addGroup(javax.swing.GroupLayout.Alignment.LEADING, panelCalculoLayout.createSequentialGroup()
+                        .addComponent(panelBotones, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addGap(86, 86, 86))
+                    .addComponent(panelMonedas, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         panelCalculoLayout.setVerticalGroup(
             panelCalculoLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(panelCalculoLayout.createSequentialGroup()
                 .addComponent(panelBilletes, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(12, 12, 12)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(panelMonedas, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(panelBotones, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(16, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout panelDetallesLayout = new javax.swing.GroupLayout(panelDetalles);
         panelDetalles.setLayout(panelDetallesLayout);
         panelDetallesLayout.setHorizontalGroup(
             panelDetallesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(panelDetallesLayout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panelDetallesLayout.createSequentialGroup()
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addGroup(panelDetallesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(panelCalculo, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGroup(panelDetallesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                    .addComponent(panelCalculo, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
                     .addGroup(panelDetallesLayout.createSequentialGroup()
                         .addComponent(jLabel9)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(btnCalcular, javax.swing.GroupLayout.PREFERRED_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                        .addComponent(btnCalcular, javax.swing.GroupLayout.PREFERRED_SIZE, 90, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap())
         );
         panelDetallesLayout.setVerticalGroup(
             panelDetallesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1379,7 +1176,7 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
                         .addContainerGap()
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                             .addComponent(panelDatosApertura, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                            .addComponent(panelDatosCierre, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE))
+                            .addComponent(panelDatosCierre, javax.swing.GroupLayout.PREFERRED_SIZE, 227, Short.MAX_VALUE))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(panelDetalles, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                 .addContainerGap())
@@ -1407,8 +1204,6 @@ public class vAperturaCierreCaja extends javax.swing.JInternalFrame implements m
     private javax.swing.JButton btnAbrirCaja;
     private javax.swing.JButton btnCalcular;
     private javax.swing.JButton btnCerrarCaja;
-    private javax.swing.JButton btnGuardar;
-    private javax.swing.JButton btnImprimir;
     private javax.swing.JButton btnSalir;
     private javax.swing.JLabel jLabel1;
     private javax.swing.JLabel jLabel10;
