@@ -159,6 +159,12 @@ public class vPrincipal extends javax.swing.JFrame {
         iconClientes.setIconColor(java.awt.Color.LIGHT_GRAY);
         mClientes.setIcon(iconClientes);
 
+        org.kordamp.ikonli.swing.FontIcon iconTalonarios = new org.kordamp.ikonli.swing.FontIcon();
+        iconTalonarios.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignB.BOOK_OPEN_PAGE_VARIANT);
+        iconTalonarios.setIconSize(16);
+        iconTalonarios.setIconColor(java.awt.Color.LIGHT_GRAY);
+        mTalonarios.setIcon(iconTalonarios);
+
         org.kordamp.ikonli.swing.FontIcon iconRegVentas = new org.kordamp.ikonli.swing.FontIcon();
         iconRegVentas.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CASH_REGISTER);
         iconRegVentas.setIconSize(16);
@@ -380,6 +386,8 @@ public class vPrincipal extends javax.swing.JFrame {
         mVentas = new javax.swing.JMenu();
         mClientes = new javax.swing.JMenuItem();
         jSeparator3 = new javax.swing.JPopupMenu.Separator();
+        mTalonarios = new javax.swing.JMenuItem();
+        jSeparator12 = new javax.swing.JPopupMenu.Separator();
         mRegVentas = new javax.swing.JMenuItem();
         jSeparator4 = new javax.swing.JPopupMenu.Separator();
         mRepVentas = new javax.swing.JMenuItem();
@@ -413,7 +421,7 @@ public class vPrincipal extends javax.swing.JFrame {
         jDesktopPane2.setLayout(jDesktopPane2Layout);
         jDesktopPane2Layout.setHorizontalGroup(
             jDesktopPane2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGap(0, 738, Short.MAX_VALUE)
+            .addGap(0, 397, Short.MAX_VALUE)
         );
         jDesktopPane2Layout.setVerticalGroup(
             jDesktopPane2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -580,6 +588,15 @@ public class vPrincipal extends javax.swing.JFrame {
         });
         mVentas.add(mClientes);
         mVentas.add(jSeparator3);
+
+        mTalonarios.setText("Talonarios de Factura");
+        mTalonarios.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mTalonariosActionPerformed(evt);
+            }
+        });
+        mVentas.add(mTalonarios);
+        mVentas.add(jSeparator12);
 
         mRegVentas.setText("Registrar Ventas");
         mRegVentas.addActionListener(new java.awt.event.ActionListener() {
@@ -1217,7 +1234,49 @@ public class vPrincipal extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_mAperturaCierreCajaActionPerformed
 
-    // 3. Método auxiliar para buscar si la ventana ya está abierta
+    private void mTalonariosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mTalonariosActionPerformed
+        try {
+            vTalonarios talonariosForm = buscarVentanaTalonariosAbierta();
+
+            if (talonariosForm != null) {
+                // Si la ventana ya está abierta, traerla al frente
+                talonariosForm.toFront();
+                talonariosForm.setSelected(true);
+                try {
+                    talonariosForm.setIcon(false); // Restaurarla si está minimizada
+                } catch (Exception e) {
+                    System.err.println("Error al restaurar ventana: " + e.getMessage());
+                }
+                return;
+            }
+
+            // Si no está abierta, crear una nueva instancia
+            talonariosForm = new vTalonarios();
+            talonariosForm.setTitle("Gestión de Talonarios");
+
+            jDesktopPane2.add(talonariosForm);
+            centrar(talonariosForm);
+            talonariosForm.setVisible(true);
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error inesperado al abrir gestión de talonarios:\n" + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }//GEN-LAST:event_mTalonariosActionPerformed
+
+    // Agregar método para buscar si la ventana de talonarios ya está abierta
+    private vTalonarios buscarVentanaTalonariosAbierta() {
+        for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
+            if (frame instanceof vTalonarios) {
+                return (vTalonarios) frame;
+            }
+        }
+        return null;
+    }
+
+    // Método auxiliar para buscar si la ventana ya está abierta
     private vAperturaCierreCaja buscarVentanaAperturaCierreCajaAbierta() {
         for (javax.swing.JInternalFrame frame : jDesktopPane2.getAllFrames()) {
             if (frame instanceof vAperturaCierreCaja) {
@@ -1290,6 +1349,7 @@ public class vPrincipal extends javax.swing.JFrame {
     private javax.swing.JPopupMenu.Separator jSeparator1;
     private javax.swing.JPopupMenu.Separator jSeparator10;
     private javax.swing.JPopupMenu.Separator jSeparator11;
+    private javax.swing.JPopupMenu.Separator jSeparator12;
     private javax.swing.JPopupMenu.Separator jSeparator2;
     private javax.swing.JPopupMenu.Separator jSeparator3;
     private javax.swing.JPopupMenu.Separator jSeparator4;
@@ -1333,6 +1393,7 @@ public class vPrincipal extends javax.swing.JFrame {
     private javax.swing.JMenu mSeguridad;
     private javax.swing.JMenuItem mSiguiente;
     private javax.swing.JMenu mStock;
+    private javax.swing.JMenuItem mTalonarios;
     private javax.swing.JMenu mTesoreria;
     private javax.swing.JMenuItem mUltimo;
     private javax.swing.JMenuItem mUsuarios;
