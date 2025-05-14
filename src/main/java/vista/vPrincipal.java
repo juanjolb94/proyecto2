@@ -1067,31 +1067,6 @@ public class vPrincipal extends javax.swing.JFrame {
         }
     }
 
-    // Método para mostrar un reporte en el JDesktopPane
-    private void mostrarReporte(String nombreReporte, String filtro) {
-        try {
-            // Crear una nueva instancia del visor de reportes
-            vReport reporteFrame = new vReport(nombreReporte, filtro);
-            jDesktopPane2.add(reporteFrame);
-            centrar(reporteFrame);
-            reporteFrame.setVisible(true);
-            reporteFrame.imFiltrar();
-
-            // Seleccionar el reporte recién creado
-            try {
-                reporteFrame.setSelected(true);
-            } catch (Exception e) {
-                System.err.println("Error al seleccionar ventana: " + e.getMessage());
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al abrir el reporte: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
-        }
-    }
-
     private void mProveedoresActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mProveedoresActionPerformed
         try {
             vProveedores proveedoresForm = findOpenWindow(vProveedores.class);
