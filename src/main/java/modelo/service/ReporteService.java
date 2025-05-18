@@ -1,18 +1,15 @@
 package modelo.service;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
 import javax.print.attribute.standard.Copies;
-import javax.swing.JOptionPane;
 
 import modelo.DatabaseConnection;
 import modelo.ProductosDAO;
