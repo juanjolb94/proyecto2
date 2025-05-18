@@ -706,6 +706,11 @@ public class vPrincipal extends javax.swing.JFrame {
         mTesoreria.add(mIngCaja);
 
         mEgrCaja.setText("Registrar Egreso Caja");
+        mEgrCaja.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mEgrCajaActionPerformed(evt);
+            }
+        });
         mTesoreria.add(mEgrCaja);
         mTesoreria.add(jSeparator8);
 
@@ -1212,6 +1217,24 @@ public class vPrincipal extends javax.swing.JFrame {
             ex.printStackTrace();
         }
     }//GEN-LAST:event_mIngCajaActionPerformed
+
+    private void mEgrCajaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mEgrCajaActionPerformed
+        try {
+            vEgresoCaja egresoCajaForm = findOpenWindow(vEgresoCaja.class);
+            if (egresoCajaForm != null) {
+                showWindowSafely(egresoCajaForm, vEgresoCaja.class);
+            } else {
+                egresoCajaForm = new vEgresoCaja();
+                egresoCajaForm.setTitle("Registro de Egreso de Caja");
+                showWindowSafely(egresoCajaForm, vEgresoCaja.class);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error inesperado al abrir Registro de Egreso de Caja:\n" + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }//GEN-LAST:event_mEgrCajaActionPerformed
 
     public static void main(String args[]) {
         try {

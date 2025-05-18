@@ -305,6 +305,9 @@
               <Properties>
                 <Property name="text" type="java.lang.String" value="Registrar Egreso Caja"/>
               </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="mEgrCajaActionPerformed"/>
+              </Events>
             </MenuItem>
             <MenuItem class="javax.swing.JPopupMenu$Separator" name="jSeparator8">
             </MenuItem>
