@@ -32,9 +32,12 @@ public class ReporteService {
 
     private final ProductosDAO productosDAO;
     private static final String REPORTES_DIR = "src/main/resources/reportes/";
+    private Map<Integer, String> cacheCategorias = new HashMap<>();
+    private Map<Integer, String> cacheMarcas = new HashMap<>();
 
     public ReporteService() throws SQLException {
         this.productosDAO = new ProductosDAO();
+        precargarDatos();
     }
 
     /**
@@ -307,24 +310,84 @@ public class ReporteService {
         }).toList();
     }
 
+    // Método para precargar los datos de categorías y marcas
+    private void precargarDatos() throws SQLException {
+        try {
+            Connection conn = DatabaseConnection.getConnection();
+
+            // Cargar categorías
+            String sqlCategorias = "SELECT id_categoria, nombre FROM categoria_producto";
+            try (java.sql.Statement stmt = conn.createStatement(); java.sql.ResultSet rs = stmt.executeQuery(sqlCategorias)) {
+                while (rs.next()) {
+                    cacheCategorias.put(rs.getInt("id_categoria"), rs.getString("nombre"));
+                }
+                System.out.println("Categorías cargadas: " + cacheCategorias.size());
+            } catch (SQLException e) {
+                System.err.println("Error al cargar categorías: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            // Cargar marcas
+            String sqlMarcas = "SELECT id_marca, nombre FROM marca_producto";
+            try (java.sql.Statement stmt = conn.createStatement(); java.sql.ResultSet rs = stmt.executeQuery(sqlMarcas)) {
+                while (rs.next()) {
+                    cacheMarcas.put(rs.getInt("id_marca"), rs.getString("nombre"));
+                }
+                System.out.println("Marcas cargadas: " + cacheMarcas.size());
+            } catch (SQLException e) {
+                System.err.println("Error al cargar marcas: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            System.err.println("Error general al precargar datos: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     // Método auxiliar para obtener nombre de categoría
     private String obtenerNombreCategoria(int idCategoria) {
-        try {
-            // Implementar la lógica para obtener el nombre real de la categoría
-            return "Categoría " + idCategoria; // Temporalmente
-        } catch (Exception e) {
-            return "Categoría desconocida";
+        if (cacheCategorias.isEmpty()) {
+            // Si la caché está vacía, intentar obtener directamente de la base de datos
+            try {
+                Connection conn = DatabaseConnection.getConnection();
+                String sql = "SELECT nombre FROM categoria_producto WHERE id_categoria = ?";
+                try (java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                    pstmt.setInt(1, idCategoria);
+                    try (java.sql.ResultSet rs = pstmt.executeQuery()) {
+                        if (rs.next()) {
+                            return rs.getString("nombre");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Error al buscar categoría " + idCategoria + ": " + e.getMessage());
+            }
+            return "Categoría " + idCategoria;
         }
+        return cacheCategorias.getOrDefault(idCategoria, "Categoría " + idCategoria);
     }
 
     // Método auxiliar para obtener nombre de marca
     private String obtenerNombreMarca(int idMarca) {
-        try {
-            // Implementar la lógica para obtener el nombre real de la marca
-            return "Marca " + idMarca; // Temporalmente
-        } catch (Exception e) {
-            return "Marca desconocida";
+        if (cacheMarcas.isEmpty()) {
+            // Si la caché está vacía, intentar obtener directamente de la base de datos
+            try {
+                Connection conn = DatabaseConnection.getConnection();
+                String sql = "SELECT nombre FROM marca_producto WHERE id_marca = ?";
+                try (java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                    pstmt.setInt(1, idMarca);
+                    try (java.sql.ResultSet rs = pstmt.executeQuery()) {
+                        if (rs.next()) {
+                            return rs.getString("nombre");
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Error al buscar marca " + idMarca + ": " + e.getMessage());
+            }
+            return "Marca " + idMarca;
         }
+        return cacheMarcas.getOrDefault(idMarca, "Marca " + idMarca);
     }
 
     /**

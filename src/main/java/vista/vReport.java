@@ -12,6 +12,7 @@ import javax.swing.JPanel;
 import interfaces.myInterface;
 import java.awt.Component;
 import java.awt.Dimension;
+import javax.swing.SwingUtilities;
 import modelo.DatabaseConnection;
 import modelo.service.ReporteService;
 import net.sf.jasperreports.engine.JasperPrint;
@@ -43,30 +44,99 @@ public class vReport extends JInternalFrame implements myInterface {
         this.reporteNombre = reporteNombre;
         this.filtroVista = filtroVista;
 
-        // Configuración inicial del frame
-        setPreferredSize(new Dimension(1024, 768));
-
         // Inicializar el panel de reporte con layout BorderLayout
         jpReporte = new JPanel(new BorderLayout());
         getContentPane().add(jpReporte, BorderLayout.CENTER);
 
+        // Intentar inicializar el servicio de reportes
+        inicializarServicioReportes();
+
+        // Ajustar el tamaño
+        addNotify();
+        ajustarTamano();
+    }
+
+    private void ajustarTamano() {
+        try {
+            // Verificar si hay un contenedor padre (Desktop Pane)
+            if (getParent() != null) {
+                // Obtener las dimensiones del contenedor padre
+                java.awt.Dimension parentSize = getParent().getSize();
+
+                // Calcular el 95% del ancho y alto del padre
+                int width = (int) (parentSize.width * 0.95);
+                int height = (int) (parentSize.height * 0.95);
+
+                // Establecer el tamaño preferido
+                setPreferredSize(new java.awt.Dimension(width, height));
+                setSize(width, height);
+
+                // Centrar la ventana en el contenedor padre
+                setLocation((parentSize.width - width) / 2, (parentSize.height - height) / 2);
+
+                System.out.println("Ventana de reporte ajustada a " + width + "x" + height);
+            } else {
+                // Si no hay padre, usar un tamaño por defecto
+                setPreferredSize(new java.awt.Dimension(1024, 768));
+                setSize(1024, 768);
+                System.out.println("Usando tamaño por defecto para ventana de reporte: 1024x768");
+            }
+        } catch (Exception e) {
+            // En caso de error, usar un tamaño por defecto
+            setPreferredSize(new java.awt.Dimension(1024, 768));
+            setSize(1024, 768);
+            System.err.println("Error al ajustar tamaño de ventana: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Método para ajustar el tamaño después de que la ventana ha sido agregada
+     * al contenedor padre y se ha hecho visible
+     */
+    public void ajustarDespuesDeAgregar() {
+        SwingUtilities.invokeLater(() -> {
+            ajustarTamano();
+            revalidate();
+            repaint();
+        });
+    }
+
+    /**
+     * Método para inicializar el servicio de reportes
+     */
+    private void inicializarServicioReportes() {
         try {
             this.reporteService = new ReporteService();
         } catch (SQLException ex) {
+            ex.printStackTrace(); // Importante para depuración
             JOptionPane.showMessageDialog(this,
-                    "Error al inicializar el servicio de reportes: " + ex.getMessage(),
+                    "Error al inicializar el servicio de reportes: " + ex.getMessage()
+                    + "\nIntente nuevamente o contacte al administrador.",
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
         }
-
-        // Ajustar el tamaño
-        pack();
     }
 
     /**
      * Genera y muestra el reporte aplicando los filtros necesarios
      */
     public void generarReporte() {
+        // Verificar si el servicio de reportes está inicializado
+        if (reporteService == null) {
+            // Intentar inicializar de nuevo
+            inicializarServicioReportes();
+
+            // Si sigue siendo null, mostrar error y salir
+            if (reporteService == null) {
+                JOptionPane.showMessageDialog(this,
+                        "No se pudo inicializar el servicio de reportes. Por favor, intente nuevamente.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+
         // Mapa para almacenar los parámetros del reporte
         Map<String, Object> parametros = new LinkedHashMap<>();
 
@@ -262,6 +332,21 @@ public class vReport extends JInternalFrame implements myInterface {
      * reporte con los nuevos parámetros si el usuario acepta.
      */
     public void abrirDialogoFiltro() {
+        // Verificar si el servicio de reportes está inicializado
+        if (reporteService == null) {
+            // Intentar inicializar de nuevo
+            inicializarServicioReportes();
+
+            // Si sigue siendo null, mostrar error y salir
+            if (reporteService == null) {
+                JOptionPane.showMessageDialog(this,
+                        "No se pudo inicializar el servicio de reportes. Por favor, intente nuevamente.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+
         // Mapa para almacenar los parámetros del reporte
         Map<String, Object> parametros = new LinkedHashMap<>();
 

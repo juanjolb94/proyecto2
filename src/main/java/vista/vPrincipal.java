@@ -3,6 +3,7 @@ package vista;
 import controlador.cGestProd;
 import javax.swing.*;
 import interfaces.myInterface;
+import java.awt.Dimension;
 import java.awt.event.ActionListener;
 import java.sql.SQLException;
 import java.awt.Insets;
@@ -1063,6 +1064,32 @@ public class vPrincipal extends javax.swing.JFrame {
         try {
             // Crear una nueva instancia del visor de reportes
             vReport reporteFrame = new vReport(nombreReporte, filtro);
+
+            // Calcular dimensiones respetando una relación de aspecto de papel oficio (1:1.53)
+            // Ajustar al espacio disponible en el escritorio
+            int maxWidth = (int) (jDesktopPane2.getWidth() * 0.9);  // 90% del ancho disponible
+            int maxHeight = (int) (jDesktopPane2.getHeight() * 0.9); // 90% del alto disponible
+
+            // Determinar si limitamos por ancho o por alto
+            int width;
+            int height;
+
+            // Calcular las dimensiones basadas en el tamaño oficio
+            double aspectRatio = 1.53; // Alto/Ancho para papel oficio
+
+            if (maxWidth * aspectRatio <= maxHeight) {
+                // Limitar por ancho
+                width = maxWidth;
+                height = (int) (width * aspectRatio);
+            } else {
+                // Limitar por alto
+                height = maxHeight;
+                width = (int) (height / aspectRatio);
+            }
+
+            // Establecer tamaño de la ventana
+            reporteFrame.setSize(width, height);
+            reporteFrame.setPreferredSize(new Dimension(width, height));
 
             // Usar el método seguro para mostrar la ventana
             if (showWindowSafely(reporteFrame, vReport.class)) {
