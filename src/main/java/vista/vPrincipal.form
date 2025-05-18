@@ -297,6 +297,9 @@
               <Properties>
                 <Property name="text" type="java.lang.String" value="Registrar Ingreso Caja"/>
               </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="mIngCajaActionPerformed"/>
+              </Events>
             </MenuItem>
             <MenuItem class="javax.swing.JMenuItem" name="mEgrCaja">
               <Properties>

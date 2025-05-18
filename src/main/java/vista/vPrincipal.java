@@ -698,6 +698,11 @@ public class vPrincipal extends javax.swing.JFrame {
         mTesoreria.add(jSeparator7);
 
         mIngCaja.setText("Registrar Ingreso Caja");
+        mIngCaja.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mIngCajaActionPerformed(evt);
+            }
+        });
         mTesoreria.add(mIngCaja);
 
         mEgrCaja.setText("Registrar Egreso Caja");
@@ -1188,6 +1193,25 @@ public class vPrincipal extends javax.swing.JFrame {
             ex.printStackTrace();
         }
     }//GEN-LAST:event_mTalonariosActionPerformed
+
+    private void mIngCajaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mIngCajaActionPerformed
+        try {
+            vIngresoCaja ingresoCajaForm = findOpenWindow(vIngresoCaja.class);
+
+            if (ingresoCajaForm != null) {
+                showWindowSafely(ingresoCajaForm, vIngresoCaja.class);
+            } else {
+                ingresoCajaForm = new vIngresoCaja();
+                ingresoCajaForm.setTitle("Registro de Ingreso a Caja");
+                showWindowSafely(ingresoCajaForm, vIngresoCaja.class);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error inesperado al abrir Registro de Ingreso a Caja:\n" + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+    }//GEN-LAST:event_mIngCajaActionPerformed
 
     public static void main(String args[]) {
         try {
