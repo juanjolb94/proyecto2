@@ -3,27 +3,29 @@ package vista;
 import controlador.cGestProd;
 import javax.swing.*;
 import interfaces.myInterface;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.ActionListener;
 import java.sql.SQLException;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import javax.swing.JOptionPane;
+import javax.swing.event.InternalFrameAdapter;
+import javax.swing.event.InternalFrameEvent;
 
 public class vPrincipal extends javax.swing.JFrame {
 
     // Variable para almacenar las ventanas internas abiertas
     public JInternalFrame[] w_abiertos;
 
+    private Map<String, org.kordamp.ikonli.swing.FontIcon> iconCache = new HashMap<>();
+
     public vPrincipal() {
         initComponents();
-        // Limpieza de listeners duplicados
-        ActionListener[] listeners = mBuscar.getActionListeners();
-        for (ActionListener listener : listeners) {
-            mBuscar.removeActionListener(listener);
-        }
-        // Asigna el listener correcto
-        mBuscar.addActionListener(this::mBuscarActionPerformed);
 
         // Establecer en pantalla completa (maximizado)
         this.setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -33,9 +35,9 @@ public class vPrincipal extends javax.swing.JFrame {
 
         setLocationRelativeTo(null);
 
-        configurarMenusDetalle();
-        configurarIconosMenu();
-        configurarIconosMenusPrincipales();
+        configurarListeners();
+        configurarTodosLosIconos();
+        validarIconos();
     }
 
     private void ajustarTamanoVentana() {
@@ -47,255 +49,369 @@ public class vPrincipal extends javax.swing.JFrame {
         this.pack();
     }
 
-    private void configurarIconosMenu() {
-        // Menú Archivo
-        org.kordamp.ikonli.swing.FontIcon iconNuevo = new org.kordamp.ikonli.swing.FontIcon();
-        iconNuevo.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignF.FILE_PLUS_OUTLINE);
-        iconNuevo.setIconSize(16);
-        iconNuevo.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mNuevo.setIcon(iconNuevo);
+    /**
+     * Método para obtener un icono del caché o crear uno nuevo si no existe
+     *
+     * @param ikonName El nombre del ikon de MaterialDesign a utilizar
+     * @param size Tamaño del icono
+     * @param color Color del icono
+     * @return Un FontIcon cacheado o nuevo
+     */
+    private org.kordamp.ikonli.swing.FontIcon getOrCreateIcon(String ikonName, int size, Color color) {
+        // Verificar si ya existe en el caché
+        if (iconCache.containsKey(ikonName)) {
+            return iconCache.get(ikonName);
+        }
 
-        org.kordamp.ikonli.swing.FontIcon iconGuardar = new org.kordamp.ikonli.swing.FontIcon();
-        iconGuardar.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CONTENT_SAVE);
-        iconGuardar.setIconSize(16);
-        iconGuardar.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mGuardar.setIcon(iconGuardar);
+        org.kordamp.ikonli.swing.FontIcon icon = new org.kordamp.ikonli.swing.FontIcon();
 
-        org.kordamp.ikonli.swing.FontIcon iconBorrar = new org.kordamp.ikonli.swing.FontIcon();
-        iconBorrar.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignD.DELETE_OUTLINE);
-        iconBorrar.setIconSize(16);
-        iconBorrar.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mBorrar.setIcon(iconBorrar);
+        // Asignar el ikon basado en el nombre
+        boolean ikonAsignado = true;
 
-        org.kordamp.ikonli.swing.FontIcon iconBuscar = new org.kordamp.ikonli.swing.FontIcon();
-        iconBuscar.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignM.MAGNIFY);
-        iconBuscar.setIconSize(16);
-        iconBuscar.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mBuscar.setIcon(iconBuscar);
+        try {
+            // Usar una estrategia más robusta para asignar los ikons
+            switch (ikonName) {
+                // Menú Archivo
+                case "FILE_DOCUMENT_OUTLINE":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignF.FILE_DOCUMENT_OUTLINE);
+                    break;
+                case "FILE_PLUS_OUTLINE":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignF.FILE_PLUS_OUTLINE);
+                    break;
+                case "CONTENT_SAVE":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CONTENT_SAVE);
+                    break;
+                case "DELETE_OUTLINE":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignD.DELETE_OUTLINE);
+                    break;
+                case "MAGNIFY":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignM.MAGNIFY);
+                    break;
+                case "PRINTER":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PRINTER);
+                    break;
+                case "WINDOW_CLOSE":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignW.WINDOW_CLOSE);
+                    break;
+                case "EXIT_TO_APP":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignE.EXIT_TO_APP);
+                    break;
 
-        org.kordamp.ikonli.swing.FontIcon iconImprimir = new org.kordamp.ikonli.swing.FontIcon();
-        iconImprimir.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PRINTER);
-        iconImprimir.setIconSize(16);
-        iconImprimir.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mImprimir.setIcon(iconImprimir);
+                // Menú Edición
+                case "PENCIL":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PENCIL);
+                    break;
+                case "PAGE_FIRST":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PAGE_FIRST);
+                    break;
+                case "CHEVRON_LEFT":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CHEVRON_LEFT);
+                    break;
+                case "CHEVRON_RIGHT":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CHEVRON_RIGHT);
+                    break;
+                case "PAGE_LAST":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PAGE_LAST);
+                    break;
+                case "PLAYLIST_PLUS":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PLAYLIST_PLUS);
+                    break;
+                case "PLAYLIST_MINUS":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PLAYLIST_MINUS);
+                    break;
 
-        org.kordamp.ikonli.swing.FontIcon iconCerrarVentana = new org.kordamp.ikonli.swing.FontIcon();
-        iconCerrarVentana.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignW.WINDOW_CLOSE);
-        iconCerrarVentana.setIconSize(16);
-        iconCerrarVentana.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mCerrarVentana.setIcon(iconCerrarVentana);
+                // Menú Compras
+                case "CART":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CART);
+                    break;
+                case "ACCOUNT_GROUP":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignA.ACCOUNT_GROUP);
+                    break;
+                case "CART_PLUS":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CART_PLUS);
+                    break;
+                case "CLIPBOARD_TEXT":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CLIPBOARD_TEXT);
+                    break;
 
-        org.kordamp.ikonli.swing.FontIcon iconSalir = new org.kordamp.ikonli.swing.FontIcon();
-        iconSalir.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignE.EXIT_TO_APP);
-        iconSalir.setIconSize(16);
-        iconSalir.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mSalir.setIcon(iconSalir);
+                // Menú Ventas
+                case "STORE":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignS.STORE);
+                    break;
+                case "ACCOUNT_MULTIPLE":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignA.ACCOUNT_MULTIPLE);
+                    break;
+                case "BOOK_OPEN_PAGE_VARIANT":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignB.BOOK_OPEN_PAGE_VARIANT);
+                    break;
+                case "CASH_REGISTER":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CASH_REGISTER);
+                    break;
+                case "CHART_LINE":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CHART_LINE);
+                    break;
 
-        // Menú Edición
-        org.kordamp.ikonli.swing.FontIcon iconPrimero = new org.kordamp.ikonli.swing.FontIcon();
-        iconPrimero.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PAGE_FIRST);
-        iconPrimero.setIconSize(16);
-        iconPrimero.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mPrimero.setIcon(iconPrimero);
+                // Menú Stock
+                case "PACKAGE":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PACKAGE);
+                    break;
+                case "PACKAGE_VARIANT_CLOSED":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PACKAGE_VARIANT_CLOSED);
+                    break;
+                case "TAG_MULTIPLE":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignT.TAG_MULTIPLE);
+                    break;
+                case "CLIPBOARD_CHECK":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CLIPBOARD_CHECK);
+                    break;
+                case "BARCODE_SCAN":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignB.BARCODE_SCAN);
+                    break;
 
-        org.kordamp.ikonli.swing.FontIcon iconAnterior = new org.kordamp.ikonli.swing.FontIcon();
-        iconAnterior.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CHEVRON_LEFT);
-        iconAnterior.setIconSize(16);
-        iconAnterior.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mAnterior.setIcon(iconAnterior);
+                // Menú Tesorería
+                case "CASH":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CASH);
+                    break;
+                case "ARRANGE_SEND_BACKWARD":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignA.ARRANGE_SEND_BACKWARD);
+                    break;
+                case "CASH_PLUS":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CASH_PLUS);
+                    break;
+                case "CASH_MINUS":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CASH_MINUS);
+                    break;
+                case "CHART_BAR":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CHART_BAR);
+                    break;
 
-        org.kordamp.ikonli.swing.FontIcon iconSiguiente = new org.kordamp.ikonli.swing.FontIcon();
-        iconSiguiente.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CHEVRON_RIGHT);
-        iconSiguiente.setIconSize(16);
-        iconSiguiente.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mSiguiente.setIcon(iconSiguiente);
+                // Menú Seguridad
+                case "SHIELD":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignS.SHIELD);
+                    break;
+                case "ACCOUNT":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignA.ACCOUNT);
+                    break;
+                case "ACCOUNT_KEY":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignA.ACCOUNT_KEY);
+                    break;
+                case "SHIELD_ACCOUNT":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignS.SHIELD_ACCOUNT);
+                    break;
+                case "KEY":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignK.KEY);
+                    break;
+                case "MENU":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignM.MENU);
+                    break;
 
-        org.kordamp.ikonli.swing.FontIcon iconUltimo = new org.kordamp.ikonli.swing.FontIcon();
-        iconUltimo.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PAGE_LAST);
-        iconUltimo.setIconSize(16);
-        iconUltimo.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mUltimo.setIcon(iconUltimo);
+                default:
+                    // Ikon por defecto para nombres no reconocidos
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignH.HELP_CIRCLE_OUTLINE);
+                    System.out.println("Advertencia: Ikon no reconocido: " + ikonName + ". Usando ikon por defecto.");
+                    ikonAsignado = false;
+                    break;
+            }
+        } catch (Exception e) {
+            // En caso de error al asignar un ikon, usar uno por defecto
+            System.err.println("Error al asignar ikon '" + ikonName + "': " + e.getMessage());
+            try {
+                icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignH.HELP_CIRCLE_OUTLINE);
+            } catch (Exception ex) {
+                // Si incluso el ikon por defecto falla, no asignar ninguno
+                System.err.println("Error crítico: No se pudo asignar el ikon por defecto. " + ex.getMessage());
+                return null; // No cachear iconos inválidos
+            }
+        }
 
-        org.kordamp.ikonli.swing.FontIcon iconInsDetalle = new org.kordamp.ikonli.swing.FontIcon();
-        iconInsDetalle.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PLAYLIST_PLUS);
-        iconInsDetalle.setIconSize(16);
-        iconInsDetalle.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mInsDetalle.setIcon(iconInsDetalle);
+        // Establecer tamaño y color solo si se asignó correctamente un ikon
+        icon.setIconSize(size);
+        icon.setIconColor(color);
 
-        org.kordamp.ikonli.swing.FontIcon iconDelDetalle = new org.kordamp.ikonli.swing.FontIcon();
-        iconDelDetalle.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PLAYLIST_MINUS);
-        iconDelDetalle.setIconSize(16);
-        iconDelDetalle.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mDelDetalle.setIcon(iconDelDetalle);
+        // Cachear el icono solo si se asignó correctamente
+        if (ikonAsignado) {
+            iconCache.put(ikonName, icon);
+        }
 
-        // Menú Compras
-        org.kordamp.ikonli.swing.FontIcon iconProveedores = new org.kordamp.ikonli.swing.FontIcon();
-        iconProveedores.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignA.ACCOUNT_GROUP);
-        iconProveedores.setIconSize(16);
-        iconProveedores.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mProveedores.setIcon(iconProveedores);
-
-        org.kordamp.ikonli.swing.FontIcon iconRegCompras = new org.kordamp.ikonli.swing.FontIcon();
-        iconRegCompras.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CART_PLUS);
-        iconRegCompras.setIconSize(16);
-        iconRegCompras.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mRegCompras.setIcon(iconRegCompras);
-
-        org.kordamp.ikonli.swing.FontIcon iconRepCompras = new org.kordamp.ikonli.swing.FontIcon();
-        iconRepCompras.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CLIPBOARD_TEXT);
-        iconRepCompras.setIconSize(16);
-        iconRepCompras.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mRepCompras.setIcon(iconRepCompras);
-
-        // Menú Ventas
-        org.kordamp.ikonli.swing.FontIcon iconClientes = new org.kordamp.ikonli.swing.FontIcon();
-        iconClientes.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignA.ACCOUNT_MULTIPLE);
-        iconClientes.setIconSize(16);
-        iconClientes.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mClientes.setIcon(iconClientes);
-
-        org.kordamp.ikonli.swing.FontIcon iconTalonarios = new org.kordamp.ikonli.swing.FontIcon();
-        iconTalonarios.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignB.BOOK_OPEN_PAGE_VARIANT);
-        iconTalonarios.setIconSize(16);
-        iconTalonarios.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mTalonarios.setIcon(iconTalonarios);
-
-        org.kordamp.ikonli.swing.FontIcon iconRegVentas = new org.kordamp.ikonli.swing.FontIcon();
-        iconRegVentas.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CASH_REGISTER);
-        iconRegVentas.setIconSize(16);
-        iconRegVentas.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mRegVentas.setIcon(iconRegVentas);
-
-        org.kordamp.ikonli.swing.FontIcon iconRepVentas = new org.kordamp.ikonli.swing.FontIcon();
-        iconRepVentas.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CHART_LINE);
-        iconRepVentas.setIconSize(16);
-        iconRepVentas.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mRepVentas.setIcon(iconRepVentas);
-
-        // Menú Stock
-        org.kordamp.ikonli.swing.FontIcon iconProductos = new org.kordamp.ikonli.swing.FontIcon();
-        iconProductos.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PACKAGE_VARIANT_CLOSED);
-        iconProductos.setIconSize(16);
-        iconProductos.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mProductos.setIcon(iconProductos);
-
-        org.kordamp.ikonli.swing.FontIcon iconPromociones = new org.kordamp.ikonli.swing.FontIcon();
-        iconPromociones.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignT.TAG_MULTIPLE);
-        iconPromociones.setIconSize(16);
-        iconPromociones.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mPromociones.setIcon(iconPromociones);
-
-        org.kordamp.ikonli.swing.FontIcon iconAjustarStock = new org.kordamp.ikonli.swing.FontIcon();
-        iconAjustarStock.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CLIPBOARD_CHECK);
-        iconAjustarStock.setIconSize(16);
-        iconAjustarStock.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mAjustarStock.setIcon(iconAjustarStock);
-
-        org.kordamp.ikonli.swing.FontIcon iconRepInvent = new org.kordamp.ikonli.swing.FontIcon();
-        iconRepInvent.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignB.BARCODE_SCAN);
-        iconRepInvent.setIconSize(16);
-        iconRepInvent.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mRepInvent.setIcon(iconRepInvent);
-
-        // Menú Tesorería
-        org.kordamp.ikonli.swing.FontIcon iconTipoMov = new org.kordamp.ikonli.swing.FontIcon();
-        iconTipoMov.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignA.ARRANGE_SEND_BACKWARD);
-        iconTipoMov.setIconSize(16);
-        iconTipoMov.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mAperturaCierreCaja.setIcon(iconTipoMov);
-
-        org.kordamp.ikonli.swing.FontIcon iconIngCaja = new org.kordamp.ikonli.swing.FontIcon();
-        iconIngCaja.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CASH_PLUS);
-        iconIngCaja.setIconSize(16);
-        iconIngCaja.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mIngCaja.setIcon(iconIngCaja);
-
-        org.kordamp.ikonli.swing.FontIcon iconEgrCaja = new org.kordamp.ikonli.swing.FontIcon();
-        iconEgrCaja.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CASH_MINUS);
-        iconEgrCaja.setIconSize(16);
-        iconEgrCaja.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mEgrCaja.setIcon(iconEgrCaja);
-
-        org.kordamp.ikonli.swing.FontIcon iconRepCaja = new org.kordamp.ikonli.swing.FontIcon();
-        iconRepCaja.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CHART_BAR);
-        iconRepCaja.setIconSize(16);
-        iconRepCaja.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mRepCaja.setIcon(iconRepCaja);
-
-        // Menú Seguridad
-        org.kordamp.ikonli.swing.FontIcon iconPersonas = new org.kordamp.ikonli.swing.FontIcon();
-        iconPersonas.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignA.ACCOUNT);
-        iconPersonas.setIconSize(16);
-        iconPersonas.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mPersonas.setIcon(iconPersonas);
-
-        org.kordamp.ikonli.swing.FontIcon iconUsuarios = new org.kordamp.ikonli.swing.FontIcon();
-        iconUsuarios.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignA.ACCOUNT_KEY);
-        iconUsuarios.setIconSize(16);
-        iconUsuarios.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mUsuarios.setIcon(iconUsuarios);
-
-        org.kordamp.ikonli.swing.FontIcon iconRoles = new org.kordamp.ikonli.swing.FontIcon();
-        iconRoles.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignS.SHIELD_ACCOUNT);
-        iconRoles.setIconSize(16);
-        iconRoles.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mRoles.setIcon(iconRoles);
-
-        org.kordamp.ikonli.swing.FontIcon iconPermisos = new org.kordamp.ikonli.swing.FontIcon();
-        iconPermisos.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignK.KEY);
-        iconPermisos.setIconSize(16);
-        iconPermisos.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mPermisos.setIcon(iconPermisos);
-
-        org.kordamp.ikonli.swing.FontIcon iconMenus = new org.kordamp.ikonli.swing.FontIcon();
-        iconMenus.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignM.MENU);
-        iconMenus.setIconSize(16);
-        iconMenus.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mMenus.setIcon(iconMenus);
+        return icon;
     }
 
-    private void configurarIconosMenusPrincipales() {
-        org.kordamp.ikonli.swing.FontIcon iconArchivo = new org.kordamp.ikonli.swing.FontIcon();
-        iconArchivo.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignF.FILE_DOCUMENT_OUTLINE);
-        iconArchivo.setIconSize(16);
-        iconArchivo.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mArchivo.setIcon(iconArchivo);
+    /**
+     * Configura todos los iconos de menú de manera eficiente usando iconos
+     * cacheados
+     */
+    private void configurarTodosLosIconos() {
+        // Solo configurar iconos si no han sido configurados todavía
+        if (iconCache == null) {
+            iconCache = new HashMap<>();
+        }
 
-        org.kordamp.ikonli.swing.FontIcon iconEdicion = new org.kordamp.ikonli.swing.FontIcon();
-        iconEdicion.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PENCIL);
-        iconEdicion.setIconSize(16);
-        iconEdicion.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mEdicion.setIcon(iconEdicion);
+        Color menuIconColor = java.awt.Color.LIGHT_GRAY;
+        int iconSize = 16;
 
-        org.kordamp.ikonli.swing.FontIcon iconCompras = new org.kordamp.ikonli.swing.FontIcon();
-        iconCompras.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CART);
-        iconCompras.setIconSize(16);
-        iconCompras.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mCompras.setIcon(iconCompras);
+        // Menús principales
+        setIconSafely(mArchivo, "FILE_DOCUMENT_OUTLINE", iconSize, menuIconColor);
+        setIconSafely(mEdicion, "PENCIL", iconSize, menuIconColor);
+        setIconSafely(mCompras, "CART", iconSize, menuIconColor);
+        setIconSafely(mVentas, "STORE", iconSize, menuIconColor);
+        setIconSafely(mStock, "PACKAGE", iconSize, menuIconColor);
+        setIconSafely(mTesoreria, "CASH", iconSize, menuIconColor);
+        setIconSafely(mSeguridad, "SHIELD", iconSize, menuIconColor);
 
-        org.kordamp.ikonli.swing.FontIcon iconVentas = new org.kordamp.ikonli.swing.FontIcon();
-        iconVentas.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignS.STORE);
-        iconVentas.setIconSize(16);
-        iconVentas.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mVentas.setIcon(iconVentas);
+        // Menú Archivo
+        setIconSafely(mNuevo, "FILE_PLUS_OUTLINE", iconSize, menuIconColor);
+        setIconSafely(mGuardar, "CONTENT_SAVE", iconSize, menuIconColor);
+        setIconSafely(mBorrar, "DELETE_OUTLINE", iconSize, menuIconColor);
+        setIconSafely(mBuscar, "MAGNIFY", iconSize, menuIconColor);
+        setIconSafely(mImprimir, "PRINTER", iconSize, menuIconColor);
+        setIconSafely(mCerrarVentana, "WINDOW_CLOSE", iconSize, menuIconColor);
+        setIconSafely(mSalir, "EXIT_TO_APP", iconSize, menuIconColor);
 
-        org.kordamp.ikonli.swing.FontIcon iconStock = new org.kordamp.ikonli.swing.FontIcon();
-        iconStock.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignP.PACKAGE);
-        iconStock.setIconSize(16);
-        iconStock.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mStock.setIcon(iconStock);
+        // Menú Edición
+        setIconSafely(mPrimero, "PAGE_FIRST", iconSize, menuIconColor);
+        setIconSafely(mAnterior, "CHEVRON_LEFT", iconSize, menuIconColor);
+        setIconSafely(mSiguiente, "CHEVRON_RIGHT", iconSize, menuIconColor);
+        setIconSafely(mUltimo, "PAGE_LAST", iconSize, menuIconColor);
+        setIconSafely(mInsDetalle, "PLAYLIST_PLUS", iconSize, menuIconColor);
+        setIconSafely(mDelDetalle, "PLAYLIST_MINUS", iconSize, menuIconColor);
 
-        org.kordamp.ikonli.swing.FontIcon iconTesoreria = new org.kordamp.ikonli.swing.FontIcon();
-        iconTesoreria.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CASH);
-        iconTesoreria.setIconSize(16);
-        iconTesoreria.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mTesoreria.setIcon(iconTesoreria);
+        // Menú Compras
+        setIconSafely(mProveedores, "ACCOUNT_GROUP", iconSize, menuIconColor);
+        setIconSafely(mRegCompras, "CART_PLUS", iconSize, menuIconColor);
+        setIconSafely(mRepCompras, "CLIPBOARD_TEXT", iconSize, menuIconColor);
 
-        org.kordamp.ikonli.swing.FontIcon iconSeguridad = new org.kordamp.ikonli.swing.FontIcon();
-        iconSeguridad.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignS.SHIELD);
-        iconSeguridad.setIconSize(16);
-        iconSeguridad.setIconColor(java.awt.Color.LIGHT_GRAY);
-        mSeguridad.setIcon(iconSeguridad);
+        // Menú Ventas
+        setIconSafely(mClientes, "ACCOUNT_MULTIPLE", iconSize, menuIconColor);
+        setIconSafely(mTalonarios, "BOOK_OPEN_PAGE_VARIANT", iconSize, menuIconColor);
+        setIconSafely(mRegVentas, "CASH_REGISTER", iconSize, menuIconColor);
+        setIconSafely(mRepVentas, "CHART_LINE", iconSize, menuIconColor);
+
+        // Menú Stock
+        setIconSafely(mProductos, "PACKAGE_VARIANT_CLOSED", iconSize, menuIconColor);
+        setIconSafely(mPromociones, "TAG_MULTIPLE", iconSize, menuIconColor);
+        setIconSafely(mAjustarStock, "CLIPBOARD_CHECK", iconSize, menuIconColor);
+        setIconSafely(mRepInvent, "BARCODE_SCAN", iconSize, menuIconColor);
+
+        // Menú Tesorería
+        setIconSafely(mAperturaCierreCaja, "ARRANGE_SEND_BACKWARD", iconSize, menuIconColor);
+        setIconSafely(mIngCaja, "CASH_PLUS", iconSize, menuIconColor);
+        setIconSafely(mEgrCaja, "CASH_MINUS", iconSize, menuIconColor);
+        setIconSafely(mRepCaja, "CHART_BAR", iconSize, menuIconColor);
+
+        // Menú Seguridad
+        setIconSafely(mPersonas, "ACCOUNT", iconSize, menuIconColor);
+        setIconSafely(mUsuarios, "ACCOUNT_KEY", iconSize, menuIconColor);
+        setIconSafely(mRoles, "SHIELD_ACCOUNT", iconSize, menuIconColor);
+        setIconSafely(mPermisos, "KEY", iconSize, menuIconColor);
+        setIconSafely(mMenus, "MENU", iconSize, menuIconColor);
+
+        // Validar que todos los iconos se hayan asignado correctamente
+        validarIconos();
+    }
+
+    /**
+     * Método auxiliar para asignar un icono de manera segura a un componente
+     */
+    private void setIconSafely(JMenuItem menuItem, String ikonName, int size, Color color) {
+        try {
+            org.kordamp.ikonli.swing.FontIcon icon = getOrCreateIcon(ikonName, size, color);
+            if (icon != null) {
+                menuItem.setIcon(icon);
+            }
+        } catch (Exception e) {
+            System.err.println("Error al asignar icono a " + menuItem.getText() + ": " + e.getMessage());
+            // No asignar ningún icono si hay error, mejor ningún icono que una excepción
+        }
+    }
+
+    /**
+     * Valida que todos los iconos asignados sean válidos Útil para ejecutar
+     * después de la inicialización para verificar que todo está correcto
+     */
+    private void validarIconos() {
+        JMenuItem[] items = {
+            // Menús principales
+            mArchivo, mEdicion, mCompras, mVentas, mStock, mTesoreria, mSeguridad,
+            // Menú Archivo
+            mNuevo, mGuardar, mBorrar, mBuscar, mImprimir, mCerrarVentana, mSalir,
+            // Menú Edición
+            mPrimero, mAnterior, mSiguiente, mUltimo, mInsDetalle, mDelDetalle,
+            // Menú Compras
+            mProveedores, mRegCompras, mRepCompras,
+            // Menú Ventas
+            mClientes, mTalonarios, mRegVentas, mRepVentas,
+            // Menú Stock
+            mProductos, mPromociones, mAjustarStock, mRepInvent,
+            // Menú Tesorería
+            mAperturaCierreCaja, mIngCaja, mEgrCaja, mRepCaja,
+            // Menú Seguridad
+            mPersonas, mUsuarios, mRoles, mPermisos, mMenus
+        };
+
+        System.out.println("Verificando " + items.length + " iconos de menú...");
+
+        for (JMenuItem item : items) {
+            if (item == null) {
+                System.err.println("ADVERTENCIA: Elemento de menú nulo encontrado en la validación.");
+                continue;
+            }
+
+            Icon icon = item.getIcon();
+            if (icon == null) {
+                System.out.println("ADVERTENCIA: " + item.getText() + " no tiene icono asignado.");
+            } else if (icon instanceof org.kordamp.ikonli.swing.FontIcon) {
+                org.kordamp.ikonli.swing.FontIcon fontIcon = (org.kordamp.ikonli.swing.FontIcon) icon;
+                if (fontIcon.getIkon() == null) {
+                    System.err.println("ERROR: " + item.getText() + " tiene un FontIcon con ikon nulo.");
+                } else {
+                    // Todo está correcto
+                    // System.out.println("OK: " + item.getText() + " tiene icono válido.");
+                }
+            } else {
+                System.out.println("INFORMACIÓN: " + item.getText() + " usa un icono que no es FontIcon.");
+            }
+        }
+
+        System.out.println("Validación de iconos completada.");
+    }
+
+    /**
+     * Configura los listeners de los componentes de la interfaz de usuario.
+     * Este método asegura que cada componente tenga exactamente un listener,
+     * evitando la duplicación de acciones.
+     */
+    private void configurarListeners() {
+        // Almacena referencias a los listeners para facilitar su gestión
+        Map<JMenuItem, ActionListener> menuListeners = new HashMap<>();
+
+        // Crear y almacenar los listeners para cada elemento del menú
+        menuListeners.put(mBuscar, e -> mBuscarActionPerformed(e));
+        menuListeners.put(mGuardar, e -> mGuardarActionPerformed(e));
+        menuListeners.put(mBorrar, e -> mBorrarActionPerformed(e));
+        menuListeners.put(mCerrarVentana, e -> mCerrarVentanaActionPerformed(e));
+        menuListeners.put(mSalir, e -> mSalirActionPerformed(e));
+        menuListeners.put(mPrimero, e -> mPrimeroActionPerformed(e));
+        menuListeners.put(mAnterior, e -> mAnteriorActionPerformed(e));
+        menuListeners.put(mSiguiente, e -> mSiguienteActionPerformed(e));
+        menuListeners.put(mUltimo, e -> mUltimoActionPerformed(e));
+
+        menuListeners.put(mInsDetalle, e -> mInsDetalleActionPerformed(e));
+        menuListeners.put(mDelDetalle, e -> mDelDetalleActionPerformed(e));
+
+        // Y así sucesivamente para todos los elementos del menú que necesiten listeners
+        // Aplicar los listeners, eliminando primero cualquier listener existente
+        for (Map.Entry<JMenuItem, ActionListener> entry : menuListeners.entrySet()) {
+            JMenuItem menuItem = entry.getKey();
+            ActionListener listener = entry.getValue();
+
+            // Eliminar listeners existentes
+            for (ActionListener existingListener : menuItem.getActionListeners()) {
+                menuItem.removeActionListener(existingListener);
+            }
+
+            // Agregar el nuevo listener
+            menuItem.addActionListener(listener);
+        }
     }
 
     /**
@@ -358,16 +474,23 @@ public class vPrincipal extends javax.swing.JFrame {
     }
 
     /**
-     * Abre una ventana si no está abierta, o activa la existente si ya está
-     * abierta
+     * Método genérico para abrir cualquier tipo de ventana interna
      *
-     * @param <T> Tipo de ventana (debe extender JInternalFrame)
-     * @param window La ventana a mostrar
+     * @param <T> Tipo de ventana a abrir
+     * @param windowSupplier Proveedor de la ventana (función que crea la
+     * instancia)
      * @param windowClass Clase de la ventana
-     * @return true si se abrió una nueva ventana, false si se activó una
-     * existente
+     * @param title Título de la ventana
+     * @param setupFunction Función opcional para configurar la ventana (puede
+     * ser null)
+     * @return La ventana abierta
      */
-    private <T extends JInternalFrame> boolean showWindowSafely(T window, Class<T> windowClass) {
+    private <T extends JInternalFrame & myInterface> T abrirVentanaGenerica(
+            Supplier<T> windowSupplier,
+            Class<T> windowClass,
+            String title,
+            Consumer<T> setupFunction) {
+
         try {
             // Buscar ventana existente
             T existingWindow = findOpenWindow(windowClass);
@@ -379,25 +502,69 @@ public class vPrincipal extends javax.swing.JFrame {
                 if (existingWindow.isIcon()) {
                     existingWindow.setIcon(false);
                 }
-                return false;
+                return existingWindow;
             } else {
-                // Si no existe, mostrarla
-                jDesktopPane2.add(window);
-                centrar(window);
-                window.setVisible(true);
-                try {
-                    window.setSelected(true);
-                } catch (Exception e) {
-                    System.err.println("Error al seleccionar ventana: " + e.getMessage());
+                // Si no existe, crear una nueva
+                T newWindow = windowSupplier.get();
+                newWindow.setTitle(title);
+
+                // Configurar la ventana si se proporciona una función de configuración
+                if (setupFunction != null) {
+                    setupFunction.accept(newWindow);
                 }
-                return true;
+
+                // Mostrar la ventana
+                jDesktopPane2.add(newWindow);
+                centrar(newWindow);
+                newWindow.setVisible(true);
+                newWindow.setSelected(true);
+
+                // Agregar un listener para limpiar recursos cuando se cierra la ventana
+                newWindow.addInternalFrameListener(new InternalFrameAdapter() {
+                    @Override
+                    public void internalFrameClosed(InternalFrameEvent e) {
+                        // Limpiar cualquier recurso asociado con esta ventana
+                        // Por ejemplo, podría almacenar referencias a controladores en un mapa
+                        // y eliminarlos cuando se cierra la ventana
+                        limpiarRecursos(newWindow);
+                    }
+                });
+
+                return newWindow;
             }
-        } catch (Exception e) {
+        } catch (Exception ex) {
             JOptionPane.showMessageDialog(this,
-                    "Error al abrir ventana: " + e.getMessage(),
+                    "Error al abrir ventana: " + ex.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
-            return false;
+            ex.printStackTrace();
+            return null;
+        }
+    }
+
+    // Mapa para almacenar referencias a los controladores por ventana
+    private Map<JInternalFrame, Object> controladores = new HashMap<>();
+
+    /**
+     * Registra un controlador asociado a una ventana
+     */
+    private void registrarControlador(JInternalFrame ventana, Object controlador) {
+        controladores.put(ventana, controlador);
+    }
+
+    /**
+     * Método para limpiar recursos asociados con una ventana cerrada
+     */
+    private void limpiarRecursos(JInternalFrame ventana) {
+        Object controlador = controladores.remove(ventana);
+        if (controlador != null) {
+            // Si el controlador implementa alguna interfaz de "disposable", llamar a su método de limpieza
+            if (controlador instanceof AutoCloseable) {
+                try {
+                    ((AutoCloseable) controlador).close();
+                } catch (Exception e) {
+                    System.err.println("Error al cerrar controlador: " + e.getMessage());
+                }
+            }
         }
     }
 
@@ -778,37 +945,21 @@ public class vPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_mSalirActionPerformed
 
     private void mPersonasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mPersonasActionPerformed
-        try {
-            vPersonas personasForm = findOpenWindow(vPersonas.class);
-            if (personasForm == null) {
-                personasForm = new vPersonas();
-                personasForm.setTitle("Personas");
-                showWindowSafely(personasForm, vPersonas.class);
-            } else {
-                showWindowSafely(personasForm, vPersonas.class);
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al abrir gestión de personas: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        }
+        abrirVentanaGenerica(
+                vPersonas::new,
+                vPersonas.class,
+                "Personas",
+                null
+        );
     }//GEN-LAST:event_mPersonasActionPerformed
 
     private void mUsuariosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mUsuariosActionPerformed
-        try {
-            vUsuarios usuariosForm = findOpenWindow(vUsuarios.class);
-            if (usuariosForm == null) {
-                usuariosForm = new vUsuarios();
-                usuariosForm.setTitle("Usuarios");
-                showWindowSafely(usuariosForm, vUsuarios.class);
-            } else {
-                showWindowSafely(usuariosForm, vUsuarios.class);
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al abrir gestión de usuarios: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        }
+        abrirVentanaGenerica(
+                vUsuarios::new,
+                vUsuarios.class,
+                "Usuarios",
+                null
+        );
     }//GEN-LAST:event_mUsuariosActionPerformed
 
     private void mGuardarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mGuardarActionPerformed
@@ -820,37 +971,21 @@ public class vPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_mGuardarActionPerformed
 
     private void mRolesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRolesActionPerformed
-        try {
-            vRoles rolesForm = findOpenWindow(vRoles.class);
-            if (rolesForm == null) {
-                rolesForm = new vRoles();
-                rolesForm.setTitle("Roles");
-                showWindowSafely(rolesForm, vRoles.class);
-            } else {
-                showWindowSafely(rolesForm, vRoles.class);
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al abrir gestión de roles: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        }
+        abrirVentanaGenerica(
+                vRoles::new,
+                vRoles.class,
+                "Roles",
+                null
+        );
     }//GEN-LAST:event_mRolesActionPerformed
 
     private void mPermisosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mPermisosActionPerformed
-        try {
-            vPermisos permisosForm = findOpenWindow(vPermisos.class);
-            if (permisosForm == null) {
-                permisosForm = new vPermisos();
-                permisosForm.setTitle("Permisos");
-                showWindowSafely(permisosForm, vPermisos.class);
-            } else {
-                showWindowSafely(permisosForm, vPermisos.class);
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al abrir gestión de permisos: " + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-        }
+        abrirVentanaGenerica(
+                vPermisos::new,
+                vPermisos.class,
+                "Permisos",
+                null
+        );
     }//GEN-LAST:event_mPermisosActionPerformed
 
     private void mPrimeroActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mPrimeroActionPerformed
@@ -954,29 +1089,49 @@ public class vPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_mBuscarActionPerformed
 
     private void mProductosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mProductosActionPerformed
-        try {
-            vGestProd productosForm = findOpenWindow(vGestProd.class);
+        abrirVentanaGenerica(
+                () -> {
+                    try {
+                        return new vGestProd();
+                    } catch (SQLException ex) {
+                        throw new RuntimeException("Error al crear ventana de productos: " + ex.getMessage(), ex);
+                    }
+                },
+                vGestProd.class,
+                "Gestión de Productos",
+                window -> {
+                    try {
+                        // Configurar el controlador
+                        cGestProd controlador = new cGestProd(window);
 
-            if (productosForm != null) {
-                showWindowSafely(productosForm, vGestProd.class);
-            } else {
-                productosForm = new vGestProd();
-                productosForm.setTitle("Gestión de Productos");
+                        // Configurar eventos específicos
+                        window.getTxtProdId().addActionListener(e -> {
+                            String idText = window.getTxtProdId().getText().trim();
+                            try {
+                                if (!idText.isEmpty()) {
+                                    int id = Integer.parseInt(idText);
+                                    controlador.buscarProductoPorId(id);
+                                } else {
+                                    window.mostrarError("El campo ID no puede estar vacío");
+                                    window.getTxtProdId().requestFocus();
+                                }
+                            } catch (NumberFormatException ex) {
+                                window.mostrarError("El ID debe ser un número entero válido");
+                                window.getTxtProdId().requestFocus();
+                                window.getTxtProdId().selectAll();
+                            }
+                        });
 
-                if (showWindowSafely(productosForm, vGestProd.class)) {
-                    configurarControladorProductos(productosForm);
+                        window.getTxtIva().setText("10.00");
+                        window.getTxtProdId().requestFocus();
+
+                        // Podríamos almacenar el controlador en un mapa para limpiarlo después
+                        // controladores.put(window, controlador);
+                    } catch (SQLException ex) {
+                        throw new RuntimeException("Error al configurar controlador: " + ex.getMessage(), ex);
+                    }
                 }
-            }
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al conectar con la base de datos:\n" + ex.getMessage(),
-                    "Error de Conexión", JOptionPane.ERROR_MESSAGE);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error inesperado al abrir gestión de productos:\n" + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
-        }
+        );
     }//GEN-LAST:event_mProductosActionPerformed
 
     private void configurarControladorProductos(vGestProd productosForm) throws SQLException {
@@ -1004,23 +1159,6 @@ public class vPrincipal extends javax.swing.JFrame {
         productosForm.getTxtProdId().requestFocus();
     }
 
-    // Configurar los listeners para los menús de insertar y eliminar detalle
-    private void configurarMenusDetalle() {
-        mInsDetalle.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent evt) {
-                mInsDetalleActionPerformed(evt);
-            }
-        });
-
-        mDelDetalle.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent evt) {
-                mDelDetalleActionPerformed(evt);
-            }
-        });
-    }
-
     // Método para manejar el evento del menú "Ins. Detalle"
     private void mInsDetalleActionPerformed(ActionEvent evt) {
         myInterface ventanaActiva = getCurrentWindow();
@@ -1038,20 +1176,31 @@ public class vPrincipal extends javax.swing.JFrame {
     }
 
     private void mRepInventActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRepInventActionPerformed
-        try {
-            vReport reporteForm = findOpenReport("inventario_productos");
+        abrirVentanaGenerica(
+                () -> {
+                    vReport reporte = new vReport("inventario_productos", "filtroInventario");
+                    // Configurar tamaño
+                    int maxWidth = (int) (jDesktopPane2.getWidth() * 0.9);
+                    int maxHeight = (int) (jDesktopPane2.getHeight() * 0.9);
+                    double aspectRatio = 1.53;
+                    int width, height;
 
-            if (reporteForm != null) {
-                showWindowSafely(reporteForm, vReport.class);
-            } else {
-                mostrarReporteRefactorizado("inventario_productos", "filtroInventario");
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error inesperado al abrir reporte de inventario:\n" + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
-        }
+                    if (maxWidth * aspectRatio <= maxHeight) {
+                        width = maxWidth;
+                        height = (int) (width * aspectRatio);
+                    } else {
+                        height = maxHeight;
+                        width = (int) (height / aspectRatio);
+                    }
+
+                    reporte.setSize(width, height);
+                    reporte.setPreferredSize(new Dimension(width, height));
+                    return reporte;
+                },
+                vReport.class,
+                "Reporte de Inventario",
+                vReport::imFiltrar
+        );
     }//GEN-LAST:event_mRepInventActionPerformed
 
     /**
@@ -1062,39 +1211,33 @@ public class vPrincipal extends javax.swing.JFrame {
      */
     private void mostrarReporteRefactorizado(String nombreReporte, String filtro) {
         try {
-            // Crear una nueva instancia del visor de reportes
-            vReport reporteFrame = new vReport(nombreReporte, filtro);
+            abrirVentanaGenerica(
+                    () -> {
+                        vReport reporte = new vReport(nombreReporte, filtro);
 
-            // Calcular dimensiones respetando una relación de aspecto de papel oficio (1:1.53)
-            // Ajustar al espacio disponible en el escritorio
-            int maxWidth = (int) (jDesktopPane2.getWidth() * 0.9);  // 90% del ancho disponible
-            int maxHeight = (int) (jDesktopPane2.getHeight() * 0.9); // 90% del alto disponible
+                        // Configurar tamaño
+                        int maxWidth = (int) (jDesktopPane2.getWidth() * 0.9);
+                        int maxHeight = (int) (jDesktopPane2.getHeight() * 0.9);
+                        double aspectRatio = 1.53;
+                        int width, height;
 
-            // Determinar si limitamos por ancho o por alto
-            int width;
-            int height;
+                        if (maxWidth * aspectRatio <= maxHeight) {
+                            width = maxWidth;
+                            height = (int) (width * aspectRatio);
+                        } else {
+                            height = maxHeight;
+                            width = (int) (height / aspectRatio);
+                        }
 
-            // Calcular las dimensiones basadas en el tamaño oficio
-            double aspectRatio = 1.53; // Alto/Ancho para papel oficio
+                        reporte.setSize(width, height);
+                        reporte.setPreferredSize(new Dimension(width, height));
 
-            if (maxWidth * aspectRatio <= maxHeight) {
-                // Limitar por ancho
-                width = maxWidth;
-                height = (int) (width * aspectRatio);
-            } else {
-                // Limitar por alto
-                height = maxHeight;
-                width = (int) (height / aspectRatio);
-            }
-
-            // Establecer tamaño de la ventana
-            reporteFrame.setSize(width, height);
-            reporteFrame.setPreferredSize(new Dimension(width, height));
-
-            // Usar el método seguro para mostrar la ventana
-            if (showWindowSafely(reporteFrame, vReport.class)) {
-                reporteFrame.imFiltrar();
-            }
+                        return reporte;
+                    },
+                    vReport.class,
+                    "Reporte: " + nombreReporte,
+                    vReport::imFiltrar
+            );
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this,
                     "Error al abrir el reporte: " + e.getMessage(),
@@ -1106,161 +1249,110 @@ public class vPrincipal extends javax.swing.JFrame {
 
     private void mProveedoresActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mProveedoresActionPerformed
         try {
-            vProveedores proveedoresForm = findOpenWindow(vProveedores.class);
-
-            if (proveedoresForm != null) {
-                showWindowSafely(proveedoresForm, vProveedores.class);
+            abrirVentanaGenerica(
+                    () -> {
+                        try {
+                            return new vProveedores();
+                        } catch (SQLException ex) {
+                            throw new RuntimeException("Error al crear ventana de proveedores", ex);
+                        }
+                    },
+                    vProveedores.class,
+                    "Gestión de Proveedores",
+                    null
+            );
+        } catch (RuntimeException ex) {
+            if (ex.getCause() instanceof SQLException) {
+                JOptionPane.showMessageDialog(this,
+                        "Error al conectar con la base de datos:\n" + ex.getCause().getMessage(),
+                        "Error de Conexión", JOptionPane.ERROR_MESSAGE);
             } else {
-                proveedoresForm = new vProveedores();
-                proveedoresForm.setTitle("Gestión de Proveedores");
-                showWindowSafely(proveedoresForm, vProveedores.class);
+                JOptionPane.showMessageDialog(this,
+                        "Error inesperado al abrir gestión de proveedores:\n" + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
             }
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al conectar con la base de datos:\n" + ex.getMessage(),
-                    "Error de Conexión", JOptionPane.ERROR_MESSAGE);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error inesperado al abrir gestión de proveedores:\n" + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
         }
     }//GEN-LAST:event_mProveedoresActionPerformed
 
     private void mRegComprasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRegComprasActionPerformed
-        try {
-            vRegCompras comprasForm = findOpenWindow(vRegCompras.class);
-
-            if (comprasForm != null) {
-                showWindowSafely(comprasForm, vRegCompras.class);
-            } else {
-                comprasForm = new vRegCompras();
-                comprasForm.setTitle("Registrar Compra");
-                showWindowSafely(comprasForm, vRegCompras.class);
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error inesperado al abrir Registro de Compras:\n" + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
-        }
+        abrirVentanaGenerica(
+                vRegCompras::new,
+                vRegCompras.class,
+                "Registrar Compra",
+                null
+        );
     }//GEN-LAST:event_mRegComprasActionPerformed
 
     private void mClientesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mClientesActionPerformed
         try {
-            vClientes clientesForm = findOpenWindow(vClientes.class);
-
-            if (clientesForm != null) {
-                showWindowSafely(clientesForm, vClientes.class);
+            abrirVentanaGenerica(
+                    () -> {
+                        try {
+                            return new vClientes();
+                        } catch (SQLException ex) {
+                            throw new RuntimeException("Error al crear ventana de clientes", ex);
+                        }
+                    },
+                    vClientes.class,
+                    "Gestión de Clientes",
+                    null
+            );
+        } catch (RuntimeException ex) {
+            if (ex.getCause() instanceof SQLException) {
+                JOptionPane.showMessageDialog(this,
+                        "Error al conectar con la base de datos:\n" + ex.getCause().getMessage(),
+                        "Error de Conexión", JOptionPane.ERROR_MESSAGE);
             } else {
-                clientesForm = new vClientes();
-                clientesForm.setTitle("Gestión de Clientes");
-                showWindowSafely(clientesForm, vClientes.class);
+                JOptionPane.showMessageDialog(this,
+                        "Error inesperado al abrir gestión de clientes:\n" + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
             }
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error al conectar con la base de datos:\n" + ex.getMessage(),
-                    "Error de Conexión", JOptionPane.ERROR_MESSAGE);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error inesperado al abrir gestión de clientes:\n" + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
         }
     }//GEN-LAST:event_mClientesActionPerformed
 
     private void mRegVentasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRegVentasActionPerformed
-        try {
-            vSeleccionMesa seleccionMesaForm = findOpenWindow(vSeleccionMesa.class);
-
-            if (seleccionMesaForm != null) {
-                showWindowSafely(seleccionMesaForm, vSeleccionMesa.class);
-            } else {
-                seleccionMesaForm = new vSeleccionMesa();
-                seleccionMesaForm.setTitle("Selección de Mesas");
-                showWindowSafely(seleccionMesaForm, vSeleccionMesa.class);
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error inesperado al abrir selección de mesas:\n" + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
-        }
+        abrirVentanaGenerica(
+                vSeleccionMesa::new,
+                vSeleccionMesa.class,
+                "Selección de Mesas",
+                null
+        );
     }//GEN-LAST:event_mRegVentasActionPerformed
 
     private void mAperturaCierreCajaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mAperturaCierreCajaActionPerformed
-        try {
-            vAperturaCierreCaja aperturaCierreCajaForm = findOpenWindow(vAperturaCierreCaja.class);
-
-            if (aperturaCierreCajaForm != null) {
-                showWindowSafely(aperturaCierreCajaForm, vAperturaCierreCaja.class);
-            } else {
-                aperturaCierreCajaForm = new vAperturaCierreCaja(vLogin.getUsuarioAutenticado());
-                aperturaCierreCajaForm.setTitle("Apertura / Cierre de Caja");
-                showWindowSafely(aperturaCierreCajaForm, vAperturaCierreCaja.class);
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error inesperado al abrir Apertura / Cierre de Caja:\n" + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
-        }
+        abrirVentanaGenerica(
+                () -> new vAperturaCierreCaja(vLogin.getUsuarioAutenticado()),
+                vAperturaCierreCaja.class,
+                "Apertura / Cierre de Caja",
+                null
+        );
     }//GEN-LAST:event_mAperturaCierreCajaActionPerformed
 
     private void mTalonariosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mTalonariosActionPerformed
-        try {
-            vTalonarios talonariosForm = findOpenWindow(vTalonarios.class);
-
-            if (talonariosForm != null) {
-                showWindowSafely(talonariosForm, vTalonarios.class);
-            } else {
-                talonariosForm = new vTalonarios();
-                talonariosForm.setTitle("Gestión de Talonarios");
-                showWindowSafely(talonariosForm, vTalonarios.class);
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error inesperado al abrir gestión de talonarios:\n" + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
-        }
+        abrirVentanaGenerica(
+                vTalonarios::new,
+                vTalonarios.class,
+                "Gestión de Talonarios",
+                null
+        );
     }//GEN-LAST:event_mTalonariosActionPerformed
 
     private void mIngCajaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mIngCajaActionPerformed
-        try {
-            vIngresoCaja ingresoCajaForm = findOpenWindow(vIngresoCaja.class);
-
-            if (ingresoCajaForm != null) {
-                showWindowSafely(ingresoCajaForm, vIngresoCaja.class);
-            } else {
-                ingresoCajaForm = new vIngresoCaja();
-                ingresoCajaForm.setTitle("Registro de Ingreso a Caja");
-                showWindowSafely(ingresoCajaForm, vIngresoCaja.class);
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error inesperado al abrir Registro de Ingreso a Caja:\n" + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
-        }
+        abrirVentanaGenerica(
+                vIngresoCaja::new,
+                vIngresoCaja.class,
+                "Registro de Ingreso a Caja",
+                null // No se necesita configuración adicional
+        );
     }//GEN-LAST:event_mIngCajaActionPerformed
 
     private void mEgrCajaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mEgrCajaActionPerformed
-        try {
-            vEgresoCaja egresoCajaForm = findOpenWindow(vEgresoCaja.class);
-            if (egresoCajaForm != null) {
-                showWindowSafely(egresoCajaForm, vEgresoCaja.class);
-            } else {
-                egresoCajaForm = new vEgresoCaja();
-                egresoCajaForm.setTitle("Registro de Egreso de Caja");
-                showWindowSafely(egresoCajaForm, vEgresoCaja.class);
-            }
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error inesperado al abrir Registro de Egreso de Caja:\n" + ex.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
-        }
+        abrirVentanaGenerica(
+                vEgresoCaja::new,
+                vEgresoCaja.class,
+                "Registro de Egreso de Caja",
+                null
+        );
     }//GEN-LAST:event_mEgrCajaActionPerformed
 
     public static void main(String args[]) {
