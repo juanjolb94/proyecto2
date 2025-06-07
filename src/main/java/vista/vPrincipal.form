@@ -224,6 +224,14 @@
             </MenuItem>
             <MenuItem class="javax.swing.JPopupMenu$Separator" name="jSeparator12">
             </MenuItem>
+            <MenuItem class="javax.swing.JMenuItem" name="mRegVentaDirecta">
+              <Properties>
+                <Property name="text" type="java.lang.String" value="Registrar Venta Directa"/>
+              </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="mRegVentaDirectaActionPerformed"/>
+              </Events>
+            </MenuItem>
             <MenuItem class="javax.swing.JMenuItem" name="mRegVentas">
               <Properties>
                 <Property name="text" type="java.lang.String" value="Registrar Ventas"/>

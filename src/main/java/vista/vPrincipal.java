@@ -603,6 +603,7 @@ public class vPrincipal extends javax.swing.JFrame {
         jSeparator3 = new javax.swing.JPopupMenu.Separator();
         mTalonarios = new javax.swing.JMenuItem();
         jSeparator12 = new javax.swing.JPopupMenu.Separator();
+        mRegVentaDirecta = new javax.swing.JMenuItem();
         mRegVentas = new javax.swing.JMenuItem();
         jSeparator4 = new javax.swing.JPopupMenu.Separator();
         mRepVentas = new javax.swing.JMenuItem();
@@ -814,6 +815,14 @@ public class vPrincipal extends javax.swing.JFrame {
         });
         mVentas.add(mTalonarios);
         mVentas.add(jSeparator12);
+
+        mRegVentaDirecta.setText("Registrar Venta Directa");
+        mRegVentaDirecta.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mRegVentaDirectaActionPerformed(evt);
+            }
+        });
+        mVentas.add(mRegVentaDirecta);
 
         mRegVentas.setText("Registrar Ventas");
         mRegVentas.addActionListener(new java.awt.event.ActionListener() {
@@ -1369,12 +1378,32 @@ public class vPrincipal extends javax.swing.JFrame {
 
     private void mListaPreciosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mListaPreciosActionPerformed
         abrirVentanaGenerica(
-                vListaPrecios::new, 
-                vListaPrecios.class, 
-                "Gestión de Listas de Precio", 
+                vListaPrecios::new,
+                vListaPrecios.class,
+                "Gestión de Listas de Precio",
                 null
         );
     }//GEN-LAST:event_mListaPreciosActionPerformed
+
+    private void mRegVentaDirectaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRegVentaDirectaActionPerformed
+        try {
+            abrirVentanaGenerica(
+                    () -> {
+                        return new vRegVentas(); // Sin try-catch aquí
+                    },
+                    vRegVentas.class,
+                    "Registro de Ventas",
+                    (window) -> {
+                        // Configuraciones adicionales si son necesarias
+                        window.getTxtCodigoBarra().requestFocus();
+                    }
+            );
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error inesperado al abrir registro de ventas:\n" + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_mRegVentaDirectaActionPerformed
 
     public static void main(String args[]) {
         try {
@@ -1447,6 +1476,7 @@ public class vPrincipal extends javax.swing.JFrame {
     private javax.swing.JMenuItem mPromociones;
     private javax.swing.JMenuItem mProveedores;
     private javax.swing.JMenuItem mRegCompras;
+    private javax.swing.JMenuItem mRegVentaDirecta;
     private javax.swing.JMenuItem mRegVentas;
     private javax.swing.JMenuItem mRepCaja;
     private javax.swing.JMenuItem mRepCompras;
