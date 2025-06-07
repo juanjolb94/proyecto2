@@ -289,6 +289,7 @@ public class vPrincipal extends javax.swing.JFrame {
         // Menú Stock
         setIconSafely(mProductos, "PACKAGE_VARIANT_CLOSED", iconSize, menuIconColor);
         setIconSafely(mPromociones, "TAG_MULTIPLE", iconSize, menuIconColor);
+        setIconSafely(mListaPrecios, "TAG_MULTIPLE", iconSize, menuIconColor);
         setIconSafely(mAjustarStock, "CLIPBOARD_CHECK", iconSize, menuIconColor);
         setIconSafely(mRepInvent, "BARCODE_SCAN", iconSize, menuIconColor);
 
@@ -341,7 +342,7 @@ public class vPrincipal extends javax.swing.JFrame {
             // Menú Ventas
             mClientes, mTalonarios, mRegVentas, mRepVentas,
             // Menú Stock
-            mProductos, mPromociones, mAjustarStock, mRepInvent,
+            mProductos, mPromociones, mAjustarStock, mListaPrecios, mRepInvent,
             // Menú Tesorería
             mAperturaCierreCaja, mIngCaja, mEgrCaja, mRepCaja,
             // Menú Seguridad
@@ -609,8 +610,10 @@ public class vPrincipal extends javax.swing.JFrame {
         mProductos = new javax.swing.JMenuItem();
         mPromociones = new javax.swing.JMenuItem();
         jSeparator5 = new javax.swing.JPopupMenu.Separator();
-        mAjustarStock = new javax.swing.JMenuItem();
+        mListaPrecios = new javax.swing.JMenuItem();
         jSeparator6 = new javax.swing.JPopupMenu.Separator();
+        mAjustarStock = new javax.swing.JMenuItem();
+        jSeparator13 = new javax.swing.JPopupMenu.Separator();
         mRepInvent = new javax.swing.JMenuItem();
         mTesoreria = new javax.swing.JMenu();
         mAperturaCierreCaja = new javax.swing.JMenuItem();
@@ -840,9 +843,18 @@ public class vPrincipal extends javax.swing.JFrame {
         mStock.add(mPromociones);
         mStock.add(jSeparator5);
 
+        mListaPrecios.setText("Lista de Precios");
+        mListaPrecios.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mListaPreciosActionPerformed(evt);
+            }
+        });
+        mStock.add(mListaPrecios);
+        mStock.add(jSeparator6);
+
         mAjustarStock.setText("Ajustar Stock");
         mStock.add(mAjustarStock);
-        mStock.add(jSeparator6);
+        mStock.add(jSeparator13);
 
         mRepInvent.setText("Reporte de Inventario");
         mRepInvent.addActionListener(new java.awt.event.ActionListener() {
@@ -1355,6 +1367,15 @@ public class vPrincipal extends javax.swing.JFrame {
         );
     }//GEN-LAST:event_mEgrCajaActionPerformed
 
+    private void mListaPreciosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mListaPreciosActionPerformed
+        abrirVentanaGenerica(
+                vListaPrecios::new, 
+                vListaPrecios.class, 
+                "Gestión de Listas de Precio", 
+                null
+        );
+    }//GEN-LAST:event_mListaPreciosActionPerformed
+
     public static void main(String args[]) {
         try {
             // Inicializar el registro de iconos de Material Design
@@ -1391,6 +1412,7 @@ public class vPrincipal extends javax.swing.JFrame {
     private javax.swing.JPopupMenu.Separator jSeparator10;
     private javax.swing.JPopupMenu.Separator jSeparator11;
     private javax.swing.JPopupMenu.Separator jSeparator12;
+    private javax.swing.JPopupMenu.Separator jSeparator13;
     private javax.swing.JPopupMenu.Separator jSeparator2;
     private javax.swing.JPopupMenu.Separator jSeparator3;
     private javax.swing.JPopupMenu.Separator jSeparator4;
@@ -1415,6 +1437,7 @@ public class vPrincipal extends javax.swing.JFrame {
     private javax.swing.JMenuItem mImprimir;
     private javax.swing.JMenuItem mIngCaja;
     private javax.swing.JMenuItem mInsDetalle;
+    private javax.swing.JMenuItem mListaPrecios;
     private javax.swing.JMenuItem mMenus;
     private javax.swing.JMenuItem mNuevo;
     private javax.swing.JMenuItem mPermisos;
