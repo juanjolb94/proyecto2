@@ -49,11 +49,23 @@ public class vDetalleProductoPrecio extends javax.swing.JDialog {
         }
     }
 
+    // Añadir una variable para almacenar la moneda actual
+    private String monedaActual = "PYG"; // Valor por defecto
+
     /**
      * Configura el formato del campo de precio
      */
     private void configurarCampoPrecio() {
-        DecimalFormat formato = new DecimalFormat("#,##0.00");
+        // Crear formato según moneda
+        DecimalFormat formato;
+        if ("PYG".equals(monedaActual)) {
+            // Para PYG: formato entero
+            formato = new DecimalFormat("#,###");
+        } else {
+            // Para USD, EUR, BRL: formato con decimales
+            formato = new DecimalFormat("#,##0.00");
+        }
+
         NumberFormatter formatter = new NumberFormatter(formato);
         formatter.setValueClass(Double.class);
         formatter.setMinimum(0.0);
@@ -129,16 +141,17 @@ public class vDetalleProductoPrecio extends javax.swing.JDialog {
             DefaultComboBoxModel<ProductoItem> modelo = new DefaultComboBoxModel<>();
 
             // Agregar opción por defecto
-            modelo.addElement(new ProductoItem("", "-- Seleccione un producto --", "", ""));
+            modelo.addElement(new ProductoItem("", "-- Seleccione un producto --", "", "", ""));
 
             // Agregar productos
             for (Object[] producto : productos) {
                 String codigoBarra = (String) producto[0];
                 String descripcion = (String) producto[1];
-                String categoria = (String) producto[2];
-                String marca = (String) producto[3];
+                String nombreProducto = (String) producto[2]; // Nuevo campo - nombre del producto cabecera
+                String categoria = (String) producto[3];
+                String marca = (String) producto[4];
 
-                modelo.addElement(new ProductoItem(codigoBarra, descripcion, categoria, marca));
+                modelo.addElement(new ProductoItem(codigoBarra, descripcion, nombreProducto, categoria, marca));
             }
 
             // Establecer modelo
@@ -150,6 +163,79 @@ public class vDetalleProductoPrecio extends javax.swing.JDialog {
                     "Error",
                     JOptionPane.ERROR_MESSAGE);
         }
+    }
+
+    /**
+     * Establece la moneda actual y actualiza el formato del campo de precio
+     *
+     * @param moneda Código de moneda (PYG, USD, EUR, BRL)
+     */
+    public void setMoneda(String moneda) {
+        this.monedaActual = moneda;
+        configurarCampoPrecio();
+    }
+
+    /**
+     * Configura el diálogo para inserción de nuevo detalle
+     *
+     * @param idPrecioCabecera ID de la lista de precios
+     * @param moneda Moneda seleccionada en la lista de precios
+     */
+    public void configurarParaInsercion(int idPrecioCabecera, String moneda) {
+        this.modoEdicion = false;
+        this.setTitle("Agregar Detalle de Precio");
+
+        // Establecer moneda
+        setMoneda(moneda);
+
+        // Crear nuevo detalle
+        detalle = new mPrecioDetalle();
+        detalle.setIdPrecioCabecera(idPrecioCabecera);
+        detalle.setFechaVigencia(new Date());
+        detalle.setActivo(true);
+
+        // Cargar productos disponibles
+        cargarProductos();
+
+        // Habilitar todos los campos
+        cboProducto.setEnabled(true);
+        txtPrecio.setEnabled(true);
+        dcFechaVigencia.setEnabled(true);
+        chkActivo.setEnabled(true);
+
+        // Limpiar campos
+        txtPrecio.setValue(0.0);
+        dcFechaVigencia.setDate(new Date());
+        chkActivo.setSelected(true);
+    }
+
+    /**
+     * Configura el diálogo para edición de un detalle existente
+     *
+     * @param detalle Detalle a editar
+     * @param moneda Moneda seleccionada en la lista de precios
+     */
+    public void configurarParaEdicion(mPrecioDetalle detalle, String moneda) {
+        this.modoEdicion = true;
+        this.detalle = detalle;
+        this.setTitle("Editar Detalle de Precio");
+
+        // Establecer moneda
+        setMoneda(moneda);
+
+        // Cargar productos disponibles
+        cargarProductos();
+
+        // Seleccionar el producto
+        seleccionarProducto(detalle.getCodigoBarra());
+
+        // Establecer valores
+        txtPrecio.setValue(detalle.getPrecio());
+        dcFechaVigencia.setDate(detalle.getFechaVigencia());
+        chkActivo.setSelected(detalle.isActivo());
+
+        // En modo edición, no permitir cambiar el producto
+        cboProducto.setEnabled(false);
     }
 
     /**
@@ -219,8 +305,9 @@ public class vDetalleProductoPrecio extends javax.swing.JDialog {
             detalle.setFechaVigencia(fechaVigencia);
             detalle.setActivo(chkActivo.isSelected());
 
-            // También establecer nombre para referencia
-            detalle.setNombreProducto(productoSeleccionado.getDescripcion());
+            // Establecer nombre combinado para referencia (nombre producto + descripción detalle)
+            String nombreCompleto = productoSeleccionado.getNombreProducto() + " - " + productoSeleccionado.getDescripcion();
+            detalle.setNombreProducto(nombreCompleto);
 
             // Indicar que se aceptó
             aceptado = true;
@@ -269,12 +356,14 @@ public class vDetalleProductoPrecio extends javax.swing.JDialog {
 
         private String codigoBarra;
         private String descripcion;
+        private String nombreProducto;
         private String categoria;
         private String marca;
 
-        public ProductoItem(String codigoBarra, String descripcion, String categoria, String marca) {
+        public ProductoItem(String codigoBarra, String descripcion, String nombreProducto, String categoria, String marca) {
             this.codigoBarra = codigoBarra;
             this.descripcion = descripcion;
+            this.nombreProducto = nombreProducto;
             this.categoria = categoria;
             this.marca = marca;
         }
@@ -285,6 +374,10 @@ public class vDetalleProductoPrecio extends javax.swing.JDialog {
 
         public String getDescripcion() {
             return descripcion;
+        }
+
+        public String getNombreProducto() {
+            return nombreProducto;
         }
 
         public String getCategoria() {
@@ -300,7 +393,8 @@ public class vDetalleProductoPrecio extends javax.swing.JDialog {
             if (codigoBarra.isEmpty()) {
                 return descripcion;
             }
-            return descripcion + " - " + marca + " [" + codigoBarra + "]";
+            // Incluir el nombre del producto en la visualización
+            return nombreProducto + " - " + descripcion + " - " + marca + " [" + codigoBarra + "]";
         }
     }
 

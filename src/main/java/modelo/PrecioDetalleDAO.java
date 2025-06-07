@@ -15,9 +15,11 @@ public class PrecioDetalleDAO {
     public List<mPrecioDetalle> obtenerDetallesPorPrecioId(int idPrecioCabecera) throws SQLException {
         List<mPrecioDetalle> detalles = new ArrayList<>();
 
-        String sql = "SELECT pd.*, p.descripcion AS nombre_producto "
+        // Consulta modificada para incluir el nombre del producto cabecera
+        String sql = "SELECT pd.*, p.descripcion AS detalle_descripcion, pc.nombre AS producto_nombre "
                 + "FROM precio_detalle pd "
-                + "LEFT JOIN productos_detalle p ON pd.codigo_barra = p.codigo_barra "
+                + "LEFT JOIN productos_detalle p ON pd.codigo_barra = p.cod_barra "
+                + "LEFT JOIN productos_cabecera pc ON p.id_producto = pc.id_producto "
                 + "WHERE pd.id_precio_cabecera = ? "
                 + "ORDER BY pd.codigo_barra";
 
@@ -35,8 +37,19 @@ public class PrecioDetalleDAO {
                     detalle.setFechaVigencia(rs.getDate("fecha_vigencia"));
                     detalle.setActivo(rs.getBoolean("activo"));
 
-                    // Establecer nombre del producto si está disponible
-                    detalle.setNombreProducto(rs.getString("nombre_producto"));
+                    // Combinar nombre del producto cabecera con la descripción del detalle
+                    String nombreProducto = rs.getString("producto_nombre");
+                    String detalleDescripcion = rs.getString("detalle_descripcion");
+
+                    if (nombreProducto != null && detalleDescripcion != null) {
+                        detalle.setNombreProducto(nombreProducto + " - " + detalleDescripcion);
+                    } else if (detalleDescripcion != null) {
+                        detalle.setNombreProducto(detalleDescripcion);
+                    } else if (nombreProducto != null) {
+                        detalle.setNombreProducto(nombreProducto);
+                    } else {
+                        detalle.setNombreProducto("Desconocido");
+                    }
 
                     detalles.add(detalle);
                 }
@@ -48,9 +61,10 @@ public class PrecioDetalleDAO {
 
     // Método para obtener un detalle específico
     public mPrecioDetalle obtenerDetallePorId(int id) throws SQLException {
-        String sql = "SELECT pd.*, p.descripcion AS nombre_producto "
+        String sql = "SELECT pd.*, p.descripcion AS detalle_descripcion, pc.nombre AS producto_nombre "
                 + "FROM precio_detalle pd "
-                + "LEFT JOIN productos_detalle p ON pd.codigo_barra = p.codigo_barra "
+                + "LEFT JOIN productos_detalle p ON pd.codigo_barra = p.cod_barra "
+                + "LEFT JOIN productos_cabecera pc ON p.id_producto = pc.id_producto "
                 + "WHERE pd.id = ?";
 
         try (Connection conn = DatabaseConnection.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -67,8 +81,19 @@ public class PrecioDetalleDAO {
                     detalle.setFechaVigencia(rs.getDate("fecha_vigencia"));
                     detalle.setActivo(rs.getBoolean("activo"));
 
-                    // Establecer nombre del producto si está disponible
-                    detalle.setNombreProducto(rs.getString("nombre_producto"));
+                    // Combinar nombre del producto cabecera con la descripción del detalle
+                    String nombreProducto = rs.getString("producto_nombre");
+                    String detalleDescripcion = rs.getString("detalle_descripcion");
+
+                    if (nombreProducto != null && detalleDescripcion != null) {
+                        detalle.setNombreProducto(nombreProducto + " - " + detalleDescripcion);
+                    } else if (detalleDescripcion != null) {
+                        detalle.setNombreProducto(detalleDescripcion);
+                    } else if (nombreProducto != null) {
+                        detalle.setNombreProducto(nombreProducto);
+                    } else {
+                        detalle.setNombreProducto("Desconocido");
+                    }
 
                     return detalle;
                 }
@@ -80,9 +105,10 @@ public class PrecioDetalleDAO {
 
     // Método para obtener un detalle por código de barras y ID de lista de precios
     public mPrecioDetalle obtenerDetallePorCodigoBarra(int idPrecioCabecera, String codigoBarra) throws SQLException {
-        String sql = "SELECT pd.*, p.descripcion AS nombre_producto "
+        String sql = "SELECT pd.*, p.descripcion AS detalle_descripcion, pc.nombre AS producto_nombre "
                 + "FROM precio_detalle pd "
-                + "LEFT JOIN productos_detalle p ON pd.codigo_barra = p.codigo_barra "
+                + "LEFT JOIN productos_detalle p ON pd.codigo_barra = p.cod_barra "
+                + "LEFT JOIN productos_cabecera pc ON p.id_producto = pc.id_producto "
                 + "WHERE pd.id_precio_cabecera = ? AND pd.codigo_barra = ?";
 
         try (Connection conn = DatabaseConnection.getConnection(); PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -100,8 +126,19 @@ public class PrecioDetalleDAO {
                     detalle.setFechaVigencia(rs.getDate("fecha_vigencia"));
                     detalle.setActivo(rs.getBoolean("activo"));
 
-                    // Establecer nombre del producto si está disponible
-                    detalle.setNombreProducto(rs.getString("nombre_producto"));
+                    // Combinar nombre del producto cabecera con la descripción del detalle
+                    String nombreProducto = rs.getString("producto_nombre");
+                    String detalleDescripcion = rs.getString("detalle_descripcion");
+
+                    if (nombreProducto != null && detalleDescripcion != null) {
+                        detalle.setNombreProducto(nombreProducto + " - " + detalleDescripcion);
+                    } else if (detalleDescripcion != null) {
+                        detalle.setNombreProducto(detalleDescripcion);
+                    } else if (nombreProducto != null) {
+                        detalle.setNombreProducto(nombreProducto);
+                    } else {
+                        detalle.setNombreProducto("Desconocido");
+                    }
 
                     return detalle;
                 }
@@ -189,22 +226,25 @@ public class PrecioDetalleDAO {
     public List<Object[]> obtenerProductosParaSelector() throws SQLException {
         List<Object[]> productos = new ArrayList<>();
 
-        String sql = "SELECT p.codigo_barra, p.descripcion, pc.nombre AS categoria, pm.nombre AS marca "
+        String sql = "SELECT p.cod_barra, p.descripcion AS detalle_descripcion, "
+                + "pc.nombre AS producto_nombre, "
+                + "c.nombre AS categoria, m.nombre AS marca "
                 + "FROM productos_detalle p "
                 + "JOIN productos_cabecera pc ON p.id_producto = pc.id_producto "
                 + "JOIN categoria_producto c ON pc.id_categoria = c.id_categoria "
-                + "JOIN marca_producto pm ON pc.id_marca = pm.id_marca "
+                + "JOIN marca_producto m ON pc.id_marca = m.id_marca "
                 + "WHERE p.estado = true "
-                + "ORDER BY p.descripcion";
+                + "ORDER BY pc.nombre, p.descripcion";
 
         try (Connection conn = DatabaseConnection.getConnection(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
-                Object[] producto = new Object[4];
-                producto[0] = rs.getString("codigo_barra");
-                producto[1] = rs.getString("descripcion");
-                producto[2] = rs.getString("categoria");
-                producto[3] = rs.getString("marca");
+                Object[] producto = new Object[5]; // Aumentamos a 5 para incluir el nombre del producto cabecera
+                producto[0] = rs.getString("cod_barra");
+                producto[1] = rs.getString("detalle_descripcion");
+                producto[2] = rs.getString("producto_nombre"); // Nuevo campo: nombre del producto cabecera
+                producto[3] = rs.getString("categoria");
+                producto[4] = rs.getString("marca");
 
                 productos.add(producto);
             }

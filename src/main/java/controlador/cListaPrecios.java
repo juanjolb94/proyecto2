@@ -1,4 +1,4 @@
- package controlador;
+package controlador;
 
 import interfaces.myInterface;
 import java.sql.SQLException;
@@ -192,9 +192,12 @@ public class cListaPrecios implements myInterface {
         }
 
         try {
+            // Obtener la moneda actual
+            String moneda = vista.getMonedaCabecera();
+
             // Abrir diálogo para selección de producto y precio
             vDetalleProductoPrecio dialogo = new vDetalleProductoPrecio(null, true);
-            dialogo.configurarParaInsercion(cabeceraActual.getId());
+            dialogo.configurarParaInsercion(cabeceraActual.getId(), moneda);
             dialogo.setVisible(true);
 
             if (dialogo.isAceptado()) {
@@ -265,13 +268,16 @@ public class cListaPrecios implements myInterface {
         }
 
         try {
+            // Obtener la moneda actual
+            String moneda = vista.getMonedaCabecera();
+
             DefaultTableModel modelo = vista.getModeloTabla();
             int idDetalle = (int) modelo.getValueAt(filaSeleccionada, 0);
             mPrecioDetalle detalle = detalleDAO.obtenerDetallePorId(idDetalle);
 
             if (detalle != null) {
                 vDetalleProductoPrecio dialogo = new vDetalleProductoPrecio(null, true);
-                dialogo.configurarParaEdicion(detalle);
+                dialogo.configurarParaEdicion(detalle, moneda);
                 dialogo.setVisible(true);
 
                 if (dialogo.isAceptado()) {
@@ -279,14 +285,14 @@ public class cListaPrecios implements myInterface {
                     boolean exito = detalleDAO.actualizarDetalle(detalle);
 
                     if (exito) {
-                        mostrarMensaje("Detalle de precio actualizado correctamente");
+                        mostrarMensaje("Detalle actualizado correctamente");
                         cargarDetallesEnTabla(cabeceraActual.getId());
                     } else {
-                        mostrarError("No se pudo actualizar el detalle de precio");
+                        mostrarError("No se pudo actualizar el detalle");
                     }
                 }
             } else {
-                mostrarError("No se encontró el detalle de precio");
+                mostrarError("No se pudo cargar el detalle para edición");
             }
         } catch (SQLException e) {
             mostrarError("Error al editar detalle: " + e.getMessage());

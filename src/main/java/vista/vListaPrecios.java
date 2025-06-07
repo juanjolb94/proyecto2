@@ -1,20 +1,25 @@
 package vista;
 
-import modelo.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.text.SimpleDateFormat;
 import java.util.Date;
-import com.toedter.calendar.JDateChooser;
 import controlador.cListaPrecios;
 import interfaces.myInterface;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.SwingConstants;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
+import javax.swing.ImageIcon;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class vListaPrecios extends javax.swing.JInternalFrame implements myInterface {
 
     private DefaultTableModel modeloTabla;
+    private JPopupMenu popupMenu;
 
     // Controlador
     private cListaPrecios controlador;
@@ -30,6 +35,8 @@ public class vListaPrecios extends javax.swing.JInternalFrame implements myInter
 
         // Añadir borde con título al panel de cabecera
         jPanel1.setBorder(BorderFactory.createTitledBorder("Datos de la Lista de Precios"));
+
+        crearMenuContextual();
 
         // Añadir opciones al combo de monedas
         cboMoneda.removeAllItems();
@@ -69,12 +76,95 @@ public class vListaPrecios extends javax.swing.JInternalFrame implements myInter
         tblDetalles.getTableHeader().setReorderingAllowed(false);
         tblDetalles.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
+        // Añadir evento de doble clic para editar detalles
+        tblDetalles.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    editarDetalleSeleccionado();
+                }
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                // Mostrar menú contextual con clic derecho
+                if (e.isPopupTrigger()) {
+                    showPopupMenu(e);
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                // Necesario para sistemas que manejan el popup en mouseReleased
+                if (e.isPopupTrigger()) {
+                    showPopupMenu(e);
+                }
+            }
+        });
+
         // Ocultar la columna ID
         if (tblDetalles.getColumnCount() > 0) {
             tblDetalles.getColumnModel().getColumn(0).setMinWidth(0);
             tblDetalles.getColumnModel().getColumn(0).setMaxWidth(0);
             tblDetalles.getColumnModel().getColumn(0).setWidth(0);
         }
+
+        // Configurar anchos específicos para cada columna
+        tblDetalles.getColumnModel().getColumn(1).setPreferredWidth(120);  // Código
+        tblDetalles.getColumnModel().getColumn(2).setPreferredWidth(200);  // Producto
+        tblDetalles.getColumnModel().getColumn(3).setPreferredWidth(100);  // Precio
+        tblDetalles.getColumnModel().getColumn(4).setPreferredWidth(100);  // Vigencia
+        tblDetalles.getColumnModel().getColumn(5).setPreferredWidth(60);   // Activo
+
+        // Formato para la columna de precio (condicional según moneda)
+        tblDetalles.getColumnModel().getColumn(3).setCellRenderer(new DefaultTableCellRenderer() {
+            private final DecimalFormat formatoEntero = new DecimalFormat("#,###");
+            private final DecimalFormat formatoDecimal = new DecimalFormat("#,##0.00");
+
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+                if (value instanceof Number) {
+                    // Obtener la moneda seleccionada
+                    String moneda = (String) cboMoneda.getSelectedItem();
+
+                    // Aplicar formato según moneda
+                    if ("PYG".equals(moneda)) {
+                        // Para PYG: formato entero
+                        int precioEntero = ((Number) value).intValue();
+                        setText(formatoEntero.format(precioEntero));
+                    } else {
+                        // Para USD, EUR, BRL: formato con decimales
+                        double precioDecimal = ((Number) value).doubleValue();
+                        setText(formatoDecimal.format(precioDecimal));
+                    }
+                }
+
+                setHorizontalAlignment(SwingConstants.RIGHT);  // Alinear a la derecha
+                return c;
+            }
+        });
+
+        // Añadir listener al combo de monedas para refrescar la tabla cuando cambie
+        cboMoneda.addActionListener(e -> {
+            // Refrescar la tabla para aplicar el nuevo formato
+            tblDetalles.repaint();
+        });
+
+        // Formato para la columna de fecha
+        SimpleDateFormat formatoFecha = new SimpleDateFormat("dd/MM/yyyy");
+        tblDetalles.getColumnModel().getColumn(4).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (value instanceof Date) {
+                    setText(formatoFecha.format(value));
+                }
+                setHorizontalAlignment(SwingConstants.CENTER);  // Alinear al centro
+                return c;
+            }
+        });
 
         // Añadir borde con título al panel de detalles
         panelDetalles.setBorder(BorderFactory.createTitledBorder("Detalle de Precios"));
@@ -133,6 +223,41 @@ public class vListaPrecios extends javax.swing.JInternalFrame implements myInter
             txtId.requestFocusInWindow();
             txtId.selectAll();
         });
+    }
+
+    /**
+     * Crea el menú contextual para la tabla de detalles
+     */
+    private void crearMenuContextual() {
+        popupMenu = new JPopupMenu();
+
+        // Opción para modificar
+        JMenuItem menuModificar = new JMenuItem("Modificar");
+        menuModificar.addActionListener(e -> editarDetalleSeleccionado());
+
+        // Opción para eliminar
+        JMenuItem menuEliminar = new JMenuItem("Eliminar");
+        menuEliminar.addActionListener(e -> eliminarDetalleSeleccionado());
+
+        // Añadir opciones al menú
+        popupMenu.add(menuModificar);
+        popupMenu.add(menuEliminar);
+    }
+
+    /**
+     * Muestra el menú contextual en la posición del evento
+     */
+    private void showPopupMenu(MouseEvent e) {
+        int row = tblDetalles.rowAtPoint(e.getPoint());
+
+        // Si se hizo clic en una fila válida
+        if (row >= 0 && row < tblDetalles.getRowCount()) {
+            // Seleccionar la fila donde se hizo clic derecho
+            tblDetalles.setRowSelectionInterval(row, row);
+
+            // Mostrar el menú popup
+            popupMenu.show(e.getComponent(), e.getX(), e.getY());
+        }
     }
 
     // Método para editar detalle seleccionado (invocado desde doble clic)
@@ -362,7 +487,7 @@ public class vListaPrecios extends javax.swing.JInternalFrame implements myInter
 
         jLabel4.setText("Moneda:");
 
-        chkActivo.setText("Activo?");
+        chkActivo.setText("Lista Activa");
 
         jLabel5.setText("Observaciones:");
 
@@ -385,42 +510,45 @@ public class vListaPrecios extends javax.swing.JInternalFrame implements myInter
                         .addGap(54, 54, 54)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(txtId)
-                                .addGap(18, 18, 18)
+                                .addComponent(txtId, javax.swing.GroupLayout.PREFERRED_SIZE, 75, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                 .addComponent(jLabel2)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(dcFechaCreacion, javax.swing.GroupLayout.PREFERRED_SIZE, 130, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(txtNombre, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                            .addGroup(jPanel1Layout.createSequentialGroup()
+                                .addComponent(txtNombre, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(chkActivo)
+                                .addGap(0, 0, Short.MAX_VALUE))))
                     .addGroup(jPanel1Layout.createSequentialGroup()
                         .addComponent(jLabel5)
                         .addGap(18, 18, 18)
                         .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(jPanel1Layout.createSequentialGroup()
                                 .addComponent(cboMoneda, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(chkActivo))
-                            .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 292, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addGap(172, 172, 172))
+                            .addComponent(jScrollPane1))))
+                .addContainerGap(226, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel1Layout.createSequentialGroup()
                 .addGap(18, 18, 18)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel1)
                     .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                        .addComponent(jLabel1)
                         .addComponent(jLabel2)
                         .addComponent(txtId, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(dcFechaCreacion, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(jLabel3)
-                    .addComponent(txtNombre, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(txtNombre, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(chkActivo))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(cboMoneda, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel4)
-                    .addComponent(chkActivo))
+                    .addComponent(jLabel4))
                 .addGap(18, 18, 18)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel5)
@@ -445,11 +573,13 @@ public class vListaPrecios extends javax.swing.JInternalFrame implements myInter
         panelDetalles.setLayout(panelDetallesLayout);
         panelDetallesLayout.setHorizontalGroup(
             panelDetallesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 690, Short.MAX_VALUE)
+            .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 628, Short.MAX_VALUE)
         );
         panelDetallesLayout.setVerticalGroup(
             panelDetallesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 265, javax.swing.GroupLayout.PREFERRED_SIZE)
+            .addGroup(panelDetallesLayout.createSequentialGroup()
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 200, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addGap(0, 6, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
