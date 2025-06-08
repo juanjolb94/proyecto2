@@ -2,6 +2,7 @@ package vista;
 
 import controlador.cRegVentas;
 import interfaces.myInterface;
+import java.awt.Frame;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.sql.SQLException;
@@ -13,6 +14,8 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import modelo.mVentas;
+import java.util.Vector;
+import modelo.VentaTemporal;
 
 public class vRegVentas extends javax.swing.JInternalFrame implements myInterface {
 
@@ -20,13 +23,15 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
     private DefaultTableModel modeloTablaDetalles;
     private SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
     private DecimalFormat dfNumeros = new DecimalFormat("#,##0");
+    private int idMesaAsociada = 0;
+    private String numeroMesaAsociada = "";
+    private vSeleccionMesa ventanaSeleccionMesa = null;
 
     // Constructor
     public vRegVentas() {
         try {
-            initComponents(); // ← Generado por NetBeans
+            initComponents();
 
-            // Configuraciones básicas de la ventana
             setClosable(true);
             setMaximizable(true);
             setResizable(true);
@@ -37,6 +42,7 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
             // Configuraciones iniciales
             configurarTabla();
+            configurarSpinners();
             cargarClientes();
             configurarEventos();
             limpiarFormulario();
@@ -44,6 +50,287 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         } catch (SQLException e) {
             mostrarError("Error al inicializar ventana de ventas: " + e.getMessage());
         }
+    }
+
+    public VentaTemporal obtenerDatosTemporal() {
+        System.out.println("DEBUG: obtenerDatosTemporal para Mesa " + numeroMesaAsociada);
+
+        if (idMesaAsociada <= 0) {
+            return null;
+        }
+
+        VentaTemporal ventaTemporal = new VentaTemporal(idMesaAsociada, numeroMesaAsociada);
+
+        // Guardar cliente
+        if (comboCliente.getSelectedItem() != null) {
+            cRegVentas.ItemCombo cliente = (cRegVentas.ItemCombo) comboCliente.getSelectedItem();
+            ventaTemporal.setIdCliente((int) cliente.getValor());
+        }
+
+        // Guardar observaciones
+        ventaTemporal.setObservaciones(txtObservaciones.getText().trim());
+
+        //Usar la tabla visual en lugar del modelo de clase**
+        DefaultTableModel modeloVisual = (DefaultTableModel) tblDetalles.getModel();
+        System.out.println("DEBUG: Filas en tabla visual: " + modeloVisual.getRowCount());
+
+        // Clonar el modelo visual
+        DefaultTableModel modeloClonado = new DefaultTableModel();
+
+        // Copiar columnas
+        for (int i = 0; i < modeloVisual.getColumnCount(); i++) {
+            modeloClonado.addColumn(modeloVisual.getColumnName(i));
+        }
+
+        // Copiar filas del modelo visual
+        for (int i = 0; i < modeloVisual.getRowCount(); i++) {
+            Vector<Object> fila = new Vector<>();
+            for (int j = 0; j < modeloVisual.getColumnCount(); j++) {
+                Object valor = modeloVisual.getValueAt(i, j);
+                fila.add(valor);
+                System.out.println("DEBUG: Fila " + i + ", Col " + j + ": " + valor);
+            }
+            modeloClonado.addRow(fila);
+        }
+
+        ventaTemporal.setDatosTabla(modeloClonado);
+
+        // Guardar totales
+        try {
+            if (!txtTotal.getText().isEmpty()) {
+                String totalText = txtTotal.getText().replaceAll("[^0-9]", "");
+                if (!totalText.isEmpty()) {
+                    ventaTemporal.setTotal(Integer.parseInt(totalText));
+                }
+            }
+            // Subtotal e IVA si existen...
+        } catch (NumberFormatException e) {
+            System.err.println("Error al parsear totales: " + e.getMessage());
+        }
+
+        System.out.println("DEBUG: VentaTemporal creada - Tiene productos: " + ventaTemporal.tieneProductos());
+        return ventaTemporal;
+    }
+
+    //Método para restaurar datos temporales
+    public void restaurarDatosTemporal(VentaTemporal ventaTemporal) {
+        System.out.println("DEBUG RESTAURAR: Iniciando restauración para Mesa "
+                + (ventaTemporal != null ? ventaTemporal.getNumeroMesa() : "null"));
+
+        if (ventaTemporal == null) {
+            System.out.println("DEBUG RESTAURAR: ventaTemporal es null - SALIENDO");
+            return;
+        }
+
+        System.out.println("DEBUG RESTAURAR: ventaTemporal válido, datos tabla: "
+                + (ventaTemporal.getDatosTabla() != null
+                ? ventaTemporal.getDatosTabla().getRowCount() + " filas" : "null"));
+
+        try {
+            // Restaurar cliente
+            seleccionarClientePorId(ventaTemporal.getIdCliente());
+            System.out.println("DEBUG RESTAURAR: Cliente restaurado: " + ventaTemporal.getIdCliente());
+
+            // Restaurar observaciones
+            if (ventaTemporal.getObservaciones() != null) {
+                txtObservaciones.setText(ventaTemporal.getObservaciones());
+                System.out.println("DEBUG RESTAURAR: Observaciones restauradas");
+            }
+
+            //Restaurar productos a través del controlador**
+            DefaultTableModel datosRestaurados = ventaTemporal.getDatosTabla();
+            if (datosRestaurados != null) {
+                System.out.println("DEBUG RESTAURAR: Restaurando " + datosRestaurados.getRowCount() + " productos a través del controlador");
+
+                //Limpiar controlador primero**
+                try {
+                    // Crear nueva venta temporal en el controlador
+                    controlador.imNuevo();
+                    System.out.println("DEBUG RESTAURAR: Controlador limpiado");
+                } catch (Exception e) {
+                    System.err.println("ERROR al limpiar controlador: " + e.getMessage());
+                }
+
+                //Restaurar productos uno por uno a través del controlador**
+                for (int i = 0; i < datosRestaurados.getRowCount(); i++) {
+                    try {
+                        String codigoBarra = datosRestaurados.getValueAt(i, 1).toString();
+                        int cantidad = Integer.parseInt(datosRestaurados.getValueAt(i, 3).toString());
+
+                        System.out.println("DEBUG RESTAURAR: Agregando producto " + i + " - " + codigoBarra + " x" + cantidad);
+
+                        // **RESTAURAR A TRAVÉS DEL CONTROLADOR**
+                        controlador.agregarProducto(codigoBarra, cantidad);
+
+                    } catch (Exception e) {
+                        System.err.println("ERROR al restaurar producto " + i + ": " + e.getMessage());
+                    }
+                }
+
+                System.out.println("DEBUG RESTAURAR: Productos restaurados a través del controlador");
+            }
+
+            // Restaurar totales (opcional, el controlador debería calcularlos)
+            if (txtSubtotal != null) {
+                txtSubtotal.setText(dfNumeros.format(ventaTemporal.getSubtotal()));
+            }
+            if (txtIVA10 != null) {
+                txtIVA10.setText(dfNumeros.format(ventaTemporal.getIva10()));
+            }
+            txtTotal.setText(dfNumeros.format(ventaTemporal.getTotal()));
+
+            System.out.println("DEBUG RESTAURAR: Totales restaurados - Total: " + ventaTemporal.getTotal());
+
+            // Reconfigurar tabla
+            configurarColumnasTabla();
+
+            // Actualizar vista
+            tblDetalles.revalidate();
+            tblDetalles.repaint();
+
+            // Mostrar mensaje de restauración
+            mostrarMensaje("Datos de la Mesa " + ventaTemporal.getNumeroMesa() + " restaurados correctamente.\n"
+                    + "Productos: " + datosRestaurados.getRowCount()
+                    + " | Total: " + dfNumeros.format(ventaTemporal.getTotal()));
+
+            DefaultTableModel modeloFinal = (DefaultTableModel) tblDetalles.getModel();
+            System.out.println("DEBUG RESTAURAR FINAL: Tabla tiene " + modeloFinal.getRowCount() + " filas al terminar restauración");
+
+            // Esperar un poco y verificar otra vez
+            SwingUtilities.invokeLater(() -> {
+                DefaultTableModel modeloDespues = (DefaultTableModel) tblDetalles.getModel();
+                System.out.println("DEBUG RESTAURAR DELAYED: Tabla tiene " + modeloDespues.getRowCount() + " filas después de SwingUtilities.invokeLater");
+            });
+
+            System.out.println("DEBUG RESTAURAR: Restauración completada exitosamente");
+
+        } catch (Exception e) {
+            System.err.println("ERROR RESTAURAR: " + e.getMessage());
+            e.printStackTrace();
+            mostrarError("Error al restaurar datos temporales: " + e.getMessage());
+        }
+    }
+
+    //Método para configurar la venta por mesa (llamado desde vSeleccionMesa)
+    public void configurarVentaPorMesa(int idMesa, String numeroMesa) {
+        System.out.println("DEBUG CONFIG: Configurando venta para Mesa " + numeroMesa + " (ID: " + idMesa + ")");
+
+        this.idMesaAsociada = idMesa;
+        this.numeroMesaAsociada = numeroMesa;
+
+        // Actualizar el título de la ventana para mostrar la mesa
+        setTitle("Registro de Ventas - Mesa " + numeroMesa);
+
+        // Buscar la ventana de selección de mesas para comunicación posterior
+        buscarVentanaSeleccionMesa();
+
+        // Enfocar en el campo de código de barras para empezar a agregar productos
+        txtCodigoBarra.requestFocus();
+
+        System.out.println("DEBUG CONFIG: Configuración completada para Mesa " + numeroMesa);
+    }
+
+    //Metodo para limpiar el formulario solo cuando NO hay datos temporales
+    public void limpiarFormularioSiEsNecesario() {
+        System.out.println("DEBUG: Limpiando formulario para nueva venta");
+        limpiarFormulario();
+    }
+
+    //Método para buscar la ventana de selección de mesas
+    private void buscarVentanaSeleccionMesa() {
+        try {
+            JDesktopPane desktop = getDesktopPane();
+            if (desktop != null) {
+                for (JInternalFrame frame : desktop.getAllFrames()) {
+                    if (frame instanceof vSeleccionMesa) {
+                        ventanaSeleccionMesa = (vSeleccionMesa) frame;
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error al buscar ventana de selección de mesa: " + e.getMessage());
+        }
+    }
+
+    //Método para verificar si hay productos en la venta
+    public boolean tieneProductosEnVenta() {
+        return modeloTablaDetalles != null && modeloTablaDetalles.getRowCount() > 0;
+    }
+
+    //Modificar el método guardarVenta para notificar a la mesa
+    private void guardarVenta() {
+        try {
+            // Validar que hay productos antes de guardar
+            if (!tieneProductosEnVenta()) {
+                mostrarError("Debe agregar al menos un producto para guardar la venta.");
+                return;
+            }
+
+            // Confirmar guardado definitivo
+            int opcion = JOptionPane.showConfirmDialog(
+                    this,
+                    "¿Está seguro que desea guardar definitivamente esta venta?\n"
+                    + "Mesa " + numeroMesaAsociada + " será liberada para nuevos clientes.\n\n"
+                    + "Productos: " + modeloTablaDetalles.getRowCount() + "\n"
+                    + "Total: " + txtTotal.getText(),
+                    "Confirmar Guardado Definitivo",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
+            );
+
+            if (opcion != JOptionPane.YES_OPTION) {
+                return;
+            }
+
+            // Establecer observaciones incluyendo información de la mesa
+            String observaciones = txtObservaciones.getText().trim();
+            if (idMesaAsociada > 0) {
+                observaciones = "Mesa " + numeroMesaAsociada
+                        + (observaciones.isEmpty() ? "" : " - " + observaciones);
+            }
+            controlador.setObservaciones(observaciones);
+
+            // Guardar venta definitivamente
+            controlador.guardarVenta();
+
+            // Liberar mesa definitivamente (eliminar datos temporales)
+            if (ventanaSeleccionMesa != null && idMesaAsociada > 0) {
+                ventanaSeleccionMesa.liberarMesaDefinitivamente(idMesaAsociada);
+            }
+
+            // Mostrar mensaje de éxito
+            mostrarMensaje("Venta guardada correctamente.\nMesa " + numeroMesaAsociada + " liberada.");
+
+            // Preguntar si desea imprimir factura
+            preguntarImprimirFactura(controlador.getVentaActual().getIdVenta());
+
+            // Limpiar asociación con mesa y cerrar ventana
+            idMesaAsociada = 0;
+            numeroMesaAsociada = "";
+            setTitle("Registro de Ventas");
+
+            // Cerrar ventana después del guardado exitoso
+            this.dispose();
+
+        } catch (Exception e) {
+            mostrarError("Error al guardar venta: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    //Método para guardar temporal (sin finalizar venta)
+    public void guardarTemporal() {
+        if (!tieneProductosEnVenta()) {
+            mostrarError("No hay productos para guardar temporalmente.");
+            return;
+        }
+
+        mostrarMensaje("Datos guardados temporalmente para Mesa " + numeroMesaAsociada + ".\n"
+                + "Para finalizar la venta, use Archivo → Guardar.");
+
+        // Los datos se guardarán automáticamente al cerrar la ventana
+        this.dispose();
     }
 
     // Configurar la tabla de detalles
@@ -77,21 +364,47 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
         rightRenderer.setHorizontalAlignment(JLabel.RIGHT);
 
-        tblDetalles.getColumnModel().getColumn(0).setCellRenderer(rightRenderer); // #
-        tblDetalles.getColumnModel().getColumn(3).setCellRenderer(rightRenderer); // Cantidad
-        tblDetalles.getColumnModel().getColumn(4).setCellRenderer(rightRenderer); // Precio
-        tblDetalles.getColumnModel().getColumn(5).setCellRenderer(rightRenderer); // Subtotal
-
-        // Configurar anchos de columnas
-        tblDetalles.getColumnModel().getColumn(0).setPreferredWidth(30);  // #
-        tblDetalles.getColumnModel().getColumn(1).setPreferredWidth(100); // Código
-        tblDetalles.getColumnModel().getColumn(2).setPreferredWidth(250); // Descripción
-        tblDetalles.getColumnModel().getColumn(3).setPreferredWidth(80);  // Cantidad
-        tblDetalles.getColumnModel().getColumn(4).setPreferredWidth(100); // Precio
-        tblDetalles.getColumnModel().getColumn(5).setPreferredWidth(100); // Subtotal
+        configurarColumnasTabla();
 
         // Configurar selección
         tblDetalles.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        configurarMenuContextual();
+
+        //Listener para recalcular al editar cantidad**
+        tblDetalles.getModel().addTableModelListener(e -> {
+            if (e.getType() == javax.swing.event.TableModelEvent.UPDATE) {
+                actualizarFilaEditada(e.getFirstRow());
+            }
+        });
+
+        // **LISTENER ADICIONAL: Para detectar cuando termina la edición de celda**
+        tblDetalles.putClientProperty("terminateEditOnFocusLost", Boolean.TRUE);
+
+        // Listener para detectar cuando se termina de editar una celda
+        tblDetalles.getDefaultEditor(Integer.class).addCellEditorListener(new javax.swing.event.CellEditorListener() {
+            @Override
+            public void editingStopped(javax.swing.event.ChangeEvent e) {
+                // Se ejecuta cuando termina la edición (Enter, Tab, click fuera, etc.)
+                int fila = tblDetalles.getEditingRow();
+                int columna = tblDetalles.getEditingColumn();
+
+                // Solo procesar si se editó la columna de cantidad (columna 3)
+                if (columna == 3) {
+                    // Usar SwingUtilities.invokeLater para asegurar que la tabla se actualice primero
+                    SwingUtilities.invokeLater(() -> {
+                        actualizarFilaEditada(fila);
+                    });
+                }
+            }
+
+            @Override
+            public void editingCanceled(javax.swing.event.ChangeEvent e) {
+                // No hacer nada si se cancela la edición
+            }
+        });
+
+        configurarMenuContextual();
     }
 
     // Configurar eventos de los componentes
@@ -117,10 +430,199 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         // Evento para cambio de cliente
         comboCliente.addActionListener(e -> actualizarDatosCliente());
 
-        // Eventos de botones (solo los que existen en la interfaz)
+        // Eventos de botones
         btnAgregarProducto.addActionListener(e -> agregarProducto());
-        btnEliminarDetalle.addActionListener(e -> eliminarDetalle());
         btnAnular.addActionListener(e -> anularVenta());
+
+        // Seleccionar todo el texto al hacer focus en txtIdVenta
+        txtIdVenta.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent evt) {
+                txtIdVenta.selectAll();
+            }
+        });
+
+        //MouseListener para el click
+        txtIdVenta.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                txtIdVenta.selectAll();
+            }
+        });
+    }
+
+    private void configurarSpinners() {
+        // Configurar spinner de cantidad - no permitir negativos, iniciar en 1
+        SpinnerNumberModel modeloCantidad = new SpinnerNumberModel(1, 1, 999, 1);
+        spinnerCantidad.setModel(modeloCantidad);
+    }
+
+    // Método para abrir búsqueda por nombre
+    private void abrirBusquedaPorNombre() {
+        vSeleccionProductoVentas ventanaBusqueda = new vSeleccionProductoVentas(
+                (Frame) SwingUtilities.getWindowAncestor(this),
+                controlador
+        );
+        ventanaBusqueda.setVisible(true);
+
+        // Si se seleccionó un producto, enfocar en código de barras para continuar
+        if (ventanaBusqueda.isProductoElegido()) {
+            txtCodigoBarra.requestFocus();
+        }
+    }
+
+    // Método para configurar el menú contextual
+    private void configurarMenuContextual() {
+        JPopupMenu popupMenu = new JPopupMenu();
+        JMenuItem menuItemEliminar = new JMenuItem("Eliminar Producto");
+
+        // Configurar icono y acción del menú
+        menuItemEliminar.addActionListener(e -> eliminarProductoSeleccionado());
+
+        // Agregar el item al menú
+        popupMenu.add(menuItemEliminar);
+
+        // Asignar el menú popup a la tabla
+        tblDetalles.setComponentPopupMenu(popupMenu);
+
+        // **LISTENER ADICIONAL PARA ENTER: Detectar Enter después de editar**
+        tblDetalles.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+                if (evt.getKeyCode() == KeyEvent.VK_ENTER) {
+                    int fila = tblDetalles.getSelectedRow();
+                    int columna = tblDetalles.getSelectedColumn();
+
+                    // Si estamos en la columna de cantidad (columna 3)
+                    if (columna == 3 && fila >= 0) {
+                        // Esperar un poco para que la edición termine
+                        SwingUtilities.invokeLater(() -> {
+                            actualizarFilaEditada(fila);
+                        });
+                    }
+                }
+            }
+        });
+
+        // Opcional: Agregar listener para habilitar/deshabilitar según selección
+        tblDetalles.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent evt) {
+                if (evt.isPopupTrigger()) {
+                    int filaSeleccionada = tblDetalles.rowAtPoint(evt.getPoint());
+                    if (filaSeleccionada >= 0) {
+                        tblDetalles.setRowSelectionInterval(filaSeleccionada, filaSeleccionada);
+                        menuItemEliminar.setEnabled(true);
+                    } else {
+                        menuItemEliminar.setEnabled(false);
+                    }
+                }
+            }
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent evt) {
+                if (evt.isPopupTrigger()) {
+                    int filaSeleccionada = tblDetalles.rowAtPoint(evt.getPoint());
+                    if (filaSeleccionada >= 0) {
+                        tblDetalles.setRowSelectionInterval(filaSeleccionada, filaSeleccionada);
+                        menuItemEliminar.setEnabled(true);
+                    } else {
+                        menuItemEliminar.setEnabled(false);
+                    }
+                }
+            }
+        });
+    }
+
+    //Método para eliminar producto seleccionado desde menú contextual
+    private void eliminarProductoSeleccionado() {
+        int filaSeleccionada = tblDetalles.getSelectedRow();
+
+        if (filaSeleccionada < 0) {
+            mostrarError("No hay ningún producto seleccionado.");
+            return;
+        }
+
+        try {
+            // Obtener descripción del producto para mostrar en confirmación
+            String descripcion = tblDetalles.getValueAt(filaSeleccionada, 2).toString();
+
+            // Confirmar eliminación
+            int opcion = JOptionPane.showConfirmDialog(
+                    this,
+                    "¿Está seguro de eliminar el producto: " + descripcion + "?",
+                    "Confirmar eliminación",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE);
+
+            if (opcion == JOptionPane.YES_OPTION) {
+                // Eliminar a través del controlador
+                controlador.eliminarDetalle(filaSeleccionada);
+
+                // Actualizar título
+                actualizarTituloConEstado();
+
+                // Recalcular totales si el método existe
+                try {
+                    recalcularTotales();
+                } catch (Exception e) {
+                    // Método puede no estar implementado aún
+                }
+
+                mostrarMensaje("Producto eliminado correctamente");
+            }
+
+        } catch (Exception e) {
+            mostrarError("Error al eliminar producto: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    //Método para actualizar fila editada (recalcular subtotal al cambiar cantidad)
+    private void actualizarFilaEditada(int fila) {
+        try {
+            // Verificar que la fila sea válida
+            if (fila < 0 || fila >= tblDetalles.getRowCount()) {
+                return;
+            }
+
+            // Debug: imprimir información
+            System.out.println("Actualizando fila: " + fila);
+
+            // Obtener valores de la fila editada
+            Object cantidadObj = tblDetalles.getValueAt(fila, 3);
+            Object precioObj = tblDetalles.getValueAt(fila, 4);
+
+            if (cantidadObj == null || precioObj == null) {
+                System.out.println("Valores nulos en fila " + fila);
+                return;
+            }
+
+            int cantidad = Integer.parseInt(cantidadObj.toString());
+            int precioUnitario = Integer.parseInt(precioObj.toString());
+
+            // Debug: imprimir valores
+            System.out.println("Cantidad: " + cantidad + ", Precio: " + precioUnitario);
+
+            // Calcular nuevo subtotal
+            int nuevoSubtotal = cantidad * precioUnitario;
+
+            // Actualizar subtotal en la tabla
+            tblDetalles.setValueAt(nuevoSubtotal, fila, 5);
+
+            System.out.println("Nuevo subtotal: " + nuevoSubtotal);
+
+            // Recalcular totales generales
+            recalcularTotales();
+
+        } catch (NumberFormatException e) {
+            mostrarError("Error: La cantidad debe ser un número válido");
+            // Recargar tabla para restaurar valor anterior
+            actualizarTablaDetalles();
+        } catch (Exception e) {
+            mostrarError("Error al actualizar fila: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     // Cargar clientes en el combo
@@ -130,11 +632,14 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
             List<cRegVentas.ItemCombo> clientes = controlador.obtenerClientes();
 
             for (cRegVentas.ItemCombo cliente : clientes) {
-                comboCliente.addItem(cliente);
+                int idCliente = (int) cliente.getValor();
+                if (idCliente != 0) {
+                    comboCliente.addItem(cliente);
+                }
             }
 
             if (comboCliente.getItemCount() > 0) {
-                comboCliente.setSelectedIndex(0);
+                seleccionarClientePorId(2);  // Seleccionar cliente con ID 2
                 actualizarDatosCliente();
             }
 
@@ -151,18 +656,38 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
             controlador.setCliente(idCliente);
 
-            if (idCliente == 0) {
-                // Cliente contado
-                txtNombreCliente.setText("CLIENTE CONTADO");
-                txtDocumentoCliente.setText("");
-            } else {
-                // Cliente específico
-                Object[] datosCliente = controlador.obtenerDatosCliente(idCliente);
-                if (datosCliente != null) {
-                    txtNombreCliente.setText((String) datosCliente[0]);
-                    txtDocumentoCliente.setText((String) datosCliente[1]);
+            // **SIMPLIFICADO: Ya no necesitas manejar el caso ID 0**
+            Object[] datosCliente = controlador.obtenerDatosCliente(idCliente);
+            if (datosCliente != null) {
+                txtNombreCliente.setText((String) datosCliente[0]);
+                txtDocumentoCliente.setText((String) datosCliente[1]);
+            }
+        }
+    }
+
+    // Método auxiliar para seleccionar un cliente por su ID
+    private void seleccionarClientePorId(int idCliente) {
+        try {
+            // Buscar el cliente con el ID especificado en el combo
+            for (int i = 0; i < comboCliente.getItemCount(); i++) {
+                cRegVentas.ItemCombo item = (cRegVentas.ItemCombo) comboCliente.getItemAt(i);
+                if ((int) item.getValor() == idCliente) {
+                    comboCliente.setSelectedIndex(i);
+                    return; // Cliente encontrado y seleccionado
                 }
             }
+
+            // Si no encuentra el cliente ID 2, seleccionar el primero como fallback
+            if (comboCliente.getItemCount() > 0) {
+                comboCliente.setSelectedIndex(0);
+            }
+
+        } catch (Exception e) {
+            // En caso de error, seleccionar el primero
+            if (comboCliente.getItemCount() > 0) {
+                comboCliente.setSelectedIndex(0);
+            }
+            System.err.println("Error al seleccionar cliente por ID: " + e.getMessage());
         }
     }
 
@@ -182,16 +707,13 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         txtCodigoBarra.setText("");
         spinnerCantidad.setValue(1);
         txtCodigoBarra.requestFocus();
+
+        recalcularTotales();
     }
 
     // Eliminar detalle seleccionado
     private void eliminarDetalle() {
-        int filaSeleccionada = tblDetalles.getSelectedRow();
-        if (filaSeleccionada >= 0) {
-            controlador.eliminarDetalle(filaSeleccionada);
-        } else {
-            mostrarError("Seleccione un producto para eliminar.");
-        }
+        eliminarProductoSeleccionado();
     }
 
     // Buscar venta por ID (llamado desde vPrincipal)
@@ -205,15 +727,6 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
                 mostrarError("El ID debe ser un número válido.");
             }
         }
-    }
-
-    // Guardar venta (llamado desde vPrincipal)
-    private void guardarVenta() {
-        // Establecer observaciones
-        controlador.setObservaciones(txtObservaciones.getText().trim());
-
-        // Guardar venta
-        controlador.guardarVenta();
     }
 
     // Anular venta (único botón en la interfaz)
@@ -233,18 +746,81 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         DefaultTableModel modelo = controlador.getModeloTablaDetalles();
         tblDetalles.setModel(modelo);
 
-        // Reconfigurar renderizadores después de cambiar el modelo
+        configurarColumnasTabla();
+        recalcularTotales();
+    }
+
+    private void configurarColumnasTabla() {
+        // Configurar renderizador para alineación
         DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
         rightRenderer.setHorizontalAlignment(JLabel.RIGHT);
 
-        tblDetalles.getColumnModel().getColumn(0).setCellRenderer(rightRenderer);
-        tblDetalles.getColumnModel().getColumn(3).setCellRenderer(rightRenderer);
-        tblDetalles.getColumnModel().getColumn(4).setCellRenderer(rightRenderer);
-        tblDetalles.getColumnModel().getColumn(5).setCellRenderer(rightRenderer);
+        tblDetalles.getColumnModel().getColumn(0).setCellRenderer(rightRenderer); // #
+        tblDetalles.getColumnModel().getColumn(3).setCellRenderer(rightRenderer); // Cantidad
+        tblDetalles.getColumnModel().getColumn(4).setCellRenderer(rightRenderer); // Precio
+        tblDetalles.getColumnModel().getColumn(5).setCellRenderer(rightRenderer); // Subtotal
+
+        // Configurar anchos de columnas
+        tblDetalles.getColumnModel().getColumn(0).setPreferredWidth(15);  // #
+        tblDetalles.getColumnModel().getColumn(1).setPreferredWidth(100); // Código
+        tblDetalles.getColumnModel().getColumn(2).setPreferredWidth(200); // Descripción
+        tblDetalles.getColumnModel().getColumn(3).setPreferredWidth(30);  // Cantidad
+        tblDetalles.getColumnModel().getColumn(4).setPreferredWidth(50);  // Precio
+        tblDetalles.getColumnModel().getColumn(5).setPreferredWidth(50);  // Subtotal
+    }
+
+    private void recalcularTotales() {
+        int subtotalTotal = 0;
+        int totalIVA = 0;
+
+        // Obtener número de filas en la tabla
+        int numFilas = tblDetalles.getRowCount();
+
+        // Recorrer todas las filas de la tabla
+        for (int fila = 0; fila < numFilas; fila++) {
+            try {
+                // Obtener cantidad y precio unitario
+                int cantidad = Integer.parseInt(tblDetalles.getValueAt(fila, 3).toString());
+                int precioUnitario = Integer.parseInt(tblDetalles.getValueAt(fila, 4).toString());
+
+                // Calcular subtotal de esta fila (cantidad * precio)
+                int subtotalFila = cantidad * precioUnitario;
+
+                // Para IVA 10%, usar el método paraguayo: dividir por 11
+                int ivaFila = (int) Math.round(subtotalFila / 11.0);
+
+                // Acumular totales
+                subtotalTotal += subtotalFila;
+                totalIVA += ivaFila;
+
+            } catch (Exception e) {
+                // Manejar posibles errores de conversión
+                System.err.println("Error al procesar fila " + fila + ": " + e.getMessage());
+            }
+        }
+
+        // Calcular total final
+        int totalFinal = subtotalTotal;
+
+        // Actualizar campos de totales
+        if (txtSubtotal != null) {
+            txtSubtotal.setText(dfNumeros.format(subtotalTotal));
+        }
+        if (txtIVA10 != null) {
+            txtIVA10.setText(dfNumeros.format(totalIVA));
+        }
+
+        // Actualizar el campo total existente
+        txtTotal.setText(dfNumeros.format(totalFinal));
+
+        // Actualizar también el total en el controlador si es necesario
+        if (controlador != null && controlador.getVentaActual() != null) {
+            controlador.getVentaActual().setTotal(totalFinal);
+        }
     }
 
     public void actualizarTotalVenta(int total) {
-        txtTotal.setText(dfNumeros.format(total));
+        recalcularTotales();
     }
 
     public void cargarDatosVenta(mVentas venta) {
@@ -264,17 +840,45 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
     }
 
     public void limpiarFormulario() {
-        txtIdVenta.setText("");
+        System.out.println("DEBUG LIMPIAR: limpiarFormulario() llamado desde:");
+
+        // Debug para ver desde dónde se llama
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        for (int i = 1; i <= Math.min(5, stackTrace.length - 1); i++) {
+            System.out.println("  " + i + ": " + stackTrace[i].getClassName() + "." + stackTrace[i].getMethodName() + ":" + stackTrace[i].getLineNumber());
+        }
+
+        txtIdVenta.setText("0");
         txtFecha.setText(sdf.format(new Date()));
-        comboCliente.setSelectedIndex(0);
+
+        // Mantener cliente ocasional seleccionado por defecto
+        seleccionarClientePorId(2);
+
         txtCodigoBarra.setText("");
         spinnerCantidad.setValue(1);
+
+        // Limpiar campos de totales si existen
+        if (txtSubtotal != null) {
+            txtSubtotal.setText("0");
+        }
+        if (txtIVA10 != null) {
+            txtIVA10.setText("0");
+        }
         txtTotal.setText("0");
-        txtObservaciones.setText("");
+
+        // Limpiar observaciones pero mantener referencia a la mesa si existe
+        if (idMesaAsociada > 0) {
+            txtObservaciones.setText("Mesa " + numeroMesaAsociada);
+        } else {
+            txtObservaciones.setText("");
+        }
+
         chkAnulado.setSelected(false);
 
-        // Limpiar tabla
+        //Debug cuando se limpia la tabla:**
+        System.out.println("DEBUG LIMPIAR: Limpiando tabla con " + modeloTablaDetalles.getRowCount() + " filas");
         modeloTablaDetalles.setRowCount(0);
+        System.out.println("DEBUG LIMPIAR: Tabla limpiada");
 
         // Establecer foco
         txtCodigoBarra.requestFocus();
@@ -282,9 +886,8 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
     public void marcarVentaComoAnulada() {
         chkAnulado.setSelected(true);
-        btnAnular.setEnabled(false);  // Solo deshabilitar el botón Anular
+        btnAnular.setEnabled(false);
         btnAgregarProducto.setEnabled(false);
-        btnEliminarDetalle.setEnabled(false);
     }
 
     public boolean confirmarAnulacion() {
@@ -311,6 +914,66 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         if (opcion == JOptionPane.YES_OPTION) {
             imprimirFactura();
         }
+    }
+
+    //Método para finalizar atención de mesa (liberar mesa explícitamente)
+    public void finalizarAtencionMesa() {
+        if (idMesaAsociada > 0 && ventanaSeleccionMesa != null) {
+            int opcion = JOptionPane.showConfirmDialog(
+                    this,
+                    "¿Está seguro que desea finalizar la atención de la Mesa " + numeroMesaAsociada
+                    + "?\nEsto liberará la mesa para nuevos clientes.",
+                    "Finalizar Atención",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
+            );
+
+            if (opcion == JOptionPane.YES_OPTION) {
+                ventanaSeleccionMesa.liberarMesa(idMesaAsociada);
+
+                // Limpiar asociación con mesa
+                idMesaAsociada = 0;
+                numeroMesaAsociada = "";
+                setTitle("Registro de Ventas");
+
+                // Cerrar ventana
+                this.dispose();
+            }
+        } else {
+            this.dispose();
+        }
+    }
+
+    //Método auxiliar para obtener información de la mesa asociada
+    public String getInfoMesaAsociada() {
+        if (idMesaAsociada > 0) {
+            return "Mesa " + numeroMesaAsociada + " (ID: " + idMesaAsociada + ")";
+        }
+        return "Sin mesa asociada";
+    }
+
+    //Método para verificar si la mesa actual tiene datos temporales
+    public boolean mesaTieneDatosTemporal() {
+        return ventanaSeleccionMesa != null
+                && idMesaAsociada > 0
+                && ventanaSeleccionMesa.mesaTieneDatosTemporal(idMesaAsociada);
+    }
+
+    //Actualizar el título con indicador temporal
+    private void actualizarTituloConEstado() {
+        String titulo = "Registro de Ventas";
+        if (idMesaAsociada > 0) {
+            titulo += " - Mesa " + numeroMesaAsociada;
+            if (tieneProductosEnVenta()) {
+                titulo += " (CON PRODUCTOS)";
+            }
+        }
+        setTitle(titulo);
+    }
+
+    //Getter para el ID de mesa (útil para otras funcionalidades)
+    public int getIdMesaAsociada() {
+        return idMesaAsociada;
     }
 
     public void mostrarDialogoFiltros() {
@@ -455,8 +1118,7 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
     @Override
     public void imInsDet() {
-        txtCodigoBarra.requestFocus();
-        txtCodigoBarra.selectAll();
+        abrirBusquedaPorNombre();
     }
 
     @Override
@@ -466,7 +1128,48 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
     @Override
     public void imCerrar() {
-        this.dispose();
+        if (tieneProductosEnVenta() && idMesaAsociada > 0) {
+            int opcion = JOptionPane.showConfirmDialog(
+                    this,
+                    "La Mesa " + numeroMesaAsociada + " tiene productos agregados.\n\n"
+                    + "¿Qué desea hacer?\n\n"
+                    + "SÍ: Guardar temporalmente (puede continuar después)\n"
+                    + "NO: Descartar cambios y liberar mesa\n"
+                    + "CANCELAR: Continuar trabajando",
+                    "Mesa con Productos",
+                    JOptionPane.YES_NO_CANCEL_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
+            );
+
+            switch (opcion) {
+                case JOptionPane.YES_OPTION:
+                    // Guardar temporalmente - se hace automático al cerrar
+                    this.dispose();
+                    break;
+                case JOptionPane.NO_OPTION:
+                    // Descartar cambios
+                    if (JOptionPane.showConfirmDialog(
+                            this,
+                            "¿Está seguro que desea descartar todos los productos?",
+                            "Confirmar Descarte",
+                            JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
+
+                        // Limpiar datos y liberar mesa
+                        limpiarFormulario();
+                        if (ventanaSeleccionMesa != null && idMesaAsociada > 0) {
+                            ventanaSeleccionMesa.liberarMesaDefinitivamente(idMesaAsociada);
+                        }
+                        this.dispose();
+                    }
+                    break;
+                case JOptionPane.CANCEL_OPTION:
+                    // No hacer nada, continuar trabajando
+                    break;
+            }
+        } else {
+            // No hay productos, cerrar normalmente
+            this.dispose();
+        }
     }
 
     @Override
@@ -507,7 +1210,6 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         jLabel7 = new javax.swing.JLabel();
         spinnerCantidad = new javax.swing.JSpinner();
         btnAgregarProducto = new javax.swing.JButton();
-        btnEliminarDetalle = new javax.swing.JButton();
         jScrollPane1 = new javax.swing.JScrollPane();
         tblDetalles = new javax.swing.JTable();
         jPanel3 = new javax.swing.JPanel();
@@ -517,6 +1219,10 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         jScrollPane2 = new javax.swing.JScrollPane();
         txtObservaciones = new javax.swing.JTextArea();
         btnAnular = new javax.swing.JButton();
+        jLabel10 = new javax.swing.JLabel();
+        txtSubtotal = new javax.swing.JTextField();
+        jLabel11 = new javax.swing.JLabel();
+        txtIVA10 = new javax.swing.JTextField();
 
         jLabel1.setText("ID Venta:");
 
@@ -540,28 +1246,24 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
                     .addComponent(jLabel1)
                     .addComponent(jLabel3)
                     .addComponent(jLabel5))
-                .addGap(35, 35, 35)
+                .addGap(18, 18, 18)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(txtIdVenta, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(33, 33, 33)
-                                .addComponent(jLabel2)
-                                .addGap(28, 28, 28)
-                                .addComponent(txtFecha, javax.swing.GroupLayout.PREFERRED_SIZE, 124, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(27, 27, 27)
-                                .addComponent(chkAnulado))
-                            .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addComponent(comboCliente, javax.swing.GroupLayout.PREFERRED_SIZE, 145, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(36, 36, 36)
-                                .addComponent(jLabel4)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 51, Short.MAX_VALUE)
-                                .addComponent(txtDocumentoCliente, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                        .addGap(183, 183, 183))
+                        .addComponent(comboCliente, javax.swing.GroupLayout.PREFERRED_SIZE, 145, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(jLabel4)
+                        .addGap(18, 18, 18)
+                        .addComponent(txtDocumentoCliente, javax.swing.GroupLayout.PREFERRED_SIZE, 109, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addComponent(txtNombreCliente, javax.swing.GroupLayout.PREFERRED_SIZE, 245, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))))
+                        .addComponent(txtIdVenta, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(50, 50, 50)
+                        .addComponent(jLabel2)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(txtFecha, javax.swing.GroupLayout.PREFERRED_SIZE, 124, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addGap(18, 18, 18)
+                        .addComponent(chkAnulado))
+                    .addComponent(txtNombreCliente, javax.swing.GroupLayout.PREFERRED_SIZE, 245, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -579,11 +1281,11 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
                     .addComponent(comboCliente, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel4)
                     .addComponent(txtDocumentoCliente, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 24, Short.MAX_VALUE)
+                .addGap(18, 18, 18)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(txtNombreCliente, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel5))
-                .addGap(39, 39, 39))
+                .addContainerGap(27, Short.MAX_VALUE))
         );
 
         jLabel6.setText("Codigo de Barras:");
@@ -592,17 +1294,15 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
         btnAgregarProducto.setText("Agregar");
 
-        btnEliminarDetalle.setText("Eliminar");
-
         tblDetalles.setModel(new javax.swing.table.DefaultTableModel(
             new Object [][] {
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null},
-                {null, null, null, null, null, null}
+                {},
+                {},
+                {},
+                {}
             },
             new String [] {
-                "Title 1", "Title 2", "Title 3", "Title 4", "Title 5", "Title 6"
+
             }
         ));
         jScrollPane1.setViewportView(tblDetalles);
@@ -617,40 +1317,63 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
         btnAnular.setText("Anular Venta");
 
+        jLabel10.setText("Subtotal:");
+
+        txtSubtotal.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                txtSubtotalActionPerformed(evt);
+            }
+        });
+
+        jLabel11.setText("IVA 10%:");
+
         javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
         jPanel3.setLayout(jPanel3Layout);
         jPanel3Layout.setHorizontalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-            .addGroup(jPanel3Layout.createSequentialGroup()
+            .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel3Layout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jLabel8)
-                .addGap(80, 80, 80)
-                .addComponent(txtTotal, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(18, 18, 18)
                 .addComponent(jLabel9)
-                .addGap(18, 18, 18)
-                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 275, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
                     .addGroup(jPanel3Layout.createSequentialGroup()
-                        .addComponent(btnAnular)
-                        .addGap(0, 0, Short.MAX_VALUE))
-                    .addComponent(jScrollPane2))
+                        .addComponent(jLabel10)
+                        .addGap(18, 18, 18)
+                        .addComponent(txtSubtotal, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addComponent(jLabel11)
+                        .addGap(18, 18, 18)
+                        .addComponent(txtIVA10, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addGroup(jPanel3Layout.createSequentialGroup()
+                        .addComponent(jLabel8)
+                        .addGap(18, 18, 18)
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                            .addComponent(btnAnular)
+                            .addComponent(txtTotal, javax.swing.GroupLayout.PREFERRED_SIZE, 150, javax.swing.GroupLayout.PREFERRED_SIZE))))
                 .addContainerGap())
         );
         jPanel3Layout.setVerticalGroup(
             jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel3Layout.createSequentialGroup()
                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(jLabel9)
+                    .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(jPanel3Layout.createSequentialGroup()
                         .addContainerGap()
-                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                .addComponent(jLabel8)
-                                .addComponent(txtTotal, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                            .addComponent(jLabel9, javax.swing.GroupLayout.Alignment.TRAILING)))
-                    .addGroup(jPanel3Layout.createSequentialGroup()
-                        .addGap(14, 14, 14)
-                        .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                .addGap(38, 38, 38)
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(txtSubtotal, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel10))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(txtIVA10, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel11))
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(txtTotal, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel8))))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(btnAnular)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
@@ -659,25 +1382,22 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         jPanel2.setLayout(jPanel2Layout);
         jPanel2Layout.setHorizontalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+            .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane1)
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 635, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addGroup(jPanel2Layout.createSequentialGroup()
                         .addComponent(jLabel6)
-                        .addGap(27, 27, 27)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(txtCodigoBarra, javax.swing.GroupLayout.PREFERRED_SIZE, 174, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(28, 28, 28)
-                        .addComponent(jLabel7)
-                        .addGap(27, 27, 27)
-                        .addComponent(spinnerCantidad, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
-                        .addGap(33, 33, 33)
-                        .addComponent(btnAgregarProducto)
                         .addGap(18, 18, 18)
-                        .addComponent(btnEliminarDetalle)
-                        .addGap(0, 0, Short.MAX_VALUE)))
-                .addContainerGap())
-            .addComponent(jPanel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(jLabel7)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(spinnerCantidad, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                        .addComponent(btnAgregarProducto, javax.swing.GroupLayout.PREFERRED_SIZE, 65, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel2Layout.setVerticalGroup(
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -688,13 +1408,12 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
                     .addComponent(txtCodigoBarra, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel7)
                     .addComponent(spinnerCantidad, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btnAgregarProducto)
-                    .addComponent(btnEliminarDetalle))
+                    .addComponent(btnAgregarProducto))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 307, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 250, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(24, Short.MAX_VALUE))
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -709,20 +1428,26 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
             .addGroup(layout.createSequentialGroup()
                 .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                .addComponent(jPanel2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap())
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    private void txtSubtotalActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtSubtotalActionPerformed
+
+    }//GEN-LAST:event_txtSubtotalActionPerformed
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private javax.swing.JButton btnAgregarProducto;
     private javax.swing.JButton btnAnular;
-    private javax.swing.JButton btnEliminarDetalle;
     private javax.swing.JCheckBox chkAnulado;
     private javax.swing.JComboBox<cRegVentas.ItemCombo> comboCliente;
     private javax.swing.JLabel jLabel1;
+    private javax.swing.JLabel jLabel10;
+    private javax.swing.JLabel jLabel11;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
     private javax.swing.JLabel jLabel4;
@@ -741,9 +1466,11 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
     private javax.swing.JTextField txtCodigoBarra;
     private javax.swing.JTextField txtDocumentoCliente;
     private javax.swing.JTextField txtFecha;
+    private javax.swing.JTextField txtIVA10;
     private javax.swing.JTextField txtIdVenta;
     private javax.swing.JTextField txtNombreCliente;
     private javax.swing.JTextArea txtObservaciones;
+    private javax.swing.JTextField txtSubtotal;
     private javax.swing.JTextField txtTotal;
     // End of variables declaration//GEN-END:variables
 }

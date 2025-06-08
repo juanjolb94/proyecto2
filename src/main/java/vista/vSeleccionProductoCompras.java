@@ -13,7 +13,7 @@ import controlador.cRegCompras;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 
-public class vSeleccionProducto extends JDialog {
+public class vSeleccionProductoCompras extends JDialog {
 
     // Variables de control
     private cRegCompras controlador;
@@ -29,7 +29,7 @@ public class vSeleccionProducto extends JDialog {
     private int cantidad;
     private double precio;
 
-    public vSeleccionProducto(java.awt.Frame parent, cRegCompras controlador) {
+    public vSeleccionProductoCompras(java.awt.Frame parent, cRegCompras controlador) {
         super(parent, "Seleccionar Producto", true);
         this.controlador = controlador;
 

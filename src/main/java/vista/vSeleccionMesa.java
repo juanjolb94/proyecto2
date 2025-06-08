@@ -9,11 +9,16 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
+import modelo.VentaTemporal;
+import java.util.Map;
+import java.util.HashMap;
+import java.text.SimpleDateFormat;
 
 public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInterface {
 
@@ -25,6 +30,8 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
     private boolean modoEdicion = false;
     private Mesa mesaEnArrastre = null;
     private Point initialClick;
+    private vRegVentas ventanaVentasActiva = null;
+    private Map<Integer, VentaTemporal> ventasTemporales = new HashMap<>();
 
     // Constantes para la cuadrícula
     private final int COLUMNAS_POR_FILA = 5;
@@ -752,35 +759,309 @@ public class vSeleccionMesa extends javax.swing.JInternalFrame implements myInte
     }
 
     private void abrirVentanaVentas(Mesa mesa) {
-        // Aquí se implementará la lógica para abrir la ventana de ventas
-        // cuando esté lista la siguiente parte
-        JOptionPane.showMessageDialog(this,
-                "Se seleccionó la mesa " + mesa.getNumero()
-                + " (" + mesa.getEstado().getDescripcion() + ")\n"
-                + "Próximamente se abrirá el formulario de ventas.",
-                "Mesa Seleccionada", JOptionPane.INFORMATION_MESSAGE);
+        try {
+            // Verificar si ya hay una ventana de ventas abierta para esta mesa
+            if (ventanaVentasActiva != null && !ventanaVentasActiva.isClosed()) {
+                ventanaVentasActiva.toFront();
+                return;
+            }
 
-        // Cambiar estado a OCUPADA si estaba disponible
-        if (mesa.getEstado() == Mesa.EstadoMesa.DISPONIBLE) {
-            try {
+            // **AGREGAR: Buscar datos temporales ANTES de cambiar estado**
+            VentaTemporal ventaTemporal = ventasTemporales.get(mesa.getId());
+            System.out.println("DEBUG APERTURA: Buscando datos temporales para Mesa " + mesa.getId());
+            System.out.println("DEBUG APERTURA: Datos encontrados: " + (ventaTemporal != null ? "SÍ" : "NO"));
+            if (ventaTemporal != null) {
+                System.out.println("DEBUG APERTURA: Filas en datos temporales: " + ventaTemporal.getDatosTabla().getRowCount());
+            }
+
+            // Cambiar estado a OCUPADA si estaba disponible **O SI HAY DATOS TEMPORALES**
+            Mesa.EstadoMesa estadoAnterior = mesa.getEstado();
+            if (mesa.getEstado() == Mesa.EstadoMesa.DISPONIBLE || ventaTemporal != null) {
                 mesa.setEstado(Mesa.EstadoMesa.OCUPADA);
                 mesasDAO.actualizarEstado(mesa.getId(), Mesa.EstadoMesa.OCUPADA);
+                actualizarVisualizacionMesa(mesa);
+            }
 
-                // Actualizar la visualización
-                for (Component comp : panelMesas.getComponents()) {
-                    if (comp instanceof JPanel
-                            && comp.getBounds().x == mesa.getPosicion().x
-                            && comp.getBounds().y == mesa.getPosicion().y) {
-                        comp.repaint();
-                        break;
-                    }
+            // Crear y configurar la ventana de ventas
+            ventanaVentasActiva = new vRegVentas();
+
+            // Configurar la venta para esta mesa
+            ventanaVentasActiva.configurarVentaPorMesa(mesa.getId(), mesa.getNumero());
+
+            // **Restaurar datos temporales si existen**
+            if (ventaTemporal != null) {
+                System.out.println("DEBUG APERTURA: Llamando a restaurarDatosTemporal...");
+                ventanaVentasActiva.restaurarDatosTemporal(ventaTemporal);
+                System.out.println("DEBUG APERTURA: restaurarDatosTemporal completado");
+            } else {
+                // **Solo limpiar si NO hay datos temporales**
+                System.out.println("DEBUG APERTURA: No hay datos temporales, limpiando formulario");
+                ventanaVentasActiva.limpiarFormularioSiEsNecesario();
+            }
+
+            // Agregar listener para detectar cuando se cierra la ventana
+            ventanaVentasActiva.addInternalFrameListener(new javax.swing.event.InternalFrameAdapter() {
+                @Override
+                public void internalFrameClosing(javax.swing.event.InternalFrameEvent e) {
+                    System.out.println("DEBUG: Cerrando Mesa " + mesa.getNumero());
+                    manejarCierreVentanaVentas(mesa, estadoAnterior);
                 }
-            } catch (SQLException e) {
+
+                @Override
+                public void internalFrameClosed(javax.swing.event.InternalFrameEvent e) {
+                    System.out.println("DEBUG: Mesa " + mesa.getNumero() + " cerrada");
+                    ventanaVentasActiva = null;  // Solo limpiar referencia
+                }
+            });
+
+            // Obtener el JDesktopPane padre y agregar la ventana
+            JDesktopPane desktop = getDesktopPane();
+            if (desktop == null) {
+                JFrame parentFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
+                if (parentFrame != null) {
+                    desktop = findDesktopPane(parentFrame);
+                }
+            }
+
+            if (desktop != null) {
+                desktop.add(ventanaVentasActiva);
+                ventanaVentasActiva.setVisible(true);
+                ventanaVentasActiva.toFront();
+
+                ventanaVentasActiva.pack();
+            } else {
                 JOptionPane.showMessageDialog(this,
-                        "Error al actualizar estado: " + e.getMessage(),
+                        "No se pudo abrir la ventana de ventas. Desktop no encontrado.",
                         "Error", JOptionPane.ERROR_MESSAGE);
             }
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al actualizar estado de mesa: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al abrir ventana de ventas: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
         }
+    }
+
+    //Método auxiliar para encontrar el JDesktopPane
+    private JDesktopPane findDesktopPane(Container container) {
+        if (container instanceof JDesktopPane) {
+            return (JDesktopPane) container;
+        }
+
+        for (Component comp : container.getComponents()) {
+            if (comp instanceof Container) {
+                JDesktopPane result = findDesktopPane((Container) comp);
+                if (result != null) {
+                    return result;
+                }
+            }
+        }
+        return null;
+    }
+
+    //Método para manejar el cierre de la ventana de ventas
+    private void manejarCierreVentanaVentas(Mesa mesa, Mesa.EstadoMesa estadoAnterior) {
+        try {
+            System.out.println("DEBUG: Manejando cierre para Mesa " + mesa.getNumero());
+
+            VentaTemporal datosActuales = null;
+            if (ventanaVentasActiva != null) {
+                datosActuales = ventanaVentasActiva.obtenerDatosTemporal();
+                System.out.println("DEBUG: Datos obtenidos: " + (datosActuales != null ? "SÍ" : "NO"));
+                if (datosActuales != null && datosActuales.getDatosTabla() != null) {
+                    System.out.println("DEBUG: Filas en tabla: " + datosActuales.getDatosTabla().getRowCount());
+                    System.out.println("DEBUG: tieneProductos() retorna: " + datosActuales.tieneProductos());
+                }
+            }
+
+            if (datosActuales != null && datosActuales.tieneProductos()) {
+                System.out.println("DEBUG: ENTRANDO a guardar temporalmente...");
+
+                // Guardar temporalmente
+                ventasTemporales.put(mesa.getId(), datosActuales);
+                System.out.println("DEBUG: Datos agregados al Map. Tamaño Map: " + ventasTemporales.size());
+
+                mesa.setEstado(Mesa.EstadoMesa.OCUPADA);
+                System.out.println("DEBUG: Estado de mesa cambiado a OCUPADA");
+
+                mesasDAO.actualizarEstado(mesa.getId(), Mesa.EstadoMesa.OCUPADA);
+                System.out.println("DEBUG: Estado actualizado en base de datos");
+
+                actualizarVisualizacionMesa(mesa);
+                System.out.println("DEBUG: Visualización actualizada");
+
+                System.out.println("DEBUG: Datos guardados temporalmente para Mesa " + mesa.getNumero());
+
+                // Mostrar mensaje - VERIFICAR SI LLEGA AQUÍ
+                mostrarMensaje("Datos guardados temporalmente para Mesa " + mesa.getNumero()
+                        + "\nProductos: " + datosActuales.getDatosTabla().getRowCount());
+                System.out.println("DEBUG: Mensaje mostrado al usuario");
+
+            } else {
+                System.out.println("DEBUG: ENTRANDO a liberar mesa (sin productos)...");
+
+                // Liberar mesa
+                ventasTemporales.remove(mesa.getId());
+                mesa.setEstado(Mesa.EstadoMesa.DISPONIBLE);
+                mesasDAO.actualizarEstado(mesa.getId(), Mesa.EstadoMesa.DISPONIBLE);
+                actualizarVisualizacionMesa(mesa);
+                System.out.println("DEBUG: Mesa liberada (sin productos)");
+            }
+
+        } catch (SQLException e) {
+            System.err.println("ERROR SQL al manejar cierre: " + e.getMessage());
+            e.printStackTrace();
+            mostrarError("Error al actualizar estado de mesa: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("ERROR GENERAL al manejar cierre: " + e.getMessage());
+            e.printStackTrace();
+            mostrarError("Error al manejar cierre: " + e.getMessage());
+        }
+    }
+
+    //Método auxiliar para actualizar la visualización de una mesa específica
+    private void actualizarVisualizacionMesa(Mesa mesa) {
+        for (Component comp : panelMesas.getComponents()) {
+            if (comp instanceof JPanel) {
+                Rectangle bounds = comp.getBounds();
+                if (bounds.x == mesa.getPosicion().x && bounds.y == mesa.getPosicion().y) {
+                    comp.repaint();
+
+                    // Actualizar tooltip con información temporal
+                    if (comp instanceof JComponent) {
+                        String tooltipBase = "Mesa " + mesa.getNumero() + " - "
+                                + mesa.getEstado().getDescripcion()
+                                + " - Capacidad: " + mesa.getCapacidad();
+
+                        // Agregar información temporal si existe
+                        if (mesaTieneDatosTemporal(mesa.getId())) {
+                            tooltipBase += "\n[DATOS TEMPORALES: " + getInfoVentaTemporal(mesa.getId()) + "]";
+                        }
+
+                        ((JComponent) comp).setToolTipText(tooltipBase);
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    //Método público para ser llamado desde vRegVentas cuando se guarda una venta
+    public void notificarVentaGuardada(int idMesa) {
+        // Buscar la mesa y cambiar su estado a OCUPADA
+        for (Mesa mesa : mesas) {
+            if (mesa.getId() == idMesa) {
+                try {
+                    mesa.setEstado(Mesa.EstadoMesa.OCUPADA);
+                    mesasDAO.actualizarEstado(mesa.getId(), Mesa.EstadoMesa.OCUPADA);
+                    actualizarVisualizacionMesa(mesa);
+                    break;
+                } catch (SQLException e) {
+                    JOptionPane.showMessageDialog(this,
+                            "Error al actualizar estado de mesa: " + e.getMessage(),
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }
+    }
+
+    //Método público para liberar una mesa (cuando se finaliza la venta)
+    public void liberarMesa(int idMesa) {
+        for (Mesa mesa : mesas) {
+            if (mesa.getId() == idMesa) {
+                try {
+                    mesa.setEstado(Mesa.EstadoMesa.DISPONIBLE);
+                    mesasDAO.actualizarEstado(mesa.getId(), Mesa.EstadoMesa.DISPONIBLE);
+                    actualizarVisualizacionMesa(mesa);
+                    break;
+                } catch (SQLException e) {
+                    JOptionPane.showMessageDialog(this,
+                            "Error al liberar mesa: " + e.getMessage(),
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }
+    }
+
+    //Método para verificar si una mesa tiene datos temporales
+    public boolean mesaTieneDatosTemporal(int idMesa) {
+        VentaTemporal ventaTemporal = ventasTemporales.get(idMesa);
+        return ventaTemporal != null && ventaTemporal.tieneProductos();
+    }
+
+    //Método para liberar mesa definitivamente (cuando se guarda la venta)
+    public void liberarMesaDefinitivamente(int idMesa) {
+        // Eliminar datos temporales
+        ventasTemporales.remove(idMesa);
+
+        // Liberar mesa
+        for (Mesa mesa : mesas) {
+            if (mesa.getId() == idMesa) {
+                try {
+                    mesa.setEstado(Mesa.EstadoMesa.DISPONIBLE);
+                    mesasDAO.actualizarEstado(mesa.getId(), Mesa.EstadoMesa.DISPONIBLE);
+                    actualizarVisualizacionMesa(mesa);
+                    break;
+                } catch (SQLException e) {
+                    JOptionPane.showMessageDialog(this,
+                            "Error al liberar mesa: " + e.getMessage(),
+                            "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }
+    }
+
+    //Método adicional: para obtener información de venta temporal (útil para debugging)
+    public String getInfoVentaTemporal(int idMesa) {
+        VentaTemporal ventaTemporal = ventasTemporales.get(idMesa);
+        if (ventaTemporal != null) {
+            return "Productos: " + ventaTemporal.getDatosTabla().getRowCount()
+                    + " | Total: " + ventaTemporal.getTotal()
+                    + " | Creado: " + new SimpleDateFormat("dd/MM/yyyy HH:mm").format(ventaTemporal.getFechaCreacion());
+        }
+        return "Sin datos temporales";
+    }
+
+    //Método adicional: para limpiar todos los datos temporales (útil para reiniciar)
+    public void limpiarTodosLosDatosTemporales() {
+        if (!ventasTemporales.isEmpty()) {
+            int opcion = JOptionPane.showConfirmDialog(
+                    this,
+                    "¿Está seguro que desea eliminar todos los datos temporales?\n"
+                    + "Se perderán " + ventasTemporales.size() + " ventas no guardadas.",
+                    "Confirmar Limpieza",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE
+            );
+
+            if (opcion == JOptionPane.YES_OPTION) {
+                // Liberar todas las mesas con datos temporales
+                for (Integer idMesa : ventasTemporales.keySet()) {
+                    liberarMesaDefinitivamente(idMesa);
+                }
+
+                mostrarMensaje("Todos los datos temporales han sido eliminados.");
+            }
+        } else {
+            mostrarMensaje("No hay datos temporales para eliminar.");
+        }
+    }
+
+    private void mostrarMensaje(String mensaje) {
+        JOptionPane.showMessageDialog(this, mensaje, "Información", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void mostrarError(String mensaje) {
+        JOptionPane.showMessageDialog(this, mensaje, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+
+    private void mostrarAdvertencia(String mensaje) {
+        JOptionPane.showMessageDialog(this, mensaje, "Advertencia", JOptionPane.WARNING_MESSAGE);
     }
 
     // Implementación de los métodos de la interfaz myInterface
