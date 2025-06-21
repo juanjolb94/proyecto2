@@ -6,10 +6,15 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import javax.swing.JDesktopPane;
+import javax.swing.JInternalFrame;
 import javax.swing.table.DefaultTableModel;
 import modelo.VentasDAO;
 import modelo.mVentas;
 import vista.vRegVentas;
+import servicio.sTalonarios;
+import vista.vTalonarios;
+import servicio.sTalonarios;
 
 public class cRegVentas implements myInterface {
 
@@ -17,15 +22,44 @@ public class cRegVentas implements myInterface {
     private VentasDAO modelo;
     private mVentas ventaActual;
     private DecimalFormat formatoNumero;
+    private sTalonarios servicioTalonarios;
+    private String numeroFacturaActual;
+    private sTalonarios.DatosTalonario datosTalonarioActual;
 
     public cRegVentas(vRegVentas vista) throws SQLException {
         this.vista = vista;
         this.modelo = new VentasDAO();
         this.ventaActual = new mVentas();
         this.formatoNumero = new DecimalFormat("#,##0");
+        this.servicioTalonarios = new sTalonarios();
 
         // Configurar venta actual con valores por defecto
         inicializarVentaNueva();
+        cargarDatosTalonarioActivo();
+    }
+
+    /**
+     * Carga los datos del talonario activo para mostrar en pantalla
+     */
+    public void cargarDatosTalonarioActivo() {
+        try {
+            datosTalonarioActual = servicioTalonarios.obtenerDatosTalonarioActivo();
+
+            // Actualizar vista con los datos
+            vista.actualizarNumeroFactura(datosTalonarioActual.getNumeroFactura());
+            vista.actualizarTimbrado(datosTalonarioActual.getNumeroTimbrado());
+
+            // Verificar si está vencido y mostrar advertencia
+            if (servicioTalonarios.isTimbradoVencido(datosTalonarioActual.getFechaVencimiento())) {
+                vista.mostrarAdvertencia("¡ATENCIÓN! El timbrado está VENCIDO. "
+                        + "Contacte con la administración antes de continuar.");
+            }
+
+        } catch (SQLException e) {
+            vista.mostrarError("Error al cargar datos del talonario: " + e.getMessage());
+            vista.actualizarNumeroFactura("ERROR-NO-TALONARIO");
+            vista.actualizarTimbrado("SIN TIMBRADO");
+        }
     }
 
     // Clase interna para manejar items en combobox
@@ -312,7 +346,7 @@ public class cRegVentas implements myInterface {
     // Método para guardar la venta
     public void guardarVenta() {
         try {
-            // Validaciones previas
+            // Validaciones existentes...
             if (ventaActual.getDetalles().isEmpty()) {
                 vista.mostrarError("No hay productos en la venta.");
                 return;
@@ -328,26 +362,55 @@ public class cRegVentas implements myInterface {
                 return;
             }
 
-            // Insertar la venta en la base de datos
-            int idVenta = modelo.insertarVenta(ventaActual);
+            // Consumir número de factura del talonario
+            sTalonarios.DatosTalonario datosVenta = servicioTalonarios.consumirSiguienteFactura();
+
+            // Establecer datos del talonario en la venta
+            ventaActual.setNumeroFactura(datosVenta.getNumeroFactura());
+            ventaActual.setNumeroTimbrado(datosVenta.getNumeroTimbrado());
+
+            // Insertar venta con datos del talonario
+            int idVenta = modelo.insertarVentaConTalonario(ventaActual);
 
             if (idVenta > 0) {
-                vista.mostrarMensaje("Venta guardada correctamente. ID: " + idVenta);
+                vista.mostrarMensaje("Venta guardada correctamente.\nFactura: "
+                        + datosVenta.getNumeroFactura()
+                        + "\nTimbrado: " + datosVenta.getNumeroTimbrado());
+
+                // Actualizar para la siguiente venta
+                cargarDatosTalonarioActivo();
+
+                // Notificar cambio a ventana de talonarios
+                notificarVentanaTalonarios();
 
                 // Limpiar formulario para nueva venta
                 limpiarFormulario();
 
-                // Opcional: Imprimir factura
-                vista.preguntarImprimirFactura(idVenta);
-
             } else {
                 vista.mostrarError("Error al guardar la venta.");
             }
-
-        } catch (SQLException e) {
-            vista.mostrarError("Error al guardar venta: " + e.getMessage());
         } catch (Exception e) {
-            vista.mostrarError("Error inesperado: " + e.getMessage());
+            vista.mostrarError("Error al guardar venta: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Busca y actualiza la ventana de talonarios si está abierta
+     */
+    private void notificarVentanaTalonarios() {
+        try {
+            JDesktopPane desktop = vista.getDesktopPane();
+            if (desktop != null) {
+                for (JInternalFrame frame : desktop.getAllFrames()) {
+                    if (frame instanceof vTalonarios && !frame.isClosed()) {
+                        // Actualizar la ventana de talonarios
+                        ((vTalonarios) frame).actualizar();
+                        break;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error al actualizar ventana de talonarios: " + e.getMessage());
         }
     }
 

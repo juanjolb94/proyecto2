@@ -38,12 +38,34 @@ public class vTalonarios extends javax.swing.JInternalFrame implements myInterfa
             public void actionPerformed(ActionEvent e) {
                 try {
                     int id = Integer.parseInt(txtId.getText());
-                    buscarPorId(id);
+                    if (id == 0) {
+                        // Si ID es 0, limpiar formulario para nuevo registro
+                        limpiarCampos();
+                    } else {
+                        // Si ID > 0, buscar talonario
+                        buscarPorId(id);
+                    }
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(vTalonarios.this,
                             "ID inválido. Ingrese un número entero.",
                             "Error", JOptionPane.ERROR_MESSAGE);
                 }
+            }
+        });
+
+        // Configurar evento de selección completa al hacer clic en txtId
+        txtId.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                txtId.selectAll();
+            }
+        });
+
+        // Agregar focus listener para seleccionar todo el texto al obtener foco
+        txtId.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent evt) {
+                txtId.selectAll();
             }
         });
     }
@@ -68,6 +90,9 @@ public class vTalonarios extends javax.swing.JInternalFrame implements myInterfa
         esNuevo = true;
         txtId.setEnabled(true);
         habilitarCampos(true);
+
+        txtId.requestFocusInWindow();
+        txtId.selectAll();
     }
 
     private void habilitarCampos(boolean habilitar) {
@@ -105,7 +130,7 @@ public class vTalonarios extends javax.swing.JInternalFrame implements myInterfa
             chkEstado.setSelected(talonario.isEstado());
 
             esNuevo = false;
-            txtId.setEnabled(false);
+            //txtId.setEnabled(false);
             habilitarCampos(true);
 
             // Actualizar la información adicional
@@ -116,6 +141,11 @@ public class vTalonarios extends javax.swing.JInternalFrame implements myInterfa
     }
 
     private void buscarPorId(int id) {
+        if (id == 0) {
+            limpiarCampos();
+            return;
+        }
+
         mTalonario talonario = controlador.buscarTalonarioPorId(id);
         if (talonario != null) {
             cargarDatosTalonario(talonario);
@@ -323,7 +353,7 @@ public class vTalonarios extends javax.swing.JInternalFrame implements myInterfa
                     txtId.setText(String.valueOf(nuevoId));
                     txtFacturaActual.setText(String.valueOf(facturaDesde));
                     esNuevo = false;
-                    txtId.setEnabled(false);
+                    //txtId.setEnabled(false);
                 }
             } else {
                 int facturaActual = Integer.parseInt(txtFacturaActual.getText());
@@ -707,9 +737,8 @@ public class vTalonarios extends javax.swing.JInternalFrame implements myInterfa
                         .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                             .addComponent(cmbTipoComprobante, 0, 150, Short.MAX_VALUE)
                             .addComponent(chkEstado)
-                            .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                                .addComponent(txtEstablecimiento, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 60, Short.MAX_VALUE)
-                                .addComponent(txtPuntoExpedicion, javax.swing.GroupLayout.Alignment.LEADING))
+                            .addComponent(txtEstablecimiento, javax.swing.GroupLayout.DEFAULT_SIZE, 60, Short.MAX_VALUE)
+                            .addComponent(txtPuntoExpedicion)
                             .addComponent(txtFacturaActual))))
                 .addContainerGap())
         );

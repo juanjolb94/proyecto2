@@ -12,6 +12,56 @@ public class VentasDAO {
         this.conexion = DatabaseConnection.getConnection();
     }
 
+    /**
+     * Inserta venta con datos del talonario
+     */
+    public int insertarVentaConTalonario(mVentas venta) throws SQLException {
+        int idVenta = 0;
+        conexion.setAutoCommit(false);
+
+        try {
+            // Insertar cabecera de venta CON datos del talonario
+            String sqlCabecera = "INSERT INTO ventas (fecha, total, id_cliente, id_usuario, "
+                    + "id_caja, anulado, observaciones, numero_factura, numero_timbrado) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+            PreparedStatement psCabecera = conexion.prepareStatement(sqlCabecera, Statement.RETURN_GENERATED_KEYS);
+            psCabecera.setTimestamp(1, new Timestamp(venta.getFecha().getTime()));
+            psCabecera.setInt(2, venta.getTotal());
+            psCabecera.setInt(3, venta.getIdCliente());
+            psCabecera.setInt(4, venta.getIdUsuario());
+            psCabecera.setInt(5, venta.getIdCaja());
+            psCabecera.setBoolean(6, venta.isAnulado());
+            psCabecera.setString(7, venta.getObservaciones());
+            psCabecera.setString(8, venta.getNumeroFactura());
+            psCabecera.setString(9, venta.getNumeroTimbrado());  // ← NUEVO CAMPO
+
+            psCabecera.executeUpdate();
+
+            // Obtener ID y procesar detalles
+            ResultSet rs = psCabecera.getGeneratedKeys();
+            if (rs.next()) {
+                idVenta = rs.getInt(1);
+                venta.setIdVenta(idVenta);
+
+                // Insertar detalles (código existente)
+                for (mVentas.DetalleVenta detalle : venta.getDetalles()) {
+                    insertarDetalleVenta(idVenta, detalle);
+                    actualizarStockVenta(detalle.getIdProducto(), detalle.getCodigoBarra(), detalle.getCantidad());
+                }
+            }
+
+            conexion.commit();
+            return idVenta;
+
+        } catch (SQLException e) {
+            conexion.rollback();
+            throw e;
+        } finally {
+            conexion.setAutoCommit(true);
+        }
+    }
+
     // Método para insertar una nueva venta con sus detalles
     public int insertarVenta(mVentas venta) throws SQLException {
         int idVenta = 0;
@@ -115,7 +165,11 @@ public class VentasDAO {
                             rs.getString("observaciones")
                     );
 
-                    // Cargar detalles de la venta
+                    // Establecer datos del talonario
+                    venta.setNumeroFactura(rs.getString("numero_factura"));
+                    venta.setNumeroTimbrado(rs.getString("numero_timbrado"));
+
+                    // Cargar detalles
                     cargarDetallesVenta(venta);
 
                     return venta;
@@ -259,7 +313,7 @@ public class VentasDAO {
     // Método para obtener lista de clientes
     public List<Object[]> obtenerClientes() throws SQLException {
         String sql = "SELECT id_cliente, nombre, ci_ruc, telefono FROM clientes "
-                + "WHERE estado = true ORDER BY nombre";
+                + "WHERE estado = 1 ORDER BY nombre";
 
         List<Object[]> clientes = new ArrayList<>();
 
@@ -418,7 +472,7 @@ public class VentasDAO {
 
     // Método para obtener el ID de caja actual activa
     public int obtenerIdCajaActiva() throws SQLException {
-        String sql = "SELECT id FROM cajas WHERE estado = 'ABIERTA' LIMIT 1";
+        String sql = "SELECT id FROM cajas WHERE estado_abierto = 1 LIMIT 1";
 
         try (PreparedStatement ps = conexion.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
 
