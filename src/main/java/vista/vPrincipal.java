@@ -163,6 +163,8 @@ public class vPrincipal extends javax.swing.JFrame {
                     break;
                 case "CLIPBOARD_CHECK":
                     icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CLIPBOARD_CHECK);
+                case "CLIPBOARD_CHECK_OUTLINE":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CLIPBOARD_CHECK_OUTLINE);
                     break;
                 case "BARCODE_SCAN":
                     icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignB.BARCODE_SCAN);
@@ -291,6 +293,7 @@ public class vPrincipal extends javax.swing.JFrame {
         setIconSafely(mPromociones, "TAG_MULTIPLE", iconSize, menuIconColor);
         setIconSafely(mListaPrecios, "TAG_MULTIPLE", iconSize, menuIconColor);
         setIconSafely(mAjustarStock, "CLIPBOARD_CHECK", iconSize, menuIconColor);
+        setIconSafely(mAprobarStock, "CLIPBOARD_CHECK_OUTLINE", iconSize, menuIconColor);
         setIconSafely(mRepInvent, "BARCODE_SCAN", iconSize, menuIconColor);
 
         // Menú Tesorería
@@ -614,6 +617,7 @@ public class vPrincipal extends javax.swing.JFrame {
         mListaPrecios = new javax.swing.JMenuItem();
         jSeparator6 = new javax.swing.JPopupMenu.Separator();
         mAjustarStock = new javax.swing.JMenuItem();
+        mAprobarStock = new javax.swing.JMenuItem();
         jSeparator13 = new javax.swing.JPopupMenu.Separator();
         mRepInvent = new javax.swing.JMenuItem();
         mTesoreria = new javax.swing.JMenu();
@@ -868,6 +872,14 @@ public class vPrincipal extends javax.swing.JFrame {
             }
         });
         mStock.add(mAjustarStock);
+
+        mAprobarStock.setText("Aprobar Ajuste de Stock");
+        mAprobarStock.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mAprobarStockActionPerformed(evt);
+            }
+        });
+        mStock.add(mAprobarStock);
         mStock.add(jSeparator13);
 
         mRepInvent.setText("Reporte de Inventario");
@@ -1431,6 +1443,39 @@ public class vPrincipal extends javax.swing.JFrame {
         }
     }//GEN-LAST:event_mAjustarStockActionPerformed
 
+    private void mAprobarStockActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mAprobarStockActionPerformed
+        try {
+            abrirVentanaGenerica(
+                    () -> {
+                        try {
+                            return new vAprobacionAjuste();
+                        } catch (Exception ex) {
+                            throw new RuntimeException("Error al inicializar ventana de aprobación de ajustes: " + ex.getMessage(), ex);
+                        }
+                    },
+                    vAprobacionAjuste.class,
+                    "Aprobar/Desaprobar Ajustes de Stock",
+                    (window) -> {
+                        // Configuraciones adicionales al abrir la ventana
+                        window.enfocarFiltros(); // Enfocar en los campos de filtro
+
+                        // Mostrar mensaje informativo
+                        SwingUtilities.invokeLater(() -> {
+                            window.mostrarMensaje("Ventana de aprobación iniciada.\n"
+                                    + "• Use los filtros para buscar ajustes\n"
+                                    + "• Marque/desmarque para aprobar/desaprobar\n"
+                                    + "• Doble clic para ver detalles del ajuste");
+                        });
+                    }
+            );
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al abrir ventana de aprobación de ajustes:\n" + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_mAprobarStockActionPerformed
+
     public static void main(String args[]) {
         try {
             // Inicializar el registro de iconos de Material Design
@@ -1479,6 +1524,7 @@ public class vPrincipal extends javax.swing.JFrame {
     private javax.swing.JMenuItem mAjustarStock;
     private javax.swing.JMenuItem mAnterior;
     private javax.swing.JMenuItem mAperturaCierreCaja;
+    private javax.swing.JMenuItem mAprobarStock;
     private javax.swing.JMenu mArchivo;
     private javax.swing.JMenuItem mBorrar;
     private javax.swing.JMenuItem mBuscar;
