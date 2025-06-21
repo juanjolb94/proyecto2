@@ -8,10 +8,10 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
-import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import javax.swing.DefaultCellEditor;
+import javax.swing.SwingUtilities;
 
 public class vAjusteStock extends javax.swing.JInternalFrame implements myInterface {
 
@@ -23,32 +23,29 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
         initComponents();
         this.formatoFecha = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
-        // Manejar posible SQLException del constructor de cAjusteStock
         try {
             this.controlador = new cAjusteStock(this);
-        } catch (SQLException e) {
+        } catch (Exception e) {
             JOptionPane.showMessageDialog(this,
                     "Error al inicializar el controlador: " + e.getMessage(),
                     "Error de Conexión",
                     JOptionPane.ERROR_MESSAGE);
-
             this.controlador = null;
 
-            // Cerrar la ventana si no se puede inicializar
-            SwingUtilities.invokeLater(() -> {
-                dispose();
-            });
+            configurarComponentes();
+            configurarTabla();
+            configurarEventos();
+            limpiarFormulario(); // CAMBIO: Esto ahora establece ID en 0
+            mostrarError("Ventana abierta con funcionalidad limitada. Verifique la conexión a la base de datos.");
             return;
         }
 
-        configurarComponentes();
-        configurarTabla();
-        configurarEventos();
-
-        // Inicializar con ajuste nuevo solo si el controlador se creó correctamente
         if (this.controlador != null) {
-            limpiarFormulario();
+            configurarComponentes();
+            configurarTabla();
+            configurarEventos();
             actualizarTablaDetalles();
+            limpiarFormulario(); // CAMBIO: Esto ahora establece ID en 0
         }
     }
 
@@ -68,6 +65,21 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
 
     // Configuración de la tabla de detalles
     private void configurarTabla() {
+        // VALIDACIÓN: Solo proceder si el controlador existe
+        if (controlador == null) {
+            // Crear modelo vacío por defecto
+            modeloTablaDetalles = new DefaultTableModel(
+                    new Object[]{"Código Barras", "Descripción", "Cant. Sistema", "Cant. Ajuste", "Diferencia", "Observaciones"}, 0
+            ) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return false; // Deshabilitar edición si no hay controlador
+                }
+            };
+            tblDetalles.setModel(modeloTablaDetalles);
+            return;
+        }
+
         modeloTablaDetalles = controlador.getModeloTablaDetalles();
         tblDetalles.setModel(modeloTablaDetalles);
 
@@ -113,68 +125,99 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
             }
         });
 
-        // SOLUCIÓN: Editor para cantidad de ajuste usando DefaultCellEditor
-        JTextField editorCantidad = new JTextField();
-        editorCantidad.setHorizontalAlignment(JTextField.RIGHT);
-
-        DefaultCellEditor cellEditorCantidad = new DefaultCellEditor(editorCantidad) {
+        // Evento para seleccionar todo el contenido al hacer click en txtIdAjuste
+        txtIdAjuste.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
-            public boolean stopCellEditing() {
-                try {
-                    String valor = (String) getCellEditorValue();
-                    double cantidad = Double.parseDouble(valor);
-                    int fila = tblDetalles.getEditingRow();
+            public void mouseClicked(java.awt.event.MouseEvent evt) {
+                txtIdAjuste.selectAll();
+            }
+        });
 
-                    if (fila >= 0 && cantidad >= 0) {
-                        controlador.actualizarCantidadAjuste(fila, cantidad);
+        // También seleccionar todo al recibir foco
+        txtIdAjuste.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent evt) {
+                SwingUtilities.invokeLater(() -> {
+                    txtIdAjuste.selectAll();
+                });
+            }
+        });
+
+        // Solo configurar editores si el controlador existe
+        if (controlador != null) {
+            // Resto del código de editores igual...
+            JTextField editorCantidad = new JTextField();
+            editorCantidad.setHorizontalAlignment(JTextField.RIGHT);
+
+            DefaultCellEditor cellEditorCantidad = new DefaultCellEditor(editorCantidad) {
+                @Override
+                public boolean stopCellEditing() {
+                    try {
+                        String valor = (String) getCellEditorValue();
+                        int cantidad = Integer.parseInt(valor);
+                        int fila = tblDetalles.getEditingRow();
+
+                        if (fila >= 0 && cantidad >= 0) {
+                            if (controlador != null) {
+                                controlador.actualizarCantidadAjuste(fila, cantidad);
+                            }
+                            return super.stopCellEditing();
+                        } else if (cantidad < 0) {
+                            mostrarError("La cantidad no puede ser negativa.");
+                            return false;
+                        }
+
                         return super.stopCellEditing();
-                    } else if (cantidad < 0) {
-                        mostrarError("La cantidad no puede ser negativa.");
+                    } catch (NumberFormatException e) {
+                        mostrarError("Ingrese un número entero válido para la cantidad.");
                         return false;
                     }
+                }
+            };
 
+            tblDetalles.getColumnModel().getColumn(3).setCellEditor(cellEditorCantidad);
+
+            // Editor para observaciones
+            JTextField editorObservaciones = new JTextField();
+            DefaultCellEditor cellEditorObservaciones = new DefaultCellEditor(editorObservaciones) {
+                @Override
+                public boolean stopCellEditing() {
+                    String valor = (String) getCellEditorValue();
+                    int fila = tblDetalles.getEditingRow();
+                    if (fila >= 0 && controlador != null) {
+                        controlador.actualizarObservacionesDetalle(fila, valor);
+                    }
                     return super.stopCellEditing();
-                } catch (NumberFormatException e) {
-                    mostrarError("Ingrese un número válido para la cantidad.");
-                    return false;
                 }
-            }
-        };
+            };
 
-        tblDetalles.getColumnModel().getColumn(3).setCellEditor(cellEditorCantidad);
-
-        // Editor para observaciones (más simple)
-        JTextField editorObservaciones = new JTextField();
-        DefaultCellEditor cellEditorObservaciones = new DefaultCellEditor(editorObservaciones) {
-            @Override
-            public boolean stopCellEditing() {
-                String valor = (String) getCellEditorValue();
-                int fila = tblDetalles.getEditingRow();
-                if (fila >= 0) {
-                    controlador.actualizarObservacionesDetalle(fila, valor);
-                }
-                return super.stopCellEditing();
-            }
-        };
-
-        tblDetalles.getColumnModel().getColumn(5).setCellEditor(cellEditorObservaciones);
+            tblDetalles.getColumnModel().getColumn(5).setCellEditor(cellEditorObservaciones);
+        }
     }
 
     // Limpiar formulario para nuevo ajuste
     public void limpiarFormulario() {
-        txtIdAjuste.setText("");
+        txtIdAjuste.setText("0");
         txtFecha.setText(formatoFecha.format(new Date()));
         txtObservaciones.setText("");
         chkAprobado.setSelected(false);
         txtCodigoBarra.setText("");
 
-        // Limpiar tabla
-        while (modeloTablaDetalles.getRowCount() > 0) {
-            modeloTablaDetalles.removeRow(0);
+        // Validación de seguridad
+        if (modeloTablaDetalles != null) {
+            while (modeloTablaDetalles.getRowCount() > 0) {
+                modeloTablaDetalles.removeRow(0);
+            }
         }
 
-        // Enfocar en código de barras
         txtCodigoBarra.requestFocus();
+    }
+
+    // Método para resetear ID y seleccionar contenido
+    private void resetearIdYSeleccionar() {
+        txtIdAjuste.setText("0");
+        txtIdAjuste.selectAll();
+        txtIdAjuste.requestFocus();
     }
 
     // Cargar datos de ajuste en el formulario
@@ -189,13 +232,21 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
 
     // Actualizar tabla de detalles
     public void actualizarTablaDetalles() {
-        modeloTablaDetalles = controlador.getModeloTablaDetalles();
-        tblDetalles.setModel(modeloTablaDetalles);
-        configurarTabla(); // Reconfigurar después de cambiar modelo
+        // VALIDACIÓN: Solo proceder si el controlador existe
+        if (controlador != null) {
+            modeloTablaDetalles = controlador.getModeloTablaDetalles();
+            tblDetalles.setModel(modeloTablaDetalles);
+            configurarTabla(); // Reconfigurar después de cambiar modelo
+        }
     }
 
     // Agregar producto por código de barras
     private void agregarProductoPorCodigo() {
+        if (controlador == null) {
+            mostrarError("Error: Sistema no disponible. Verifique la conexión a la base de datos.");
+            return;
+        }
+
         String codigo = txtCodigoBarra.getText().trim();
         if (!codigo.isEmpty()) {
             controlador.agregarProductoPorCodigo(codigo);
@@ -204,10 +255,22 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
 
     // Buscar ajuste por ID
     private void buscarPorId() {
+        if (controlador == null) {
+            mostrarError("Error: Sistema no disponible. Verifique la conexión a la base de datos.");
+            return;
+        }
+
         String idTexto = txtIdAjuste.getText().trim();
         if (!idTexto.isEmpty()) {
             try {
                 int id = Integer.parseInt(idTexto);
+
+                if (id == 0) {
+                    limpiarFormulario();
+                    mostrarMensaje("Formulario limpiado para nuevo ajuste.");
+                    return;
+                }
+
                 controlador.buscarAjustePorId(id);
             } catch (NumberFormatException e) {
                 mostrarError("ID debe ser un número válido.");
@@ -217,6 +280,11 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
 
     // Eliminar detalle seleccionado
     public void eliminarDetalleSeleccionado() {
+        if (controlador == null) {
+            mostrarError("Error: Sistema no disponible. Verifique la conexión a la base de datos.");
+            return;
+        }
+
         int filaSeleccionada = tblDetalles.getSelectedRow();
         if (filaSeleccionada >= 0) {
             controlador.eliminarDetalleSeleccionado(filaSeleccionada);
@@ -250,100 +318,197 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
         JOptionPane.showMessageDialog(this, mensaje, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
+    // Método para enfocar y seleccionar ID (útil para llamadas externas)
+    public void enfocarId() {
+        txtIdAjuste.requestFocus();
+        txtIdAjuste.selectAll();
+    }
+
     // Implementación de métodos de la interfaz myInterface
     @Override
     public void imGrabar() {
-        controlador.imGrabar();
+        if (controlador != null) {
+            controlador.imGrabar();
+
+            SwingUtilities.invokeLater(() -> {
+                resetearIdYSeleccionar();
+            });
+        } else {
+            mostrarError("Error: Sistema no disponible para guardar.");
+        }
     }
 
     @Override
     public void imFiltrar() {
-        controlador.imFiltrar();
+        if (controlador != null) {
+            controlador.imFiltrar();
+        } else {
+            mostrarError("Error: Sistema no disponible para filtrar.");
+        }
     }
 
     @Override
     public void imActualizar() {
-        controlador.imActualizar();
+        if (controlador != null) {
+            controlador.imActualizar();
+
+            SwingUtilities.invokeLater(() -> {
+                resetearIdYSeleccionar();
+            });
+        } else {
+            mostrarError("Error: Sistema no disponible para actualizar.");
+        }
     }
 
     @Override
     public void imBorrar() {
-        controlador.imBorrar();
+        if (controlador != null) {
+            controlador.imBorrar();
+
+            SwingUtilities.invokeLater(() -> {
+                resetearIdYSeleccionar();
+            });
+        } else {
+            mostrarError("Error: Sistema no disponible para borrar.");
+        }
     }
 
     @Override
     public void imNuevo() {
-        controlador.imNuevo();
+        if (controlador != null) {
+            controlador.imNuevo();
+        } else {
+            // Permitir nuevo ajuste incluso sin controlador
+            limpiarFormulario();
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            txtIdAjuste.selectAll();
+            txtIdAjuste.requestFocus();
+        });
     }
 
     @Override
     public void imBuscar() {
-        controlador.imBuscar();
+        if (controlador != null) {
+            controlador.imBuscar();
+        } else {
+            mostrarError("Error: Sistema no disponible para buscar.");
+        }
     }
 
     @Override
     public void imPrimero() {
-        controlador.imPrimero();
+        if (controlador != null) {
+            controlador.imPrimero();
+        } else {
+            mostrarError("Error: Sistema no disponible para navegación.");
+        }
     }
 
     @Override
     public void imSiguiente() {
-        controlador.imSiguiente();
+        if (controlador != null) {
+            controlador.imSiguiente();
+        } else {
+            mostrarError("Error: Sistema no disponible para navegación.");
+        }
     }
 
     @Override
     public void imAnterior() {
-        controlador.imAnterior();
+        if (controlador != null) {
+            controlador.imAnterior();
+        } else {
+            mostrarError("Error: Sistema no disponible para navegación.");
+        }
     }
 
     @Override
     public void imUltimo() {
-        controlador.imUltimo();
+        if (controlador != null) {
+            controlador.imUltimo();
+        } else {
+            mostrarError("Error: Sistema no disponible para navegación.");
+        }
     }
 
     @Override
     public void imImprimir() {
-        controlador.imImprimir();
+        if (controlador != null) {
+            controlador.imImprimir();
+        } else {
+            mostrarError("Error: Sistema no disponible para imprimir.");
+        }
     }
 
     @Override
     public void imInsDet() {
-        controlador.imInsDet();
+        if (controlador != null) {
+            controlador.imInsDet();
+        } else {
+            mostrarError("Error: Sistema no disponible para insertar detalles.");
+        }
     }
 
     @Override
     public void imDelDet() {
-        controlador.imDelDet();
+        if (controlador != null) {
+            controlador.imDelDet();
+        } else {
+            mostrarError("Error: Sistema no disponible para eliminar detalles.");
+        }
     }
 
     @Override
     public void imCerrar() {
-        controlador.imCerrar();
+        if (controlador != null) {
+            controlador.imCerrar();
+        } else {
+            dispose();
+        }
     }
 
     @Override
     public boolean imAbierto() {
-        return controlador.imAbierto();
+        if (controlador != null) {
+            return controlador.imAbierto();
+        }
+        return this.isVisible();
     }
 
     @Override
     public void imAbrir() {
-        controlador.imAbrir();
+        if (controlador != null) {
+            controlador.imAbrir();
+        } else {
+            this.setVisible(true);
+        }
     }
 
     @Override
     public String getTablaActual() {
-        return controlador.getTablaActual();
+        if (controlador != null) {
+            return controlador.getTablaActual();
+        }
+        return "ajustes_stock_cabecera";
     }
 
     @Override
     public String[] getCamposBusqueda() {
-        return controlador.getCamposBusqueda();
+        if (controlador != null) {
+            return controlador.getCamposBusqueda();
+        }
+        return new String[]{"id_ajuste", "fecha", "observaciones"};
     }
 
     @Override
     public void setRegistroSeleccionado(int id) {
-        controlador.setRegistroSeleccionado(id);
+        if (controlador != null) {
+            controlador.setRegistroSeleccionado(id);
+        } else {
+            mostrarError("Error: Sistema no disponible para seleccionar registro.");
+        }
     }
 
     // Métodos para integración con ventana principal
@@ -353,23 +518,23 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
     }
 
     public boolean tieneDetalles() {
-        return modeloTablaDetalles.getRowCount() > 0;
+        return modeloTablaDetalles != null && modeloTablaDetalles.getRowCount() > 0;
     }
 
     public void mostrarResumenAjuste() {
         if (tieneDetalles()) {
             int productos = modeloTablaDetalles.getRowCount();
-            double totalDiferencias = 0;
+            int totalDiferencias = 0;
 
             for (int i = 0; i < productos; i++) {
-                Object valorDif = modeloTablaDetalles.getValueAt(i, 4); // Columna diferencia
-                if (valorDif instanceof Double) {
-                    totalDiferencias += (Double) valorDif;
+                Object valorDif = modeloTablaDetalles.getValueAt(i, 4);
+                if (valorDif instanceof Integer) {
+                    totalDiferencias += (Integer) valorDif;
                 }
             }
 
             String resumen = String.format(
-                    "Productos en ajuste: %d\nTotal diferencias: %.2f",
+                    "Productos en ajuste: %d\nTotal diferencias: %d",
                     productos, totalDiferencias
             );
 
@@ -392,7 +557,11 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
 
             switch (opcion) {
                 case JOptionPane.YES_OPTION:
-                    controlador.imGrabar();
+                    if (controlador != null) {
+                        controlador.imGrabar();
+                    } else {
+                        mostrarError("No se puede guardar: Sistema no disponible.");
+                    }
                     return true;
                 case JOptionPane.NO_OPTION:
                     return true;

@@ -68,8 +68,8 @@ public class cAjusteStock implements myInterface {
                 detalle.setCodBarra((String) producto[2]);
                 detalle.setNombreProducto((String) producto[1]);
                 detalle.setDescripcionProducto((String) producto[3]);
-                detalle.setCantidadSistema((Double) producto[4]);
-                detalle.setCantidadAjuste(0.0); // Inicializar en 0
+                detalle.setCantidadSistema((Integer) producto[4]);
+                detalle.setCantidadAjuste(0);
 
                 ajusteActual.agregarDetalle(detalle);
                 vista.actualizarTablaDetalles();
@@ -108,8 +108,8 @@ public class cAjusteStock implements myInterface {
             detalle.setCodBarra(codBarra);
             detalle.setNombreProducto((String) producto[1]);
             detalle.setDescripcionProducto((String) producto[3]);
-            detalle.setCantidadSistema((Double) producto[4]);
-            detalle.setCantidadAjuste(0.0);
+            detalle.setCantidadSistema((Integer) producto[4]);
+            detalle.setCantidadAjuste(0);
 
             ajusteActual.agregarDetalle(detalle);
             vista.actualizarTablaDetalles();
@@ -148,8 +148,17 @@ public class cAjusteStock implements myInterface {
     public void actualizarCantidadAjuste(int indice, double nuevaCantidad) {
         if (indice >= 0 && indice < ajusteActual.getDetalles().size()) {
             if (nuevaCantidad >= 0) {
-                ajusteActual.getDetalles().get(indice).setCantidadAjuste(nuevaCantidad);
+                // Validación adicional: verificar límites razonables
+                if (nuevaCantidad > 999999) {
+                    vista.mostrarError("La cantidad no puede ser mayor a 999,999.");
+                    return;
+                }
+
+                ajusteActual.getDetalles().get(indice).setCantidadAjuste((int) nuevaCantidad);
                 System.out.println("Cantidad actualizada en índice " + indice + ": " + nuevaCantidad);
+
+                // Actualizar la vista para reflejar los cambios
+                vista.actualizarTablaDetalles();
             } else {
                 vista.mostrarError("La cantidad no puede ser negativa.");
             }
@@ -257,7 +266,7 @@ public class cAjusteStock implements myInterface {
                     case 2: // Cant. Sistema
                     case 3: // Cant. Ajuste
                     case 4: // Diferencia
-                        return Double.class;
+                        return Integer.class;
                     default:
                         return String.class;
                 }
@@ -269,9 +278,9 @@ public class cAjusteStock implements myInterface {
             modelo.addRow(new Object[]{
                 detalle.getCodBarra(),
                 detalle.getDescripcionCompleta(),
-                detalle.getCantidadSistema(),
-                detalle.getCantidadAjuste(),
-                detalle.getDiferencia(),
+                (int) detalle.getCantidadSistema(),
+                (int) detalle.getCantidadAjuste(),
+                (int) detalle.getDiferencia(),
                 detalle.getObservaciones() != null ? detalle.getObservaciones() : ""
             });
         }
