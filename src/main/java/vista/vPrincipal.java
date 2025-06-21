@@ -862,6 +862,11 @@ public class vPrincipal extends javax.swing.JFrame {
         mStock.add(jSeparator6);
 
         mAjustarStock.setText("Ajustar Stock");
+        mAjustarStock.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mAjustarStockActionPerformed(evt);
+            }
+        });
         mStock.add(mAjustarStock);
         mStock.add(jSeparator13);
 
@@ -1404,6 +1409,27 @@ public class vPrincipal extends javax.swing.JFrame {
                     "Error", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_mRegVentaDirectaActionPerformed
+
+    private void mAjustarStockActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mAjustarStockActionPerformed
+        try {
+            abrirVentanaGenerica(
+                    () -> {
+                        return new vAjusteStock(); // Sin try-catch aquí
+                    },
+                    vAjusteStock.class,
+                    "Ajuste de Stock",
+                    (window) -> {
+                        // Configuraciones adicionales al abrir la ventana
+                        window.enfocarCodigoBarra(); // Enfocar en el campo de código de barras
+                    }
+            );
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al abrir ventana de ajuste de stock:\n" + ex.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }//GEN-LAST:event_mAjustarStockActionPerformed
 
     public static void main(String args[]) {
         try {
