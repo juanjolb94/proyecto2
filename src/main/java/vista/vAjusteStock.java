@@ -8,6 +8,8 @@ import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import javax.swing.DefaultCellEditor;
@@ -21,6 +23,11 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
 
     public vAjusteStock() {
         initComponents();
+
+        setClosable(true);
+        setMaximizable(true);
+        setIconifiable(true);
+        setResizable(true);
         this.formatoFecha = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
 
         try {
@@ -101,6 +108,68 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
         // Configurar selección
         tblDetalles.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         tblDetalles.getTableHeader().setReorderingAllowed(false);
+
+        // Agregar listener para capturar cambios en la tabla
+        if (modeloTablaDetalles != null) {
+            modeloTablaDetalles.addTableModelListener(e -> {
+                if (e.getType() == javax.swing.event.TableModelEvent.UPDATE) {
+                    int fila = e.getFirstRow();
+                    int columna = e.getColumn();
+
+                    // Solo procesar si se editó cantidad ajuste (columna 3) u observaciones (columna 5)
+                    if (columna == 3 || columna == 5) {
+                        SwingUtilities.invokeLater(() -> {
+                            actualizarModeloDesdeTabla(fila, columna);
+                        });
+                    }
+                }
+            });
+        }
+    }
+
+    // Actualizar el modelo del controlador desde los cambios en la tabla
+    private void actualizarModeloDesdeTabla(int fila, int columna) {
+        if (controlador == null || fila < 0) {
+            return;
+        }
+
+        try {
+            Object valor = modeloTablaDetalles.getValueAt(fila, columna);
+
+            if (columna == 3) { // Cantidad Ajuste
+                if (valor instanceof Integer) {
+                    int nuevaCantidad = (Integer) valor;
+                    controlador.actualizarCantidadAjuste(fila, nuevaCantidad);
+                }
+            } else if (columna == 5) { // Observaciones
+                String observaciones = valor != null ? valor.toString() : "";
+                controlador.actualizarObservacionesDetalle(fila, observaciones);
+            }
+
+            // Forzar actualización de la columna diferencia (columna 4)
+            if (columna == 3) {
+                actualizarDiferencia(fila);
+            }
+
+        } catch (Exception e) {
+            mostrarError("Error al actualizar datos: " + e.getMessage());
+        }
+    }
+
+// Actualizar la columna diferencia
+    private void actualizarDiferencia(int fila) {
+        try {
+            Object cantSistema = modeloTablaDetalles.getValueAt(fila, 2);
+            Object cantAjuste = modeloTablaDetalles.getValueAt(fila, 3);
+
+            int sistema = cantSistema instanceof Integer ? (Integer) cantSistema : 0;
+            int ajuste = cantAjuste instanceof Integer ? (Integer) cantAjuste : 0;
+            int diferencia = ajuste - sistema;
+
+            modeloTablaDetalles.setValueAt(diferencia, fila, 4);
+        } catch (Exception e) {
+            // Ignorar errores menores de cálculo
+        }
     }
 
     // Configuración de eventos
@@ -193,6 +262,61 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
 
             tblDetalles.getColumnModel().getColumn(5).setCellEditor(cellEditorObservaciones);
         }
+
+        // Configurar menú contextual para eliminar productos
+        configurarMenuContextual();
+
+        // Agregar listener para tecla Delete
+        tblDetalles.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_DELETE) {
+                    eliminarDetalleSeleccionado();
+                }
+            }
+        });
+    }
+
+    // Configurar menú contextual para la tabla
+    private void configurarMenuContextual() {
+        JPopupMenu popupMenu = new JPopupMenu();
+
+        // Opción para eliminar
+        JMenuItem menuEliminar = new JMenuItem("Eliminar producto");
+        menuEliminar.addActionListener(e -> eliminarDetalleSeleccionado());
+
+        popupMenu.add(menuEliminar);
+
+        // Agregar listener para click derecho en la tabla
+        tblDetalles.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    mostrarMenuContextual(e, popupMenu);
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    mostrarMenuContextual(e, popupMenu);
+                }
+            }
+        });
+    }
+
+// Mostrar menú contextual en la posición del evento
+    private void mostrarMenuContextual(MouseEvent e, JPopupMenu popupMenu) {
+        int row = tblDetalles.rowAtPoint(e.getPoint());
+
+        // Si se hizo clic en una fila válida
+        if (row >= 0 && row < tblDetalles.getRowCount()) {
+            // Seleccionar la fila donde se hizo clic derecho
+            tblDetalles.setRowSelectionInterval(row, row);
+
+            // Mostrar el menú popup
+            popupMenu.show(e.getComponent(), e.getX(), e.getY());
+        }
     }
 
     // Limpiar formulario para nuevo ajuste
@@ -203,14 +327,20 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
         chkAprobado.setSelected(false);
         txtCodigoBarra.setText("");
 
-        // Validación de seguridad
+        // Limpiar la tabla de detalles completamente
         if (modeloTablaDetalles != null) {
             while (modeloTablaDetalles.getRowCount() > 0) {
                 modeloTablaDetalles.removeRow(0);
             }
         }
 
-        txtCodigoBarra.requestFocus();
+        txtIdAjuste.requestFocus();
+    }
+
+    // Método para enfocar y seleccionar el campo ID de ajuste
+    public void enfocarIdAjuste() {
+        txtIdAjuste.requestFocus();
+        txtIdAjuste.selectAll();
     }
 
     // Método para resetear ID y seleccionar contenido
@@ -377,8 +507,8 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
     public void imNuevo() {
         if (controlador != null) {
             controlador.imNuevo();
+            actualizarTablaDetalles();
         } else {
-            // Permitir nuevo ajuste incluso sin controlador
             limpiarFormulario();
         }
 

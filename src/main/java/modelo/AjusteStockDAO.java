@@ -216,6 +216,82 @@ public class AjusteStockDAO {
         }
     }
 
+    // Eliminar ajuste completo (cabecera y detalles)
+    public boolean eliminarAjuste(int idAjuste) throws SQLException {
+        // Como la tabla ajustes_stock_detalle tiene CASCADE en la FK,
+        // al eliminar la cabecera se eliminan automáticamente los detalles
+        String sql = "DELETE FROM ajustes_stock_cabecera WHERE id_ajuste = ?";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setInt(1, idAjuste);
+
+            int filasAfectadas = ps.executeUpdate();
+            return filasAfectadas > 0;
+        }
+    }
+
+// Método alternativo si quieres eliminar explícitamente los detalles primero
+    public boolean eliminarAjusteCompleto(int idAjuste) throws SQLException {
+        // Iniciar transacción
+        conexion.setAutoCommit(false);
+
+        try {
+            // Primero eliminar los detalles
+            eliminarDetallesAjuste(idAjuste);
+
+            // Luego eliminar la cabecera
+            String sqlCabecera = "DELETE FROM ajustes_stock_cabecera WHERE id_ajuste = ?";
+            try (PreparedStatement ps = conexion.prepareStatement(sqlCabecera)) {
+                ps.setInt(1, idAjuste);
+                int filasAfectadas = ps.executeUpdate();
+
+                if (filasAfectadas > 0) {
+                    conexion.commit();
+                    return true;
+                } else {
+                    conexion.rollback();
+                    return false;
+                }
+            }
+
+        } catch (SQLException e) {
+            conexion.rollback();
+            throw e;
+        } finally {
+            conexion.setAutoCommit(true);
+        }
+    }
+
+// Verificar si un ajuste existe
+    public boolean existeAjuste(int idAjuste) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM ajustes_stock_cabecera WHERE id_ajuste = ?";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setInt(1, idAjuste);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+
+// Verificar si un ajuste está aprobado (no se puede eliminar si está aprobado)
+    public boolean estaAprobado(int idAjuste) throws SQLException {
+        String sql = "SELECT aprobado FROM ajustes_stock_cabecera WHERE id_ajuste = ?";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setInt(1, idAjuste);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBoolean("aprobado");
+                }
+            }
+        }
+        return false;
+    }
+
     // Buscar productos por nombre o código de barras
     public List<Object[]> buscarProductos(String busqueda) throws SQLException {
         String sql = "SELECT pc.id_producto, pc.nombre, pd.cod_barra, pd.descripcion, "

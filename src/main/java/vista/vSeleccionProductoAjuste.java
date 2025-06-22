@@ -26,7 +26,7 @@ public class vSeleccionProductoAjuste extends javax.swing.JDialog {
     public vSeleccionProductoAjuste(java.awt.Frame parent, cAjusteStock controlador) {
         super(parent, true);
         this.controladorAjuste = controlador;
-        this.formatoDecimal = new DecimalFormat("#,##0.00");
+        this.formatoDecimal = new DecimalFormat("#,##0");
 
         // Manejar posible SQLException del constructor de AjusteStockDAO
         try {
@@ -80,7 +80,7 @@ public class vSeleccionProductoAjuste extends javax.swing.JDialog {
             @Override
             public Class<?> getColumnClass(int columnIndex) {
                 if (columnIndex == 3) { // Columna Stock
-                    return Double.class;
+                    return Integer.class; // Cambiar a Integer
                 }
                 return String.class;
             }
@@ -97,38 +97,55 @@ public class vSeleccionProductoAjuste extends javax.swing.JDialog {
         tblProductos.getColumnModel().getColumn(3).setPreferredWidth(80);  // Stock
         tblProductos.getColumnModel().getColumn(4).setPreferredWidth(100); // Presentación
 
-        // Configurar alineación para columnas numéricas
-        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
-        rightRenderer.setHorizontalAlignment(JLabel.RIGHT);
-        tblProductos.getColumnModel().getColumn(3).setCellRenderer(rightRenderer);
-
-        // Renderizador personalizado para resaltar productos sin stock
+        // Renderizador personalizado para la columna Stock
         DefaultTableCellRenderer stockRenderer = new DefaultTableCellRenderer() {
             @Override
             public java.awt.Component getTableCellRendererComponent(JTable table, Object value,
                     boolean isSelected, boolean hasFocus, int row, int column) {
                 super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 
-                if (column == 3 && value instanceof Double) { // Columna Stock
-                    double stock = (Double) value;
-                    if (stock <= 0) {
-                        if (!isSelected) {
-                            setBackground(new java.awt.Color(255, 230, 230)); // Rojo claro
-                        }
-                        setToolTipText("Producto sin stock");
-                    } else {
-                        if (!isSelected) {
-                            setBackground(table.getBackground());
-                        }
-                        setToolTipText("Stock: " + formatoDecimal.format(stock));
-                    }
-                    setText(formatoDecimal.format(stock));
-                    setHorizontalAlignment(JLabel.RIGHT);
-                }
+                if (column == 3) { // Columna Stock
+                    int stock = 0;
 
+                    // Manejar tanto Integer como Double por compatibilidad
+                    if (value instanceof Integer) {
+                        stock = (Integer) value;
+                    } else if (value instanceof Double) {
+                        stock = ((Double) value).intValue();
+                    } else if (value != null) {
+                        try {
+                            stock = Integer.parseInt(value.toString());
+                        } catch (NumberFormatException e) {
+                            stock = 0;
+                        }
+                    }
+
+                    // Establecer texto y alineación
+                    setText(String.valueOf(stock));
+                    setHorizontalAlignment(JLabel.RIGHT);
+
+                    // Configurar colores - fondo igual, solo cambiar texto si stock < 11
+                    if (isSelected) {
+                        setBackground(table.getSelectionBackground());
+                        setForeground(table.getSelectionForeground());
+                    } else {
+                        setBackground(table.getBackground()); // Fondo siempre igual
+
+                        // Color del texto: rojo si stock < 11, normal en otros casos
+                        if (stock < 11) {
+                            setForeground(java.awt.Color.RED);
+                            setToolTipText("Stock bajo: " + stock + " unidades");
+                        } else {
+                            setForeground(table.getForeground());
+                            setToolTipText("Stock: " + stock + " unidades");
+                        }
+                    }
+                }
                 return this;
             }
         };
+
+// Aplicar renderizador solo a la columna Stock
         tblProductos.getColumnModel().getColumn(3).setCellRenderer(stockRenderer);
     }
 
@@ -156,10 +173,17 @@ public class vSeleccionProductoAjuste extends javax.swing.JDialog {
                     String codigo = (String) modeloTabla.getValueAt(filaSeleccionada, 0);
                     String nombre = (String) modeloTabla.getValueAt(filaSeleccionada, 1);
                     String descripcion = (String) modeloTabla.getValueAt(filaSeleccionada, 2);
-                    Double stock = (Double) modeloTabla.getValueAt(filaSeleccionada, 3);
+                    // Manejar tanto Integer como Double
+                    Object stockObj = modeloTabla.getValueAt(filaSeleccionada, 3);
+                    int stock = 0;
+                    if (stockObj instanceof Integer) {
+                        stock = (Integer) stockObj;
+                    } else if (stockObj instanceof Double) {
+                        stock = ((Double) stockObj).intValue();
+                    }
 
-                    String info = String.format("%s - %s (Stock: %s)",
-                            nombre, descripcion, formatoDecimal.format(stock));
+                    String info = String.format("%s - %s (Stock: %d unidades)",
+                            nombre, descripcion, stock);
                     lblResultados.setText(info);
                 }
             }
@@ -264,7 +288,7 @@ public class vSeleccionProductoAjuste extends javax.swing.JDialog {
                 producto[2], // cod_barra
                 producto[1], // nombre
                 producto[3], // descripcion
-                producto[4], // stock
+                ((Double) producto[4]).intValue(), // stock como entero
                 obtenerPresentacion(producto) // presentación (si está disponible)
             });
         }
@@ -295,14 +319,21 @@ public class vSeleccionProductoAjuste extends javax.swing.JDialog {
                 // Confirmar selección
                 String nombre = (String) productoCompleto[1];
                 String descripcion = (String) productoCompleto[3];
-                Double stock = (Double) productoCompleto[4];
+                // Manejar tanto Integer como Double
+                Object stockObj = productoCompleto[4];
+                int stock = 0;
+                if (stockObj instanceof Integer) {
+                    stock = (Integer) stockObj;
+                } else if (stockObj instanceof Double) {
+                    stock = ((Double) stockObj).intValue();
+                }
 
                 String mensaje = String.format(
                         "¿Agregar este producto al ajuste?\n\n"
                         + "Código: %s\n"
                         + "Producto: %s - %s\n"
-                        + "Stock actual: %s",
-                        codigoBarra, nombre, descripcion, formatoDecimal.format(stock)
+                        + "Stock actual: %d unidades",
+                        codigoBarra, nombre, descripcion, stock
                 );
 
                 int opcion = JOptionPane.showConfirmDialog(

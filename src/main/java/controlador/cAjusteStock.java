@@ -25,7 +25,7 @@ public class cAjusteStock implements myInterface {
         this.vista = vista;
         this.modelo = new AjusteStockDAO();
         this.ajusteActual = new mAjusteStock();
-        this.formatoNumero = new DecimalFormat("#,##0.00");
+        this.formatoNumero = new DecimalFormat("#,##0");
 
         // Establecer usuario actual (aquí puedes obtenerlo del sistema de login)
         this.ajusteActual.setUsuarioId(1); // Temporal - obtener del login
@@ -39,7 +39,7 @@ public class cAjusteStock implements myInterface {
         ajusteActual.setUsuarioId(1); // Temporal - obtener del login actual
         ajusteActual.setFecha(new Date());
         vista.limpiarFormulario();
-        vista.actualizarTablaDetalles();
+        vista.actualizarTablaDetalles(); // Actualizar tabla vacía
     }
 
     // Buscar producto por código de barras y agregarlo al detalle
@@ -68,7 +68,15 @@ public class cAjusteStock implements myInterface {
                 detalle.setCodBarra((String) producto[2]);
                 detalle.setNombreProducto((String) producto[1]);
                 detalle.setDescripcionProducto((String) producto[3]);
-                detalle.setCantidadSistema((Integer) producto[4]);
+                // Manejar tanto Integer como Double para el stock
+                Object stockObj = producto[4];
+                int stockValue = 0;
+                if (stockObj instanceof Integer) {
+                    stockValue = (Integer) stockObj;
+                } else if (stockObj instanceof Double) {
+                    stockValue = ((Double) stockObj).intValue();
+                }
+                detalle.setCantidadSistema(stockValue);
                 detalle.setCantidadAjuste(0);
 
                 ajusteActual.agregarDetalle(detalle);
@@ -108,7 +116,15 @@ public class cAjusteStock implements myInterface {
             detalle.setCodBarra(codBarra);
             detalle.setNombreProducto((String) producto[1]);
             detalle.setDescripcionProducto((String) producto[3]);
-            detalle.setCantidadSistema((Integer) producto[4]);
+            // Manejar tanto Integer como Double para el stock
+            Object stockObj = producto[4];
+            int stockValue = 0;
+            if (stockObj instanceof Integer) {
+                stockValue = (Integer) stockObj;
+            } else if (stockObj instanceof Double) {
+                stockValue = ((Double) stockObj).intValue();
+            }
+            detalle.setCantidadSistema(stockValue);
             detalle.setCantidadAjuste(0);
 
             ajusteActual.agregarDetalle(detalle);
@@ -181,6 +197,14 @@ public class cAjusteStock implements myInterface {
             System.out.println("Ajuste cargado: ID " + ajuste.getIdAjuste());
         } else {
             vista.mostrarError("No se encontró el ajuste especificado.");
+
+            // IMPORTANTE: Limpiar formulario y tabla cuando no se encuentra el ajuste
+            inicializarNuevoAjuste();
+
+            // Enfocar el campo ID para facilitar nueva búsqueda
+            SwingUtilities.invokeLater(() -> {
+                vista.enfocarIdAjuste();
+            });
         }
     }
 
@@ -211,7 +235,10 @@ public class cAjusteStock implements myInterface {
                     }
 
                     vista.mostrarMensaje("Ajuste guardado exitosamente. ID: " + idGenerado);
-                    vista.setIdAjuste(idGenerado);
+
+                    // IMPORTANTE: Limpiar después de guardar exitosamente
+                    inicializarNuevoAjuste();
+
                 } else {
                     vista.mostrarError("Error al generar ID del ajuste.");
                 }
@@ -226,6 +253,9 @@ public class cAjusteStock implements myInterface {
                 }
 
                 vista.mostrarMensaje("Ajuste actualizado exitosamente.");
+
+                // Limpiar después de actualizar exitosamente
+                inicializarNuevoAjuste();
             }
 
         } catch (SQLException e) {
@@ -246,6 +276,13 @@ public class cAjusteStock implements myInterface {
             cargarAjusteEnVista(ajuste);
         } catch (SQLException e) {
             vista.mostrarError("Error al buscar ajuste: " + e.getMessage());
+
+            // También limpiar en caso de error de base de datos
+            inicializarNuevoAjuste();
+            SwingUtilities.invokeLater(() -> {
+                vista.enfocarIdAjuste();
+            });
+
             e.printStackTrace();
         }
     }
@@ -298,6 +335,18 @@ public class cAjusteStock implements myInterface {
         return formatoNumero.format(numero);
     }
 
+    // Limpiar completamente después de operaciones exitosas
+    private void limpiarDespuesDeOperacion() {
+        // Crear nuevo ajuste vacío
+        ajusteActual = new mAjusteStock();
+        ajusteActual.setUsuarioId(1); // Temporal - obtener del login
+        ajusteActual.setFecha(new Date());
+
+        // Limpiar vista
+        vista.limpiarFormulario();
+        vista.actualizarTablaDetalles();
+    }
+
     // Implementación de métodos de la interfaz myInterface
     @Override
     public void imGrabar() {
@@ -317,8 +366,47 @@ public class cAjusteStock implements myInterface {
 
     @Override
     public void imBorrar() {
-        // Implementar borrado lógico si es necesario
-        vista.mostrarMensaje("Función de borrado no implementada aún.");
+        if (ajusteActual.getIdAjuste() > 0) {
+            try {
+                // Validar que el ajuste existe
+                if (!modelo.existeAjuste(ajusteActual.getIdAjuste())) {
+                    vista.mostrarError("El ajuste no existe en la base de datos.");
+                    return;
+                }
+
+                // Validar que el ajuste no esté aprobado
+                if (modelo.estaAprobado(ajusteActual.getIdAjuste())) {
+                    vista.mostrarError("No se puede eliminar un ajuste aprobado.");
+                    return;
+                }
+
+                int opcion = JOptionPane.showConfirmDialog(
+                        vista,
+                        "¿Está seguro que desea eliminar este ajuste?\n"
+                        + "ID: " + ajusteActual.getIdAjuste() + "\n"
+                        + "Esta acción no se puede deshacer.",
+                        "Confirmar Eliminación",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE
+                );
+
+                if (opcion == JOptionPane.YES_OPTION) {
+                    boolean eliminado = modelo.eliminarAjuste(ajusteActual.getIdAjuste());
+                    if (eliminado) {
+                        vista.mostrarMensaje("Ajuste eliminado exitosamente.");
+                        // Limpiar después de eliminar
+                        inicializarNuevoAjuste();
+                    } else {
+                        vista.mostrarError("Error al eliminar el ajuste.");
+                    }
+                }
+            } catch (SQLException e) {
+                vista.mostrarError("Error al eliminar ajuste: " + e.getMessage());
+                e.printStackTrace();
+            }
+        } else {
+            vista.mostrarError("No hay ajuste seleccionado para eliminar.");
+        }
     }
 
     @Override
