@@ -192,13 +192,14 @@ public class cAjusteStock implements myInterface {
     private void cargarAjusteEnVista(mAjusteStock ajuste) {
         if (ajuste != null) {
             this.ajusteActual = ajuste;
+            vista.setObservaciones(ajuste.getObservaciones() != null ? ajuste.getObservaciones() : "");
             vista.cargarDatosAjuste(ajuste);
             vista.actualizarTablaDetalles();
             System.out.println("Ajuste cargado: ID " + ajuste.getIdAjuste());
         } else {
             vista.mostrarError("No se encontró el ajuste especificado.");
 
-            // IMPORTANTE: Limpiar formulario y tabla cuando no se encuentra el ajuste
+            // Limpiar formulario y tabla cuando no se encuentra el ajuste
             inicializarNuevoAjuste();
 
             // Enfocar el campo ID para facilitar nueva búsqueda
@@ -290,11 +291,11 @@ public class cAjusteStock implements myInterface {
     // Obtener modelo de tabla para los detalles
     public DefaultTableModel getModeloTablaDetalles() {
         DefaultTableModel modelo = new DefaultTableModel(
-                new Object[]{"Código Barras", "Descripción", "Cant. Sistema", "Cant. Ajuste", "Diferencia", "Observaciones"}, 0
+                new Object[]{"Código Barras", "Descripción", "Cant. Sistema", "Cant. Ajuste", "Diferencia"}, 0
         ) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 3 || column == 5; // Solo cantidad ajuste y observaciones son editables
+                return column == 3; //Solo cantidad ajuste es editable (era column == 3 || column == 5)
             }
 
             @Override
@@ -317,8 +318,7 @@ public class cAjusteStock implements myInterface {
                 detalle.getDescripcionCompleta(),
                 (int) detalle.getCantidadSistema(),
                 (int) detalle.getCantidadAjuste(),
-                (int) detalle.getDiferencia(),
-                detalle.getObservaciones() != null ? detalle.getObservaciones() : ""
+                (int) detalle.getDiferencia()
             });
         }
 

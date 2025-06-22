@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.List;
 
 public class AprobacionAjusteDAO {
+
     private Connection conexion;
 
     public AprobacionAjusteDAO() throws SQLException {
@@ -15,34 +16,34 @@ public class AprobacionAjusteDAO {
     // Buscar ajustes por filtros
     public List<mAprobacionAjuste> buscarAjustesPorFiltros(Date fechaDesde, Date fechaHasta, Integer idAjuste) throws SQLException {
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT asc.id_ajuste, asc.fecha, asc.observaciones, asc.aprobado, asc.estado, asc.usuario_id, ");
+        sql.append("SELECT cab.id_ajuste, cab.fecha, cab.observaciones, cab.aprobado, cab.estado, cab.usuario_id, ");
         sql.append("COUNT(asd.id_detalle) as cantidad_detalles ");
-        sql.append("FROM ajustes_stock_cabecera asc ");
-        sql.append("LEFT JOIN ajustes_stock_detalle asd ON asc.id_ajuste = asd.id_ajuste ");
-        sql.append("WHERE asc.estado = 1 ");
+        sql.append("FROM ajustes_stock_cabecera cab ");
+        sql.append("LEFT JOIN ajustes_stock_detalle asd ON cab.id_ajuste = asd.id_ajuste ");
+        sql.append("WHERE cab.estado = 1 ");
 
         List<Object> parametros = new ArrayList<>();
 
         // Filtro por fecha desde
         if (fechaDesde != null) {
-            sql.append("AND DATE(asc.fecha) >= ? ");
+            sql.append("AND DATE(cab.fecha) >= ? ");
             parametros.add(new java.sql.Date(fechaDesde.getTime()));
         }
 
         // Filtro por fecha hasta
         if (fechaHasta != null) {
-            sql.append("AND DATE(asc.fecha) <= ? ");
+            sql.append("AND DATE(cab.fecha) <= ? ");
             parametros.add(new java.sql.Date(fechaHasta.getTime()));
         }
 
         // Filtro por ID específico
         if (idAjuste != null && idAjuste > 0) {
-            sql.append("AND asc.id_ajuste = ? ");
+            sql.append("AND cab.id_ajuste = ? ");
             parametros.add(idAjuste);
         }
 
-        sql.append("GROUP BY asc.id_ajuste, asc.fecha, asc.observaciones, asc.aprobado, asc.estado, asc.usuario_id ");
-        sql.append("ORDER BY asc.fecha DESC, asc.id_ajuste DESC");
+        sql.append("GROUP BY cab.id_ajuste, cab.fecha, cab.observaciones, cab.aprobado, cab.estado, cab.usuario_id ");
+        sql.append("ORDER BY cab.fecha DESC, cab.id_ajuste DESC");
 
         List<mAprobacionAjuste> ajustes = new ArrayList<>();
 
@@ -86,12 +87,12 @@ public class AprobacionAjusteDAO {
 
     // Obtener ajuste por ID
     public mAprobacionAjuste obtenerAjustePorId(int idAjuste) throws SQLException {
-        String sql = "SELECT asc.id_ajuste, asc.fecha, asc.observaciones, asc.aprobado, asc.estado, asc.usuario_id, " +
-                    "COUNT(asd.id_detalle) as cantidad_detalles " +
-                    "FROM ajustes_stock_cabecera asc " +
-                    "LEFT JOIN ajustes_stock_detalle asd ON asc.id_ajuste = asd.id_ajuste " +
-                    "WHERE asc.id_ajuste = ? " +
-                    "GROUP BY asc.id_ajuste, asc.fecha, asc.observaciones, asc.aprobado, asc.estado, asc.usuario_id";
+        String sql = "SELECT cab.id_ajuste, cab.fecha, cab.observaciones, cab.aprobado, cab.estado, cab.usuario_id, "
+                + "COUNT(asd.id_detalle) as cantidad_detalles "
+                + "FROM ajustes_stock_cabecera cab "
+                + "LEFT JOIN ajustes_stock_detalle asd ON cab.id_ajuste = asd.id_ajuste "
+                + "WHERE cab.id_ajuste = ? "
+                + "GROUP BY cab.id_ajuste, cab.fecha, cab.observaciones, cab.aprobado, cab.estado, cab.usuario_id";
 
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
             ps.setInt(1, idAjuste);
@@ -116,15 +117,15 @@ public class AprobacionAjusteDAO {
 
     // Obtener detalles de un ajuste para información
     public List<Object[]> obtenerDetallesAjuste(int idAjuste) throws SQLException {
-        String sql = "SELECT asd.cod_barra, pc.nombre, pd.descripcion, " +
-                    "asd.cantidad_sistema, asd.cantidad_ajuste, " +
-                    "(asd.cantidad_ajuste - asd.cantidad_sistema) as diferencia, " +
-                    "asd.observaciones " +
-                    "FROM ajustes_stock_detalle asd " +
-                    "INNER JOIN productos_cabecera pc ON asd.id_producto = pc.id_producto " +
-                    "INNER JOIN productos_detalle pd ON asd.id_producto = pd.id_producto AND asd.cod_barra = pd.cod_barra " +
-                    "WHERE asd.id_ajuste = ? " +
-                    "ORDER BY pc.nombre, pd.descripcion";
+        String sql = "SELECT asd.cod_barra, pc.nombre, pd.descripcion, "
+                + "asd.cantidad_sistema, asd.cantidad_ajuste, "
+                + "(asd.cantidad_ajuste - asd.cantidad_sistema) as diferencia, "
+                + "asd.observaciones "
+                + "FROM ajustes_stock_detalle asd "
+                + "INNER JOIN productos_cabecera pc ON asd.id_producto = pc.id_producto "
+                + "INNER JOIN productos_detalle pd ON asd.id_producto = pd.id_producto AND asd.cod_barra = pd.cod_barra "
+                + "WHERE asd.id_ajuste = ? "
+                + "ORDER BY pc.nombre, pd.descripcion";
 
         List<Object[]> detalles = new ArrayList<>();
 
@@ -134,13 +135,13 @@ public class AprobacionAjusteDAO {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     detalles.add(new Object[]{
-                        rs.getString("cod_barra"),                    // 0
-                        rs.getString("nombre"),                       // 1
-                        rs.getString("descripcion"),                  // 2
-                        rs.getDouble("cantidad_sistema"),            // 3
-                        rs.getDouble("cantidad_ajuste"),             // 4
-                        rs.getDouble("diferencia"),                  // 5
-                        rs.getString("observaciones")                // 6
+                        rs.getString("cod_barra"), // 0
+                        rs.getString("nombre"), // 1
+                        rs.getString("descripcion"), // 2
+                        rs.getInt("cantidad_sistema"), // 3
+                        rs.getInt("cantidad_ajuste"), // 4
+                        rs.getInt("diferencia"), // 5
+                        rs.getString("observaciones") // 6
                     });
                 }
             }
@@ -167,12 +168,12 @@ public class AprobacionAjusteDAO {
 
     // Obtener estadísticas de ajustes
     public Object[] obtenerEstadisticasAjustes(Date fechaDesde, Date fechaHasta) throws SQLException {
-        String sql = "SELECT " +
-                    "COUNT(*) as total_ajustes, " +
-                    "SUM(CASE WHEN aprobado = 1 THEN 1 ELSE 0 END) as aprobados, " +
-                    "SUM(CASE WHEN aprobado = 0 THEN 1 ELSE 0 END) as pendientes " +
-                    "FROM ajustes_stock_cabecera " +
-                    "WHERE estado = 1 ";
+        String sql = "SELECT "
+                + "COUNT(*) as total_ajustes, "
+                + "SUM(CASE WHEN aprobado = 1 THEN 1 ELSE 0 END) as aprobados, "
+                + "SUM(CASE WHEN aprobado = 0 THEN 1 ELSE 0 END) as pendientes "
+                + "FROM ajustes_stock_cabecera "
+                + "WHERE estado = 1 ";
 
         List<Object> parametros = new ArrayList<>();
 
@@ -194,9 +195,9 @@ public class AprobacionAjusteDAO {
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     return new Object[]{
-                        rs.getInt("total_ajustes"),    // 0
-                        rs.getInt("aprobados"),        // 1
-                        rs.getInt("pendientes")        // 2
+                        rs.getInt("total_ajustes"), // 0
+                        rs.getInt("aprobados"), // 1
+                        rs.getInt("pendientes") // 2
                     };
                 }
             }

@@ -13,6 +13,7 @@ import java.util.Date;
 import java.util.List;
 
 public class cAprobacionAjuste implements myInterface {
+
     private vAprobacionAjuste vista;
     private AprobacionAjusteDAO modelo;
     private DefaultTableModel modeloTabla;
@@ -24,15 +25,15 @@ public class cAprobacionAjuste implements myInterface {
         this.modelo = new AprobacionAjusteDAO();
         this.formatoFecha = new SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
         this.formatoFechaCorta = new SimpleDateFormat("dd/MM/yyyy");
-        
+
         inicializarModelo();
-        cargarAjustesIniciales();
+        inicializarEstadisticas();
     }
 
     // Inicializar modelo de tabla
     private void inicializarModelo() {
         modeloTabla = new DefaultTableModel(
-            new Object[]{"ID", "Fecha", "Observaciones", "Cant. Items", "Estado", "Aprobado"}, 0
+                new Object[]{"ID", "Fecha", "Observaciones", "Cant. Items", "Estado", "Aprobado"}, 0
         ) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -59,47 +60,57 @@ public class cAprobacionAjuste implements myInterface {
         };
     }
 
-    // Cargar ajustes iniciales (últimos 30 días)
+    // Inicializar estadísticas vacías
+    private void inicializarEstadisticas() {
+        vista.actualizarEstadisticas(0, 0, 0);
+    }
+
+    // Cargar ajustes iniciales (últimos 30 días) 
     private void cargarAjustesIniciales() {
         try {
             // Cargar ajustes de los últimos 30 días por defecto
             Date fechaHasta = new Date();
             Date fechaDesde = new Date(fechaHasta.getTime() - (30L * 24 * 60 * 60 * 1000)); // 30 días atrás
-            
+
             vista.setFechaDesde(fechaDesde);
             vista.setFechaHasta(fechaHasta);
-            
+
             buscarAjustes();
             actualizarEstadisticas();
-            
+
         } catch (Exception e) {
             vista.mostrarError("Error al cargar ajustes iniciales: " + e.getMessage());
         }
     }
 
-    // Buscar ajustes con filtros
+    // Buscar ajustes con filtros modificado
     public void buscarAjustes() {
         try {
             Date fechaDesde = vista.getFechaDesde();
             Date fechaHasta = vista.getFechaHasta();
             Integer idAjuste = vista.getIdAjuste();
-            
+
+            // Si ID = 0, convertir a null para buscar todos
+            if (idAjuste != null && idAjuste == 0) {
+                idAjuste = null;
+            }
+
             // Validar fechas
             if (fechaDesde != null && fechaHasta != null && fechaDesde.after(fechaHasta)) {
                 vista.mostrarError("La fecha desde no puede ser mayor que la fecha hasta.");
                 return;
             }
-            
+
             List<mAprobacionAjuste> ajustes = modelo.buscarAjustesPorFiltros(fechaDesde, fechaHasta, idAjuste);
             actualizarTablaAjustes(ajustes);
             actualizarEstadisticas();
-            
+
             if (ajustes.isEmpty()) {
                 vista.mostrarMensaje("No se encontraron ajustes con los filtros especificados.");
             } else {
                 vista.mostrarMensaje(ajustes.size() + " ajuste(s) encontrado(s).");
             }
-            
+
         } catch (SQLException e) {
             vista.mostrarError("Error al buscar ajustes: " + e.getMessage());
         }
@@ -109,7 +120,7 @@ public class cAprobacionAjuste implements myInterface {
     private void actualizarTablaAjustes(List<mAprobacionAjuste> ajustes) {
         // Limpiar tabla
         modeloTabla.setRowCount(0);
-        
+
         // Agregar ajustes a la tabla
         for (mAprobacionAjuste ajuste : ajustes) {
             modeloTabla.addRow(new Object[]{
@@ -121,7 +132,7 @@ public class cAprobacionAjuste implements myInterface {
                 ajuste.isAprobado()
             });
         }
-        
+
         vista.actualizarTabla();
     }
 
@@ -132,30 +143,30 @@ public class cAprobacionAjuste implements myInterface {
                 vista.mostrarError("Fila no válida seleccionada.");
                 return;
             }
-            
+
             int idAjuste = (Integer) modeloTabla.getValueAt(fila, 0);
             String accion = aprobar ? "aprobar" : "desaprobar";
-            
+
             // Confirmación del usuario
             int confirmacion = JOptionPane.showConfirmDialog(
-                vista,
-                String.format("¿Está seguro que desea %s el ajuste ID %d?\n\n" +
-                             "%s el ajuste %s las cantidades en el stock.",
-                             accion, idAjuste,
-                             aprobar ? "Aprobar" : "Desaprobar",
-                             aprobar ? "aplicará" : "revertirá"),
-                "Confirmar " + (aprobar ? "Aprobación" : "Desaprobación"),
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE
+                    vista,
+                    String.format("¿Está seguro que desea %s el ajuste ID %d?\n\n"
+                            + "%s el ajuste %s las cantidades en el stock.",
+                            accion, idAjuste,
+                            aprobar ? "Aprobar" : "Desaprobar",
+                            aprobar ? "aplicará" : "revertirá"),
+                    "Confirmar " + (aprobar ? "Aprobación" : "Desaprobación"),
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.QUESTION_MESSAGE
             );
-            
+
             if (confirmacion != JOptionPane.YES_OPTION) {
                 // Revertir el checkbox si el usuario cancela
                 modeloTabla.setValueAt(!aprobar, fila, 5);
                 vista.actualizarTabla();
                 return;
             }
-            
+
             // Verificar que el ajuste tenga detalles
             if (!modelo.tieneDetalles(idAjuste)) {
                 vista.mostrarError("El ajuste no tiene productos para procesar.");
@@ -163,33 +174,35 @@ public class cAprobacionAjuste implements myInterface {
                 vista.actualizarTabla();
                 return;
             }
-            
+
+            // NUEVO: Obtener detalles del ajuste ANTES del cambio para el log
+            List<Object[]> detallesAjuste = modelo.obtenerDetallesAjuste(idAjuste);
+
             // Ejecutar cambio en base de datos (esto dispara el trigger)
             boolean exito = modelo.cambiarAprobacionAjuste(idAjuste, aprobar);
-            
+
             if (exito) {
                 // Actualizar estado en la tabla
                 modeloTabla.setValueAt(aprobar ? "Aprobado" : "Pendiente", fila, 4);
-                
-                vista.mostrarMensaje(String.format("Ajuste ID %d %s exitosamente.", 
-                                                 idAjuste, 
-                                                 aprobar ? "aprobado" : "desaprobado"));
-                
+
+                vista.mostrarMensaje(String.format("Ajuste ID %d %s exitosamente.",
+                        idAjuste,
+                        aprobar ? "aprobado" : "desaprobado"));
+
+                // NUEVO: Imprimir log detallado de los cambios realizados
+                imprimirLogCambiosAjuste(idAjuste, aprobar, detallesAjuste);
+
                 // Actualizar estadísticas
                 actualizarEstadisticas();
-                
-                System.out.println(String.format("Ajuste %d %s. Stock actualizado por trigger.", 
-                                                idAjuste, 
-                                                aprobar ? "aprobado" : "desaprobado"));
-                
+
             } else {
                 vista.mostrarError("Error al cambiar el estado del ajuste.");
                 // Revertir el checkbox
                 modeloTabla.setValueAt(!aprobar, fila, 5);
             }
-            
+
             vista.actualizarTabla();
-            
+
         } catch (SQLException e) {
             vista.mostrarError("Error en base de datos: " + e.getMessage());
             // Revertir el checkbox en caso de error
@@ -198,29 +211,96 @@ public class cAprobacionAjuste implements myInterface {
         }
     }
 
+    // Imprimir log detallado de cambios en el ajuste
+    private void imprimirLogCambiosAjuste(int idAjuste, boolean aprobar, List<Object[]> detalles) {
+        System.out.println("═".repeat(80));
+        System.out.println(String.format("AJUSTE DE STOCK %s - ID: %d",
+                aprobar ? "APROBADO" : "REVERTIDO", idAjuste));
+        System.out.println("Fecha: " + new java.util.Date());
+        System.out.println("─".repeat(80));
+
+        if (detalles.isEmpty()) {
+            System.out.println("No hay productos en este ajuste.");
+            System.out.println("═".repeat(80));
+            return;
+        }
+
+        System.out.println(String.format("%-15s %-25s %-12s %-12s %-12s",
+                "Código", "Producto", "Cant.Sist.", "Cant.Ajust.", "Diferencia"));
+        System.out.println("─".repeat(80));
+
+        int totalProductos = 0;
+        int totalDiferencia = 0;
+
+        for (Object[] detalle : detalles) {
+            String codigo = (String) detalle[0];
+            String nombre = (String) detalle[1];
+            String descripcion = (String) detalle[2];
+            int cantidadSistema = (Integer) detalle[3];
+            int cantidadAjuste = (Integer) detalle[4];
+            int diferencia = (Integer) detalle[5];
+
+            // Truncar nombre del producto si es muy largo
+            String productoCompleto = nombre + " - " + descripcion;
+            String productoCorto = productoCompleto.length() > 25
+                    ? productoCompleto.substring(0, 22) + "..." : productoCompleto;
+
+            System.out.println(String.format("%-15s %-25s %12d %12d %12d%s",
+                    codigo,
+                    productoCorto,
+                    cantidadSistema,
+                    cantidadAjuste,
+                    diferencia,
+                    diferencia != 0 ? " *" : ""));
+
+            totalProductos++;
+            totalDiferencia += Math.abs(diferencia);
+        }
+
+        System.out.println("─".repeat(80));
+        System.out.println(String.format("RESUMEN: %d producto(s) procesado(s)", totalProductos));
+
+        if (aprobar) {
+            System.out.println("ACCIÓN: Stock actualizado a cantidades de ajuste");
+            System.out.println("EFECTO: Las cantidades en stock ahora reflejan los valores ajustados");
+        } else {
+            System.out.println("ACCIÓN: Stock revertido a cantidades del sistema");
+            System.out.println("EFECTO: Las cantidades en stock volvieron a los valores originales");
+        }
+
+        if (totalDiferencia > 0) {
+            System.out.println(String.format("Total de unidades con diferencias: %d", totalDiferencia));
+        }
+
+        System.out.println("ESTADO: Cambios aplicados por trigger de base de datos");
+        System.out.println("═".repeat(80));
+    }
+
     // Actualizar estadísticas
     private void actualizarEstadisticas() {
         try {
             Date fechaDesde = vista.getFechaDesde();
             Date fechaHasta = vista.getFechaHasta();
-            
+
             Object[] estadisticas = modelo.obtenerEstadisticasAjustes(fechaDesde, fechaHasta);
-            
+
             int total = (Integer) estadisticas[0];
             int aprobados = (Integer) estadisticas[1];
             int pendientes = (Integer) estadisticas[2];
-            
+
             vista.actualizarEstadisticas(total, aprobados, pendientes);
-            
+
         } catch (SQLException e) {
             System.err.println("Error al actualizar estadísticas: " + e.getMessage());
         }
     }
 
-    // Limpiar filtros y recargar
+    // CAMBIO: Limpiar filtros
     public void limpiarFiltros() {
         vista.limpiarFiltros();
-        cargarAjustesIniciales();
+        modeloTabla.setRowCount(0);
+        vista.actualizarTabla();
+        vista.actualizarEstadisticas(0, 0, 0);
     }
 
     // Mostrar detalles de un ajuste seleccionado
@@ -230,42 +310,42 @@ public class cAprobacionAjuste implements myInterface {
                 vista.mostrarError("Seleccione un ajuste para ver sus detalles.");
                 return;
             }
-            
+
             int idAjuste = (Integer) modeloTabla.getValueAt(filaSeleccionada, 0);
             List<Object[]> detalles = modelo.obtenerDetallesAjuste(idAjuste);
-            
+
             if (detalles.isEmpty()) {
                 vista.mostrarMensaje("El ajuste seleccionado no tiene productos.");
                 return;
             }
-            
+
             // Crear ventana de detalles
             StringBuilder sb = new StringBuilder();
             sb.append("DETALLES DEL AJUSTE ID: ").append(idAjuste).append("\n\n");
-            sb.append(String.format("%-15s %-20s %-15s %-15s %-15s %-20s\n", 
-                                  "Código", "Producto", "Cant. Sistema", "Cant. Ajuste", "Diferencia", "Observaciones"));
+            sb.append(String.format("%-15s %-20s %-15s %-15s %-15s %-20s\n",
+                    "Código", "Producto", "Cant. Sistema", "Cant. Ajuste", "Diferencia", "Observaciones"));
             sb.append("─".repeat(120)).append("\n");
-            
+
             for (Object[] detalle : detalles) {
-                sb.append(String.format("%-15s %-20s %15.2f %15.2f %15.2f %-20s\n",
-                    detalle[0], // código
-                    (detalle[1] + " - " + detalle[2]).substring(0, Math.min(20, (detalle[1] + " - " + detalle[2]).length())), // producto
-                    detalle[3], // cantidad sistema
-                    detalle[4], // cantidad ajuste
-                    detalle[5], // diferencia
-                    detalle[6] != null ? detalle[6].toString() : "" // observaciones
+                sb.append(String.format("%-15s %-20s %15d %15d %15d %-20s\n",
+                        detalle[0], // código
+                        (detalle[1] + " - " + detalle[2]).substring(0, Math.min(20, (detalle[1] + " - " + detalle[2]).length())), // producto
+                        detalle[3], // cantidad sistema
+                        detalle[4], // cantidad ajuste
+                        detalle[5], // diferencia
+                        detalle[6] != null ? detalle[6].toString() : "" // observaciones
                 ));
             }
-            
+
             JTextArea textArea = new JTextArea(sb.toString());
             textArea.setEditable(false);
             textArea.setFont(new java.awt.Font("Monospaced", java.awt.Font.PLAIN, 12));
-            
+
             JScrollPane scrollPane = new JScrollPane(textArea);
             scrollPane.setPreferredSize(new java.awt.Dimension(800, 400));
-            
+
             JOptionPane.showMessageDialog(vista, scrollPane, "Detalles del Ajuste " + idAjuste, JOptionPane.INFORMATION_MESSAGE);
-            
+
         } catch (SQLException e) {
             vista.mostrarError("Error al obtener detalles: " + e.getMessage());
         }
@@ -310,13 +390,8 @@ public class cAprobacionAjuste implements myInterface {
 
     @Override
     public void imBuscar() {
-        try {
-            java.awt.Frame parentFrame = javax.swing.JOptionPane.getFrameForComponent(vista);
-            vBusqueda ventanaBusqueda = new vBusqueda(parentFrame, true, this);
-            ventanaBusqueda.setVisible(true);
-        } catch (Exception e) {
-            vista.mostrarError("Error al abrir ventana de búsqueda: " + e.getMessage());
-        }
+        // Abrir ventana de búsqueda si fuera necesario
+        vista.mostrarMensaje("Use los filtros superiores para buscar ajustes.");
     }
 
     @Override
@@ -356,13 +431,12 @@ public class cAprobacionAjuste implements myInterface {
 
     @Override
     public void imInsDet() {
-        int filaSeleccionada = vista.getFilaSeleccionada();
-        mostrarDetallesAjuste(filaSeleccionada);
+        vista.mostrarMensaje("No aplica para esta ventana.");
     }
 
     @Override
     public void imDelDet() {
-        vista.mostrarMensaje("No se permite eliminar detalles desde esta ventana.");
+        vista.mostrarMensaje("No aplica para esta ventana.");
     }
 
     @Override
@@ -392,21 +466,6 @@ public class cAprobacionAjuste implements myInterface {
 
     @Override
     public void setRegistroSeleccionado(int id) {
-        try {
-            // Buscar ajuste específico por ID
-            vista.setIdAjuste(id);
-            buscarAjustes();
-            
-            // Seleccionar la fila si se encontró
-            for (int i = 0; i < modeloTabla.getRowCount(); i++) {
-                if ((Integer) modeloTabla.getValueAt(i, 0) == id) {
-                    vista.seleccionarFila(i);
-                    break;
-                }
-            }
-            
-        } catch (Exception e) {
-            vista.mostrarError("Error al buscar ajuste: " + e.getMessage());
-        }
+        vista.setIdAjuste(id);
     }
 }

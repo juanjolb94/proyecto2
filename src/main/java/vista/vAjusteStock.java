@@ -76,7 +76,7 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
         if (controlador == null) {
             // Crear modelo vacío por defecto
             modeloTablaDetalles = new DefaultTableModel(
-                    new Object[]{"Código Barras", "Descripción", "Cant. Sistema", "Cant. Ajuste", "Diferencia", "Observaciones"}, 0
+                    new Object[]{"Código Barras", "Descripción", "Cant. Sistema", "Cant. Ajuste", "Diferencia"}, 0
             ) {
                 @Override
                 public boolean isCellEditable(int row, int column) {
@@ -96,7 +96,6 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
         tblDetalles.getColumnModel().getColumn(2).setPreferredWidth(100); // Cant. Sistema
         tblDetalles.getColumnModel().getColumn(3).setPreferredWidth(100); // Cant. Ajuste
         tblDetalles.getColumnModel().getColumn(4).setPreferredWidth(100); // Diferencia
-        tblDetalles.getColumnModel().getColumn(5).setPreferredWidth(150); // Observaciones
 
         // Configurar alineación para columnas numéricas
         DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
@@ -109,15 +108,15 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
         tblDetalles.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         tblDetalles.getTableHeader().setReorderingAllowed(false);
 
-        // Agregar listener para capturar cambios en la tabla
+        // Simplificar listener - solo para cantidad ajuste (columna 3)
         if (modeloTablaDetalles != null) {
             modeloTablaDetalles.addTableModelListener(e -> {
                 if (e.getType() == javax.swing.event.TableModelEvent.UPDATE) {
                     int fila = e.getFirstRow();
                     int columna = e.getColumn();
 
-                    // Solo procesar si se editó cantidad ajuste (columna 3) u observaciones (columna 5)
-                    if (columna == 3 || columna == 5) {
+                    // Solo procesar si se editó cantidad ajuste (columna 3)
+                    if (columna == 3) {
                         SwingUtilities.invokeLater(() -> {
                             actualizarModeloDesdeTabla(fila, columna);
                         });
@@ -141,9 +140,6 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
                     int nuevaCantidad = (Integer) valor;
                     controlador.actualizarCantidadAjuste(fila, nuevaCantidad);
                 }
-            } else if (columna == 5) { // Observaciones
-                String observaciones = valor != null ? valor.toString() : "";
-                controlador.actualizarObservacionesDetalle(fila, observaciones);
             }
 
             // Forzar actualización de la columna diferencia (columna 4)
@@ -153,6 +149,7 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
 
         } catch (Exception e) {
             mostrarError("Error al actualizar datos: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -214,7 +211,7 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
 
         // Solo configurar editores si el controlador existe
         if (controlador != null) {
-            // Resto del código de editores igual...
+            // Editor para cantidad ajuste (columna 3)
             JTextField editorCantidad = new JTextField();
             editorCantidad.setHorizontalAlignment(JTextField.RIGHT);
 
@@ -245,22 +242,6 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
             };
 
             tblDetalles.getColumnModel().getColumn(3).setCellEditor(cellEditorCantidad);
-
-            // Editor para observaciones
-            JTextField editorObservaciones = new JTextField();
-            DefaultCellEditor cellEditorObservaciones = new DefaultCellEditor(editorObservaciones) {
-                @Override
-                public boolean stopCellEditing() {
-                    String valor = (String) getCellEditorValue();
-                    int fila = tblDetalles.getEditingRow();
-                    if (fila >= 0 && controlador != null) {
-                        controlador.actualizarObservacionesDetalle(fila, valor);
-                    }
-                    return super.stopCellEditing();
-                }
-            };
-
-            tblDetalles.getColumnModel().getColumn(5).setCellEditor(cellEditorObservaciones);
         }
 
         // Configurar menú contextual para eliminar productos
@@ -432,6 +413,10 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
     // Obtener observaciones
     public String getObservaciones() {
         return txtObservaciones.getText().trim();
+    }
+
+    public void setObservaciones(String observaciones) {
+        txtObservaciones.setText(observaciones);
     }
 
     // Establecer ID de ajuste

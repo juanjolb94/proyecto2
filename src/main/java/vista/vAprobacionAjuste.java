@@ -24,6 +24,11 @@ public class vAprobacionAjuste extends javax.swing.JInternalFrame implements myI
 
     public vAprobacionAjuste() {
         initComponents();
+
+        setClosable(true);
+        setMaximizable(true);
+        setIconifiable(true);
+        setResizable(true);
         this.formatoFecha = new SimpleDateFormat("dd/MM/yyyy");
 
         try {
@@ -58,6 +63,8 @@ public class vAprobacionAjuste extends javax.swing.JInternalFrame implements myI
         dcFechaDesde.setDate(fechaDesde);
         dcFechaHasta.setDate(fechaHasta);
 
+        txtIdAjuste.setText("0");
+
         // Configurar etiquetas de estadísticas
         actualizarEstadisticas(0, 0, 0);
     }
@@ -80,7 +87,6 @@ public class vAprobacionAjuste extends javax.swing.JInternalFrame implements myI
         centerRenderer.setHorizontalAlignment(JLabel.CENTER);
         tblAjustes.getColumnModel().getColumn(0).setCellRenderer(centerRenderer); // ID
         tblAjustes.getColumnModel().getColumn(3).setCellRenderer(centerRenderer); // Cant. Items
-        tblAjustes.getColumnModel().getColumn(4).setCellRenderer(centerRenderer); // Estado
 
         // Renderizador personalizado para la columna Estado
         DefaultTableCellRenderer estadoRenderer = new DefaultTableCellRenderer() {
@@ -89,18 +95,24 @@ public class vAprobacionAjuste extends javax.swing.JInternalFrame implements myI
                     boolean isSelected, boolean hasFocus, int row, int column) {
                 super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 
-                if (value != null && value.toString().equals("Aprobado")) {
-                    if (!isSelected) {
-                        setBackground(new java.awt.Color(230, 255, 230)); // Verde claro
-                    }
-                } else if (value != null && value.toString().equals("Pendiente")) {
-                    if (!isSelected) {
-                        setBackground(new java.awt.Color(255, 245, 230)); // Amarillo claro
+                // Obtener el valor del estado
+                String estado = value != null ? value.toString() : "";
+
+                if (!isSelected) {
+                    setBackground(table.getBackground());
+
+                    // Color de texto según el estado
+                    if ("Pendiente".equals(estado)) {
+                        setForeground(new java.awt.Color(255, 165, 0)); // Amarillo/Naranja
+                    } else if ("Aprobado".equals(estado)) {
+                        setForeground(new java.awt.Color(0, 128, 0)); // Verde
+                    } else {
+                        setForeground(table.getForeground()); // Color normal
                     }
                 } else {
-                    if (!isSelected) {
-                        setBackground(table.getBackground());
-                    }
+                    // Cuando está seleccionada, usar colores de selección
+                    setBackground(table.getSelectionBackground());
+                    setForeground(table.getSelectionForeground());
                 }
 
                 setHorizontalAlignment(JLabel.CENTER);
@@ -109,9 +121,49 @@ public class vAprobacionAjuste extends javax.swing.JInternalFrame implements myI
         };
         tblAjustes.getColumnModel().getColumn(4).setCellRenderer(estadoRenderer);
 
+        // NUEVO: Configurar renderer para columna checkbox (Aprobado)
+        tblAjustes.getColumnModel().getColumn(5).setCellRenderer(new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+
+                JCheckBox checkBox = new JCheckBox();
+                checkBox.setSelected(value != null && (Boolean) value);
+                checkBox.setHorizontalAlignment(SwingConstants.CENTER);
+
+                if (isSelected) {
+                    checkBox.setBackground(table.getSelectionBackground());
+                } else {
+                    checkBox.setBackground(table.getBackground());
+                }
+
+                return checkBox;
+            }
+        });
+
+        // NUEVO: Configurar editor para la columna checkbox
+        tblAjustes.getColumnModel().getColumn(5).setCellEditor(new DefaultCellEditor(new JCheckBox()) {
+            @Override
+            public boolean stopCellEditing() {
+                boolean result = super.stopCellEditing();
+                if (result) {
+                    // Obtener valores actuales
+                    int fila = tblAjustes.getSelectedRow();
+                    boolean nuevoValor = (Boolean) getCellEditorValue();
+
+                    // Llamar al controlador para cambiar el estado
+                    SwingUtilities.invokeLater(() -> {
+                        controlador.cambiarAprobacionAjuste(fila, nuevoValor);
+                    });
+                }
+                return result;
+            }
+        });
+
         // Configurar selección
         tblAjustes.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         tblAjustes.getTableHeader().setReorderingAllowed(false);
+        tblAjustes.setRowHeight(25);
     }
 
     // Configuración de eventos
@@ -227,14 +279,14 @@ public class vAprobacionAjuste extends javax.swing.JInternalFrame implements myI
 
     // Obtener ID de ajuste
     public Integer getIdAjuste() {
-        String texto = txtIdAjuste.getText().trim();
-        if (texto.isEmpty()) {
-            return null;
-        }
         try {
+            String texto = txtIdAjuste.getText().trim();
+            if (texto.isEmpty()) {
+                return 0; // Retornar 0 en lugar de null si está vacío
+            }
             return Integer.parseInt(texto);
         } catch (NumberFormatException e) {
-            return null;
+            return 0; // Retornar 0 en lugar de null si hay error
         }
     }
 
@@ -245,7 +297,7 @@ public class vAprobacionAjuste extends javax.swing.JInternalFrame implements myI
 
     // Limpiar filtros
     public void limpiarFiltros() {
-        txtIdAjuste.setText("");
+        txtIdAjuste.setText("0");
 
         // Establecer últimos 30 días
         Date fechaHasta = new Date();
@@ -388,8 +440,10 @@ public class vAprobacionAjuste extends javax.swing.JInternalFrame implements myI
 
     // Métodos adicionales para funcionalidades específicas
     public void enfocarFiltros() {
-        txtIdAjuste.requestFocus();
-        txtIdAjuste.selectAll();
+        SwingUtilities.invokeLater(() -> {
+            txtIdAjuste.requestFocus();
+            txtIdAjuste.selectAll();
+        });
     }
 
     public void mostrarResumenBusqueda() {
@@ -486,21 +540,22 @@ public class vAprobacionAjuste extends javax.swing.JInternalFrame implements myI
         pnlFiltrosLayout.setVerticalGroup(
             pnlFiltrosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(pnlFiltrosLayout.createSequentialGroup()
-                .addContainerGap()
-                .addComponent(jLabel1)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-            .addGroup(pnlFiltrosLayout.createSequentialGroup()
-                .addGroup(pnlFiltrosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                    .addComponent(dcFechaHasta, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel2)
-                    .addComponent(dcFechaDesde, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(18, 18, 18)
-                .addGroup(pnlFiltrosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(txtIdAjuste, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel3)
-                    .addComponent(btnBuscar, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btnLimpiar, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addGap(16, 16, 16))
+                .addGroup(pnlFiltrosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addGroup(pnlFiltrosLayout.createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(jLabel1))
+                    .addGroup(pnlFiltrosLayout.createSequentialGroup()
+                        .addGroup(pnlFiltrosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                            .addComponent(dcFechaHasta, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel2)
+                            .addComponent(dcFechaDesde, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                        .addGap(18, 18, 18)
+                        .addGroup(pnlFiltrosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                            .addComponent(txtIdAjuste, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(jLabel3)
+                            .addComponent(btnBuscar, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addComponent(btnLimpiar, javax.swing.GroupLayout.PREFERRED_SIZE, 35, javax.swing.GroupLayout.PREFERRED_SIZE))))
+                .addContainerGap(16, Short.MAX_VALUE))
         );
 
         tblAjustes.setModel(new javax.swing.table.DefaultTableModel(
@@ -560,10 +615,10 @@ public class vAprobacionAjuste extends javax.swing.JInternalFrame implements myI
             pnlTablaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, pnlTablaLayout.createSequentialGroup()
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 282, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 250, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(pnlEstadisticas, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addGap(54, 54, 54))
+                .addContainerGap())
         );
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
