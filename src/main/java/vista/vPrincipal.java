@@ -23,6 +23,7 @@ public class vPrincipal extends javax.swing.JFrame {
     public JInternalFrame[] w_abiertos;
 
     private Map<String, org.kordamp.ikonli.swing.FontIcon> iconCache = new HashMap<>();
+    private vMovimientoCaja ventanaMovimientoCaja;
 
     public vPrincipal() {
         initComponents();
@@ -51,11 +52,6 @@ public class vPrincipal extends javax.swing.JFrame {
 
     /**
      * Método para obtener un icono del caché o crear uno nuevo si no existe
-     *
-     * @param ikonName El nombre del ikon de MaterialDesign a utilizar
-     * @param size Tamaño del icono
-     * @param color Color del icono
-     * @return Un FontIcon cacheado o nuevo
      */
     private org.kordamp.ikonli.swing.FontIcon getOrCreateIcon(String ikonName, int size, Color color) {
         // Verificar si ya existe en el caché
@@ -69,7 +65,6 @@ public class vPrincipal extends javax.swing.JFrame {
         boolean ikonAsignado = true;
 
         try {
-            // Usar una estrategia más robusta para asignar los ikons
             switch (ikonName) {
                 // Menú Archivo
                 case "FILE_DOCUMENT_OUTLINE":
@@ -290,7 +285,6 @@ public class vPrincipal extends javax.swing.JFrame {
 
         // Menú Stock
         setIconSafely(mProductos, "PACKAGE_VARIANT_CLOSED", iconSize, menuIconColor);
-        setIconSafely(mPromociones, "TAG_MULTIPLE", iconSize, menuIconColor);
         setIconSafely(mListaPrecios, "TAG_MULTIPLE", iconSize, menuIconColor);
         setIconSafely(mAjustarStock, "CLIPBOARD_CHECK", iconSize, menuIconColor);
         setIconSafely(mAprobarStock, "CLIPBOARD_CHECK_OUTLINE", iconSize, menuIconColor);
@@ -299,7 +293,6 @@ public class vPrincipal extends javax.swing.JFrame {
         // Menú Tesorería
         setIconSafely(mAperturaCierreCaja, "ARRANGE_SEND_BACKWARD", iconSize, menuIconColor);
         setIconSafely(mIngCaja, "CASH_PLUS", iconSize, menuIconColor);
-        setIconSafely(mEgrCaja, "CASH_MINUS", iconSize, menuIconColor);
         setIconSafely(mRepCaja, "CHART_BAR", iconSize, menuIconColor);
 
         // Menú Seguridad
@@ -345,9 +338,9 @@ public class vPrincipal extends javax.swing.JFrame {
             // Menú Ventas
             mClientes, mTalonarios, mRegVentas, mRepVentas,
             // Menú Stock
-            mProductos, mPromociones, mAjustarStock, mListaPrecios, mRepInvent,
+            mProductos, mAjustarStock, mListaPrecios, mRepInvent,
             // Menú Tesorería
-            mAperturaCierreCaja, mIngCaja, mEgrCaja, mRepCaja,
+            mAperturaCierreCaja, mIngCaja, mRepCaja,
             // Menú Seguridad
             mPersonas, mUsuarios, mRoles, mPermisos, mMenus
         };
@@ -612,7 +605,6 @@ public class vPrincipal extends javax.swing.JFrame {
         mRepVentas = new javax.swing.JMenuItem();
         mStock = new javax.swing.JMenu();
         mProductos = new javax.swing.JMenuItem();
-        mPromociones = new javax.swing.JMenuItem();
         jSeparator5 = new javax.swing.JPopupMenu.Separator();
         mListaPrecios = new javax.swing.JMenuItem();
         jSeparator6 = new javax.swing.JPopupMenu.Separator();
@@ -624,7 +616,6 @@ public class vPrincipal extends javax.swing.JFrame {
         mAperturaCierreCaja = new javax.swing.JMenuItem();
         jSeparator7 = new javax.swing.JPopupMenu.Separator();
         mIngCaja = new javax.swing.JMenuItem();
-        mEgrCaja = new javax.swing.JMenuItem();
         jSeparator8 = new javax.swing.JPopupMenu.Separator();
         mRepCaja = new javax.swing.JMenuItem();
         mSeguridad = new javax.swing.JMenu();
@@ -732,7 +723,7 @@ public class vPrincipal extends javax.swing.JFrame {
         });
         mEdicion.add(mPrimero);
 
-        mAnterior.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_LEFT, java.awt.event.InputEvent.CTRL_DOWN_MASK));
+        mAnterior.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_A, java.awt.event.InputEvent.SHIFT_DOWN_MASK | java.awt.event.InputEvent.CTRL_DOWN_MASK));
         mAnterior.setMnemonic('y');
         mAnterior.setText("Anterior");
         mAnterior.addActionListener(new java.awt.event.ActionListener() {
@@ -742,7 +733,7 @@ public class vPrincipal extends javax.swing.JFrame {
         });
         mEdicion.add(mAnterior);
 
-        mSiguiente.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_RIGHT, java.awt.event.InputEvent.CTRL_DOWN_MASK));
+        mSiguiente.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, java.awt.event.InputEvent.SHIFT_DOWN_MASK | java.awt.event.InputEvent.CTRL_DOWN_MASK));
         mSiguiente.setMnemonic('p');
         mSiguiente.setText("Siguiente");
         mSiguiente.addActionListener(new java.awt.event.ActionListener() {
@@ -851,9 +842,6 @@ public class vPrincipal extends javax.swing.JFrame {
             }
         });
         mStock.add(mProductos);
-
-        mPromociones.setText("Gestionar Promociones");
-        mStock.add(mPromociones);
         mStock.add(jSeparator5);
 
         mListaPrecios.setText("Lista de Precios");
@@ -903,21 +891,13 @@ public class vPrincipal extends javax.swing.JFrame {
         mTesoreria.add(mAperturaCierreCaja);
         mTesoreria.add(jSeparator7);
 
-        mIngCaja.setText("Registrar Ingreso Caja");
+        mIngCaja.setText("Registrar Movimiento de Caja");
         mIngCaja.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 mIngCajaActionPerformed(evt);
             }
         });
         mTesoreria.add(mIngCaja);
-
-        mEgrCaja.setText("Registrar Egreso Caja");
-        mEgrCaja.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                mEgrCajaActionPerformed(evt);
-            }
-        });
-        mTesoreria.add(mEgrCaja);
         mTesoreria.add(jSeparator8);
 
         mRepCaja.setText("Reporte de Ingresos - Egresos");
@@ -1376,22 +1356,25 @@ public class vPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_mTalonariosActionPerformed
 
     private void mIngCajaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mIngCajaActionPerformed
-        abrirVentanaGenerica(
-                vIngresoCaja::new,
-                vIngresoCaja.class,
-                "Registro de Ingreso a Caja",
-                null // No se necesita configuración adicional
-        );
+        try {
+            if (ventanaMovimientoCaja == null || ventanaMovimientoCaja.isClosed()) {
+                ventanaMovimientoCaja = new vMovimientoCaja("INGRESO");
+                jDesktopPane2.add(ventanaMovimientoCaja);
+                centrar(ventanaMovimientoCaja);
+            } else {
+                // Si ya existe, cambiar el tipo a INGRESO
+                ventanaMovimientoCaja.getCmbTipo().setSelectedItem("INGRESO");
+            }
+            ventanaMovimientoCaja.setVisible(true);
+            ventanaMovimientoCaja.toFront();
+            ventanaMovimientoCaja.setSelected(true);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this,
+                    "Error al abrir ventana de ingreso: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }//GEN-LAST:event_mIngCajaActionPerformed
-
-    private void mEgrCajaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mEgrCajaActionPerformed
-        abrirVentanaGenerica(
-                vEgresoCaja::new,
-                vEgresoCaja.class,
-                "Registro de Egreso de Caja",
-                null
-        );
-    }//GEN-LAST:event_mEgrCajaActionPerformed
 
     private void mListaPreciosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mListaPreciosActionPerformed
         abrirVentanaGenerica(
@@ -1533,7 +1516,6 @@ public class vPrincipal extends javax.swing.JFrame {
     private javax.swing.JMenu mCompras;
     private javax.swing.JMenuItem mDelDetalle;
     private javax.swing.JMenu mEdicion;
-    private javax.swing.JMenuItem mEgrCaja;
     private javax.swing.JMenuItem mGuardar;
     private javax.swing.JMenuItem mImprimir;
     private javax.swing.JMenuItem mIngCaja;
@@ -1545,7 +1527,6 @@ public class vPrincipal extends javax.swing.JFrame {
     private javax.swing.JMenuItem mPersonas;
     private javax.swing.JMenuItem mPrimero;
     private javax.swing.JMenuItem mProductos;
-    private javax.swing.JMenuItem mPromociones;
     private javax.swing.JMenuItem mProveedores;
     private javax.swing.JMenuItem mRegCompras;
     private javax.swing.JMenuItem mRegVentaDirecta;

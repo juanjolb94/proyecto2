@@ -112,7 +112,7 @@
             <MenuItem class="javax.swing.JMenuItem" name="mAnterior">
               <Properties>
                 <Property name="accelerator" type="javax.swing.KeyStroke" editor="org.netbeans.modules.form.editors.KeyStrokeEditor">
-                  <KeyStroke key="Ctrl+LEFT"/>
+                  <KeyStroke key="Shift+Ctrl+A"/>
                 </Property>
                 <Property name="mnemonic" type="int" value="121"/>
                 <Property name="text" type="java.lang.String" value="Anterior"/>
@@ -124,7 +124,7 @@
             <MenuItem class="javax.swing.JMenuItem" name="mSiguiente">
               <Properties>
                 <Property name="accelerator" type="javax.swing.KeyStroke" editor="org.netbeans.modules.form.editors.KeyStrokeEditor">
-                  <KeyStroke key="Ctrl+RIGHT"/>
+                  <KeyStroke key="Shift+Ctrl+S"/>
                 </Property>
                 <Property name="mnemonic" type="int" value="112"/>
                 <Property name="text" type="java.lang.String" value="Siguiente"/>
@@ -262,11 +262,6 @@
                 <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="mProductosActionPerformed"/>
               </Events>
             </MenuItem>
-            <MenuItem class="javax.swing.JMenuItem" name="mPromociones">
-              <Properties>
-                <Property name="text" type="java.lang.String" value="Gestionar Promociones"/>
-              </Properties>
-            </MenuItem>
             <MenuItem class="javax.swing.JPopupMenu$Separator" name="jSeparator5">
             </MenuItem>
             <MenuItem class="javax.swing.JMenuItem" name="mListaPrecios">
@@ -324,18 +319,10 @@
             </MenuItem>
             <MenuItem class="javax.swing.JMenuItem" name="mIngCaja">
               <Properties>
-                <Property name="text" type="java.lang.String" value="Registrar Ingreso Caja"/>
+                <Property name="text" type="java.lang.String" value="Registrar Movimiento de Caja"/>
               </Properties>
               <Events>
                 <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="mIngCajaActionPerformed"/>
-              </Events>
-            </MenuItem>
-            <MenuItem class="javax.swing.JMenuItem" name="mEgrCaja">
-              <Properties>
-                <Property name="text" type="java.lang.String" value="Registrar Egreso Caja"/>
-              </Properties>
-              <Events>
-                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="mEgrCajaActionPerformed"/>
               </Events>
             </MenuItem>
             <MenuItem class="javax.swing.JPopupMenu$Separator" name="jSeparator8">
