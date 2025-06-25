@@ -13,14 +13,21 @@ import javax.swing.event.PopupMenuListener;
 import javax.swing.table.DefaultTableModel;
 import modelo.RolesDAO;
 import controlador.PermisosController;
+import java.awt.Component;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import modelo.mPermiso;
 import java.util.List;
 import java.util.ArrayList;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
+import javax.swing.JTable;
+import javax.swing.table.TableCellRenderer;
 
 public class vPermisos extends javax.swing.JInternalFrame implements myInterface {
 
-    // Agregar variable de instancia
+    private boolean permisosCambiados = false;
     private PermisosController controlador;
 
     public vPermisos() {
@@ -36,6 +43,7 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
         configurarComboBoxRoles();
         configurarTablaPermisos();
         configurarEventoComboBox();
+        configurarListenersTabla();
         habilitarOrdenamientoTabla();
         cargarMenusIniciales();
     }
@@ -44,6 +52,25 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
     private void cargarMenusIniciales() {
         List<mPermiso> menus = controlador.obtenerMenusDelSistema();
         cargarMenusEnTablaDesdeDB(menus);
+    }
+
+    // Método para configurar listeners en la tabla
+    private void configurarListenersTabla() {
+        jTable1.getModel().addTableModelListener(e -> {
+            if (e.getColumn() >= 2 && e.getColumn() <= 6) {
+                jTable1.getTableHeader().repaint();
+                permisosCambiados = true; // Marcar que hay cambios
+                actualizarTitulo();
+            }
+        });
+    }
+
+    private void actualizarTitulo() {
+        String titulo = "Permisos";
+        if (permisosCambiados) {
+            titulo += " *"; // Asterisco indica cambios no guardados
+        }
+        setTitle(titulo);
     }
 
     // Método para cargar menús desde base de datos
@@ -68,12 +95,19 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
     private void habilitarOrdenamientoTabla() {
         jTable1.setAutoCreateRowSorter(true);
 
-        // Opcional: Configurar ordenamiento personalizado por columna
+        // Configurar ordenamiento personalizado por columna
         javax.swing.table.TableRowSorter<DefaultTableModel> sorter
                 = new javax.swing.table.TableRowSorter<>((DefaultTableModel) jTable1.getModel());
 
         // Configurar comparador para la columna ID (ordenamiento numérico)
         sorter.setComparator(0, (Integer o1, Integer o2) -> o1.compareTo(o2));
+
+        // Deshabilitar ordenamiento para las columnas de checkboxes
+        sorter.setSortable(2, false); // VER
+        sorter.setSortable(3, false); // CREATE
+        sorter.setSortable(4, false); // READ
+        sorter.setSortable(5, false); // UPDATE
+        sorter.setSortable(6, false); // DELETE
 
         jTable1.setRowSorter(sorter);
     }
@@ -121,7 +155,9 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
 
         List<mPermiso> permisosAGuardar = new ArrayList<>();
         DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
+        int permisosConfigurados = 0;
 
+        // 1. PASO 1: Recolectar todos los permisos (SIN guardar)
         for (int i = 0; i < modelo.getRowCount(); i++) {
             int idMenu = (Integer) modelo.getValueAt(i, 0);
             boolean ver = (Boolean) modelo.getValueAt(i, 2);
@@ -130,7 +166,7 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
             boolean actualizar = (Boolean) modelo.getValueAt(i, 5);
             boolean eliminar = (Boolean) modelo.getValueAt(i, 6);
 
-            // Solo guardar si al menos un permiso está marcado
+            // Solo agregar si al menos un permiso está marcado
             if (ver || crear || leer || actualizar || eliminar) {
                 mPermiso permiso = new mPermiso();
                 permiso.setIdRol(rolSeleccionado.getId());
@@ -142,12 +178,27 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
                 permiso.setEliminar(eliminar);
 
                 permisosAGuardar.add(permiso);
+                permisosConfigurados++;
             }
         }
 
+        // 2. PASO 2: Validar 
+        if (permisosConfigurados == 0) {
+            int opcion = JOptionPane.showConfirmDialog(this,
+                    "No hay permisos configurados para este rol.\n¿Desea guardar sin permisos?",
+                    "Confirmar", JOptionPane.YES_NO_OPTION);
+            if (opcion != JOptionPane.YES_OPTION) {
+                return;
+            }
+        }
+
+        // 3. PASO 3: Guardar 
         if (controlador.guardarPermisos(permisosAGuardar)) {
+            permisosCambiados = false; // Resetear indicador
+            actualizarTitulo();
             JOptionPane.showMessageDialog(this,
-                    "Permisos guardados correctamente.",
+                    String.format("Permisos guardados correctamente.\n%d menús configurados para el rol %s",
+                            permisosConfigurados, rolSeleccionado.toString()),
                     "Éxito", JOptionPane.INFORMATION_MESSAGE);
         } else {
             JOptionPane.showMessageDialog(this,
@@ -337,6 +388,73 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
         jTable1.getColumnModel().getColumn(4).setMaxWidth(60);  // READ
         jTable1.getColumnModel().getColumn(5).setMaxWidth(70);  // UPDATE
         jTable1.getColumnModel().getColumn(6).setMaxWidth(70);  // DELETE
+
+        // Agregar checkboxes en headers de columnas de permisos
+        configurarHeadersConCheckbox();
+    }
+
+    private void configurarHeadersConCheckbox() {
+        // Agregar checkbox headers para las columnas de permisos (columnas 2-6)
+        for (int i = 2; i <= 6; i++) {
+            CheckBoxHeader checkBoxHeader = new CheckBoxHeader(jTable1, i);
+            jTable1.getColumnModel().getColumn(i).setHeaderRenderer(checkBoxHeader);
+        }
+
+        // Hacer que el header sea más alto para acomodar los checkboxes
+        jTable1.getTableHeader().setPreferredSize(new java.awt.Dimension(0, 35));
+
+        // Agregar listener para manejar clicks en el header
+        jTable1.getTableHeader().addMouseListener(new MouseListener() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int columnIndex = jTable1.getTableHeader().columnAtPoint(e.getPoint());
+
+                // Solo procesar clicks en columnas de permisos (2-6)
+                if (columnIndex >= 2 && columnIndex <= 6) {
+                    toggleColumna(columnIndex);
+                    jTable1.getTableHeader().repaint();
+                }
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+            }
+
+            @Override
+            public void mouseEntered(MouseEvent e) {
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+            }
+        });
+    }
+
+    // Método para alternar selección de columna
+    private void toggleColumna(int columna) {
+        DefaultTableModel model = (DefaultTableModel) jTable1.getModel();
+
+        // Verificar si todos están seleccionados
+        boolean todosSeleccionados = true;
+        for (int i = 0; i < model.getRowCount(); i++) {
+            Object value = model.getValueAt(i, columna);
+            if (value == null || !(Boolean) value) {
+                todosSeleccionados = false;
+                break;
+            }
+        }
+
+        // Aplicar el estado opuesto
+        boolean nuevoEstado = !todosSeleccionados;
+        for (int i = 0; i < model.getRowCount(); i++) {
+            model.setValueAt(nuevoEstado, i, columna);
+        }
+
+        jTable1.repaint();
     }
 
     // Método para aplicar permisos a menús
@@ -389,6 +507,52 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
         return controlador.tienePermiso(idRol, nombreComponente, tipoAccion);
     }
 
+    // Clase para seleccionar toda la columna con checkbox en el header
+    class CheckBoxHeader extends JCheckBox implements TableCellRenderer {
+
+        private final int column;
+        private final JTable table;
+
+        public CheckBoxHeader(JTable table, int column) {
+            this.table = table;
+            this.column = column;
+            setText(getColumnName());
+            setHorizontalAlignment(JLabel.CENTER);
+            setOpaque(true);
+            setBackground(jTable1.getTableHeader().getBackground());
+        }
+
+        private String getColumnName() {
+            return table.getColumnModel().getColumn(column).getHeaderValue().toString();
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus, int row, int column) {
+
+            // Verificar estado actual de la columna
+            boolean todosSeleccionados = verificarTodosSeleccionados();
+            setSelected(todosSeleccionados);
+
+            return this;
+        }
+
+        private boolean verificarTodosSeleccionados() {
+            DefaultTableModel model = (DefaultTableModel) table.getModel();
+            if (model.getRowCount() == 0) {
+                return false;
+            }
+
+            for (int i = 0; i < model.getRowCount(); i++) {
+                Object cellValue = model.getValueAt(i, column);
+                if (cellValue == null || !(Boolean) cellValue) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
+
     @SuppressWarnings("unchecked")
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
@@ -431,13 +595,14 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(layout.createSequentialGroup()
                 .addGap(23, 23, 23)
-                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addGroup(layout.createSequentialGroup()
-                        .addComponent(jLabel1)
-                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE))
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(26, Short.MAX_VALUE))
+                .addComponent(jLabel1)
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 140, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addGroup(layout.createSequentialGroup()
+                .addContainerGap()
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 557, Short.MAX_VALUE)
+                .addContainerGap())
         );
         layout.setVerticalGroup(
             layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
