@@ -40,12 +40,10 @@
               <EmptySpace type="unrelated" max="-2" attributes="0"/>
               <Group type="103" groupAlignment="0" max="-2" attributes="0">
                   <Component id="btnSalir" max="32767" attributes="0"/>
-                  <Group type="103" groupAlignment="1" max="-2" attributes="0">
-                      <Component id="btnAcceder" alignment="0" max="32767" attributes="0"/>
-                      <Component id="txtContraseña" alignment="0" max="32767" attributes="0"/>
-                      <Component id="txtUsuario" alignment="0" max="32767" attributes="0"/>
-                      <Component id="jLabel3" alignment="0" max="32767" attributes="0"/>
-                  </Group>
+                  <Component id="btnAcceder" alignment="0" max="32767" attributes="0"/>
+                  <Component id="txtContraseña" alignment="0" max="32767" attributes="0"/>
+                  <Component id="txtUsuario" alignment="0" max="32767" attributes="0"/>
+                  <Component id="jLabel3" alignment="0" max="32767" attributes="0"/>
               </Group>
               <EmptySpace pref="113" max="32767" attributes="0"/>
           </Group>

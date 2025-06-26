@@ -349,7 +349,7 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
 
     @Override
     public String[] getCamposBusqueda() {
-        return new String[]{"id_rol", "nombre_rol"}; // Campos de búsqueda en la tabla
+        return new String[]{"id_rol", "nombre"};
     }
 
     @Override

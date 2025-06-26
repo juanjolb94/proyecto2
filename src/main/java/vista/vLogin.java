@@ -1,9 +1,10 @@
 package vista;
 
-import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.Insets;
 import javax.swing.*;
 import java.awt.event.*;
+import modelo.PasswordUtils;
+import modelo.UsuariosDAO;
 
 public class vLogin extends javax.swing.JDialog {
 
@@ -125,12 +126,69 @@ public class vLogin extends javax.swing.JDialog {
         String usuario = txtUsuario.getText();
         String contraseña = new String(txtContraseña.getPassword());
 
+        System.out.println("=== INTENTO DE LOGIN ===");
+        System.out.println("Usuario ingresado: " + usuario);
+        System.out.println("Contraseña ingresada: " + contraseña);
+
+        // Primero verificar el usuario hardcodeado admin (temporal)
         if (usuario.equals("admin") && contraseña.equals("1234")) {
-            usuarioAutenticado = usuario; // Guardar el nombre de usuario
-            loginExitoso = true; // Marcar el login como exitoso
-            this.dispose(); // Cerrar la ventana de Login
-        } else {
+            System.out.println("Login exitoso con usuario ADMIN hardcodeado");
+            System.out.println("=======================");
+            usuarioAutenticado = usuario;
+            loginExitoso = true;
+            this.dispose();
+            return;
+        }
+
+        // Verificar usuarios de la base de datos
+        try {
+            UsuariosDAO usuariosDAO = new UsuariosDAO();
+            String[] datosUsuario = usuariosDAO.buscarPorNombreUsuario(usuario);
+
+            if (datosUsuario != null) {
+                System.out.println("Usuario encontrado en la base de datos:");
+                System.out.println("ID: " + datosUsuario[0]);
+                System.out.println("Nombre: " + datosUsuario[1]);
+                System.out.println("Contraseña hasheada en BD: " + datosUsuario[2]);
+                System.out.println("Persona ID: " + datosUsuario[3]);
+                System.out.println("Rol ID: " + datosUsuario[4]);
+                System.out.println("Activo: " + datosUsuario[5]);
+
+                if (Boolean.parseBoolean(datosUsuario[5])) { // Si está activo
+                    String contraseñaHasheada = datosUsuario[2]; // Contraseña hasheada de la BD
+
+                    System.out.println("Verificando contraseña...");
+                    System.out.println("Contraseña ingresada: " + contraseña);
+                    System.out.println("Contraseña hasheada en BD: " + contraseñaHasheada);
+
+                    boolean passwordMatch = PasswordUtils.checkPassword(contraseña, contraseñaHasheada);
+                    System.out.println("¿Contraseña coincide?: " + passwordMatch);
+
+                    if (passwordMatch) {
+                        System.out.println("✓ LOGIN EXITOSO");
+                        System.out.println("=======================");
+                        usuarioAutenticado = usuario;
+                        loginExitoso = true;
+                        this.dispose();
+                        return;
+                    } else {
+                        System.out.println("✗ Contraseña incorrecta");
+                    }
+                } else {
+                    System.out.println("✗ Usuario inactivo");
+                }
+            } else {
+                System.out.println("✗ Usuario no encontrado en la base de datos");
+            }
+
+            System.out.println("✗ LOGIN FALLIDO");
+            System.out.println("=======================");
             JOptionPane.showMessageDialog(this, "Usuario o contraseña incorrectos", "Error", JOptionPane.ERROR_MESSAGE);
+
+        } catch (Exception e) {
+            System.err.println("✗ Error durante el login: " + e.getMessage());
+            System.out.println("=======================");
+            JOptionPane.showMessageDialog(this, "Error al verificar usuario: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_btnAccederActionPerformed
 
