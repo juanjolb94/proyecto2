@@ -79,9 +79,7 @@ public class ReporteService {
         }
     }
 
-    /**
-     * Genera el reporte de inventario de productos
-     */
+    // Genera el reporte de inventario de productos
     public JasperPrint generarReporteInventarioProductos(Map<String, Object> parametros) throws JRException, SQLException {
         // Obtener productos desde el DAO con descripción incluida
         ProductosDAO productosDAO = new ProductosDAO();
@@ -142,9 +140,7 @@ public class ReporteService {
         );
     }
 
-    /**
-     * Genera un objeto JasperPrint con el reporte procesado
-     */
+    // Genera un objeto JasperPrint con el reporte procesado
     public JasperPrint generarJasperPrint(String reporteNombre, Map<String, Object> parametros) throws Exception {
         System.out.println("Generando reporte: " + reporteNombre);
 
@@ -180,8 +176,6 @@ public class ReporteService {
 
     /**
      * Prepara los parámetros para evitar errores de tipos
-     *
-     * @param parametros Mapa de parámetros a preparar
      */
     private void prepararParametros(Map<String, Object> parametros) {
         // Asegurar que FECHA_GENERACION sea un objeto java.util.Date
@@ -226,11 +220,6 @@ public class ReporteService {
 
     /**
      * Genera un visor de reportes para mostrar en la interfaz gráfica
-     *
-     * @param reporteNombre Nombre del reporte
-     * @param parametros Parámetros del reporte
-     * @return Un visor de JasperReports
-     * @throws Exception Si ocurre algún error
      */
     public JRViewer generarVisorReporte(String reporteNombre, Map<String, Object> parametros) throws Exception {
         JasperPrint jasperPrint = generarReporte(reporteNombre, parametros);
@@ -239,11 +228,6 @@ public class ReporteService {
 
     /**
      * Exporta un reporte a formato PDF
-     *
-     * @param reporteNombre Nombre del reporte
-     * @param parametros Parámetros del reporte
-     * @param rutaDestino Ruta donde se guardará el PDF
-     * @throws Exception Si ocurre algún error
      */
     public void exportarReporteAPdf(String reporteNombre, Map<String, Object> parametros, String rutaDestino) throws Exception {
         JasperPrint jasperPrint = generarReporte(reporteNombre, parametros);
@@ -261,9 +245,6 @@ public class ReporteService {
 
     /**
      * Imprime directamente un reporte en la impresora predeterminada
-     *
-     * @param reporteNombre Nombre del reporte
-     * @throws Exception Si ocurre algún error
      */
     public void imprimirReporte(String reporteNombre) throws Exception {
         Map<String, Object> parametros = new HashMap<>();
@@ -276,22 +257,15 @@ public class ReporteService {
         System.out.println("Reporte enviado a la impresora");
     }
 
-    /**
-     * Genera específicamente el reporte de inventario
-     *
-     * @param parametros Parámetros del reporte
-     * @return JasperPrint generado
-     * @throws SQLException Si hay error en la base de datos
-     * @throws JRException Si hay error en Jasper
-     */
+    // Genera específicamente el reporte de inventario
     private JasperPrint generarReporteInventario(Map<String, Object> parametros) throws SQLException, JRException {
-        // Obtener datos para el reporte desde la base de datos
-        List<mProducto> productos = productosDAO.listarTodos();
+
+        List<mProducto> productos = productosDAO.listarTodosConDescripcion();
 
         // Aplicar filtros si existen
         if (parametros.containsKey("categoria_id")) {
             Integer categoriaId = (Integer) parametros.get("categoria_id");
-            if (categoriaId > 0) {
+            if (categoriaId != null && categoriaId > 0) {
                 productos = productos.stream()
                         .filter(p -> p.getIdCategoria() == categoriaId)
                         .toList();
@@ -300,14 +274,15 @@ public class ReporteService {
 
         if (parametros.containsKey("marca_id")) {
             Integer marcaId = (Integer) parametros.get("marca_id");
-            if (marcaId > 0) {
+            if (marcaId != null && marcaId > 0) {
                 productos = productos.stream()
                         .filter(p -> p.getIdMarca() == marcaId)
                         .toList();
             }
         }
 
-        if (!parametros.containsKey("mostrar_inactivos") || !(Boolean) parametros.get("mostrar_inactivos")) {
+        if (parametros.containsKey("mostrar_inactivos")
+                && !((Boolean) parametros.get("mostrar_inactivos"))) {
             productos = productos.stream()
                     .filter(mProducto::isEstado)
                     .toList();
@@ -342,9 +317,7 @@ public class ReporteService {
         );
     }
 
-    /**
-     * Prepara los datos de productos para el reporte de inventario
-     */
+    // Prepara los datos de productos para el reporte de inventario
     private List<Map<String, Object>> prepararDatosProductos(List<mProducto> productos) throws SQLException {
         return productos.stream().map(producto -> {
             Map<String, Object> fila = new HashMap<>();
@@ -352,12 +325,16 @@ public class ReporteService {
             fila.put("codigo", producto.getCodigo() != null ? producto.getCodigo() : "");
             fila.put("nombre", producto.getNombre());
             fila.put("descripcion", producto.getDescripcion() != null ? producto.getDescripcion() : "");
-            fila.put("stock", producto.getStock());  // Ya es int
-            fila.put("precio", producto.getPrecio());  // Ya es int
-            fila.put("categoria", obtenerNombreCategoria(producto.getIdCategoria()));
-            fila.put("marca", obtenerNombreMarca(producto.getIdMarca()));
-            fila.put("iva", producto.getIva());  // double
+            fila.put("stock", producto.getStock());
+            fila.put("precio", producto.getPrecio());
+
+            // Usar los nombres ya obtenidos de la consulta SQL
+            fila.put("categoria", producto.getNombreCategoria() != null ? producto.getNombreCategoria() : "Sin categoría");
+            fila.put("marca", producto.getNombreMarca() != null ? producto.getNombreMarca() : "Sin marca");
+
+            fila.put("iva", producto.getIva());
             fila.put("estado", producto.isEstado() ? "Activo" : "Inactivo");
+
             return fila;
         }).collect(Collectors.toList());
     }
