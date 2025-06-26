@@ -250,6 +250,61 @@ public class ProductosDAO {
         return productos;
     }
 
+    // Método específico para obtener productos con descripción para reportes
+    public List<mProducto> listarTodosConDescripcion() throws SQLException {
+        List<mProducto> productos = new ArrayList<>();
+        String sql = "SELECT pc.id_producto, pc.nombre, pc.id_categoria, pc.id_marca, "
+                + "pc.iva, pc.estado, pd.descripcion, pd.cod_barra, "
+                + "COALESCE(pd.precio_compra, 0) as precio_compra "
+                + "FROM productos_cabecera pc "
+                + "LEFT JOIN productos_detalle pd ON pc.id_producto = pd.id_producto "
+                + "WHERE pc.estado = true "
+                + "GROUP BY pc.id_producto, pc.nombre, pc.id_categoria, pc.id_marca, pc.iva, pc.estado "
+                + "ORDER BY pc.nombre";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                mProducto producto = new mProducto();
+                producto.setIdProducto(rs.getInt("id_producto"));
+                producto.setNombre(rs.getString("nombre"));
+                producto.setIdCategoria(rs.getInt("id_categoria"));
+                producto.setIdMarca(rs.getInt("id_marca"));
+                producto.setIva(rs.getDouble("iva"));
+                producto.setEstado(rs.getBoolean("estado"));
+
+                // Obtener la primera descripción disponible para este producto
+                String descripcion = obtenerPrimeraDescripcion(rs.getInt("id_producto"));
+                producto.setDescripcion(descripcion);
+                producto.setCodigo(rs.getString("cod_barra"));
+
+                // Establecer precio (por ahora usamos precio_compra, luego se puede mejorar)
+                producto.setPrecio(rs.getInt("precio_compra"));
+                producto.setStock(0); // Por ahora 0, luego se puede implementar tabla de stock
+
+                productos.add(producto);
+            }
+        }
+        return productos;
+    }
+
+    // Método auxiliar para obtener la primera descripción de un producto
+    private String obtenerPrimeraDescripcion(int idProducto) throws SQLException {
+        String sql = "SELECT descripcion FROM productos_detalle "
+                + "WHERE id_producto = ? AND estado = true "
+                + "ORDER BY id_detalle ASC LIMIT 1";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setInt(1, idProducto);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("descripcion");
+                }
+            }
+        }
+        return null;
+    }
+
     // Método auxiliar para mapear un ResultSet a mProducto
     private mProducto mapearProducto(ResultSet rs) throws SQLException {
         mProducto producto = new mProducto();

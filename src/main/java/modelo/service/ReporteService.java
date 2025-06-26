@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
 import javax.print.attribute.standard.Copies;
@@ -79,12 +80,70 @@ public class ReporteService {
     }
 
     /**
+     * Genera el reporte de inventario de productos
+     */
+    public JasperPrint generarReporteInventarioProductos(Map<String, Object> parametros) throws JRException, SQLException {
+        // Obtener productos desde el DAO con descripción incluida
+        ProductosDAO productosDAO = new ProductosDAO();
+        List<mProducto> productos = productosDAO.listarTodosConDescripcion();
+
+        // Aplicar filtros si existen
+        if (parametros.containsKey("categoria_id")) {
+            Integer categoriaId = (Integer) parametros.get("categoria_id");
+            if (categoriaId != null && categoriaId > 0) {
+                productos = productos.stream()
+                        .filter(p -> p.getIdCategoria() == categoriaId)
+                        .toList();
+            }
+        }
+
+        if (parametros.containsKey("marca_id")) {
+            Integer marcaId = (Integer) parametros.get("marca_id");
+            if (marcaId != null && marcaId > 0) {
+                productos = productos.stream()
+                        .filter(p -> p.getIdMarca() == marcaId)
+                        .toList();
+            }
+        }
+
+        if (parametros.containsKey("mostrar_inactivos")
+                && !((Boolean) parametros.get("mostrar_inactivos"))) {
+            productos = productos.stream()
+                    .filter(mProducto::isEstado)
+                    .toList();
+        }
+
+        // Aplicar filtros de stock si existen
+        if (parametros.containsKey("stock_minimo")) {
+            Integer stockMinimo = (Integer) parametros.get("stock_minimo");
+            productos = productos.stream()
+                    .filter(p -> p.getStock() >= stockMinimo)
+                    .toList();
+        }
+
+        if (parametros.containsKey("stock_maximo")) {
+            Integer stockMaximo = (Integer) parametros.get("stock_maximo");
+            productos = productos.stream()
+                    .filter(p -> p.getStock() <= stockMaximo)
+                    .toList();
+        }
+
+        // Convertir a datos para el reporte
+        List<Map<String, Object>> datosReporte = prepararDatosProductos(productos);
+
+        // Obtener el reporte compilado
+        JasperReport jasperReport = obtenerReporteCompilado("inventario_productos");
+
+        // Generar el reporte con la colección de datos
+        return JasperFillManager.fillReport(
+                jasperReport,
+                parametros,
+                new JRBeanCollectionDataSource(datosReporte)
+        );
+    }
+
+    /**
      * Genera un objeto JasperPrint con el reporte procesado
-     *
-     * @param reporteNombre Nombre del reporte
-     * @param parametros Parámetros del reporte
-     * @return JasperPrint generado
-     * @throws Exception Si ocurre algún error
      */
     public JasperPrint generarJasperPrint(String reporteNombre, Map<String, Object> parametros) throws Exception {
         System.out.println("Generando reporte: " + reporteNombre);
@@ -285,26 +344,22 @@ public class ReporteService {
 
     /**
      * Prepara los datos de productos para el reporte de inventario
-     *
-     * @param productos Lista de productos
-     * @return Lista de mapas con datos formateados para el reporte
-     * @throws SQLException Si hay error en la base de datos
      */
     private List<Map<String, Object>> prepararDatosProductos(List<mProducto> productos) throws SQLException {
         return productos.stream().map(producto -> {
             Map<String, Object> fila = new HashMap<>();
             fila.put("idProducto", producto.getIdProducto());
-            fila.put("codigo", producto.getCodigo());
+            fila.put("codigo", producto.getCodigo() != null ? producto.getCodigo() : "");
             fila.put("nombre", producto.getNombre());
-            fila.put("descripcion", producto.getDescripcion());
-            fila.put("stock", producto.getStock());
-            fila.put("precio", producto.getPrecio());
+            fila.put("descripcion", producto.getDescripcion() != null ? producto.getDescripcion() : "");
+            fila.put("stock", producto.getStock());  // Ya es int
+            fila.put("precio", producto.getPrecio());  // Ya es int
             fila.put("categoria", obtenerNombreCategoria(producto.getIdCategoria()));
             fila.put("marca", obtenerNombreMarca(producto.getIdMarca()));
-            fila.put("iva", producto.getIva());
+            fila.put("iva", producto.getIva());  // double
             fila.put("estado", producto.isEstado() ? "Activo" : "Inactivo");
             return fila;
-        }).toList();
+        }).collect(Collectors.toList());
     }
 
     // Método para precargar los datos de categorías y marcas
