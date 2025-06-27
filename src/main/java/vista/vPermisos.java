@@ -19,6 +19,8 @@ import java.awt.event.MouseListener;
 import modelo.mPermiso;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -482,22 +484,105 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
             return;
         }
 
+        // Si es Administrador (rol ID = 1), habilitar todo
+        if (idRol == 1) {
+            menu.setEnabled(true);
+            for (int i = 0; i < menu.getItemCount(); i++) {
+                JMenuItem item = menu.getItem(i);
+                if (item != null && item.getText() != null && !item.getText().trim().isEmpty()) {
+                    item.setEnabled(true);
+                }
+            }
+            return;
+        }
+
         // Verificar permiso para el menú principal
         String nombreMenu = "m" + menu.getText().replace(" ", "");
         boolean tienePermiso = controlador.tienePermiso(idRol, nombreMenu, "ver");
         menu.setEnabled(tienePermiso);
 
+        // Si el menú principal no tiene permisos, deshabilitar todos los submenús
+        if (!tienePermiso) {
+            for (int i = 0; i < menu.getItemCount(); i++) {
+                JMenuItem item = menu.getItem(i);
+                if (item != null && item.getText() != null && !item.getText().trim().isEmpty()) {
+                    item.setEnabled(false);
+                }
+            }
+            return;
+        }
+
+        // Mapeo de textos de menú a nombres de componentes en BD
+        Map<String, String> mapeoComponentes = new HashMap<>();
+
+        // Menús de Compras
+        mapeoComponentes.put("Gestionar Proveedores", "mProveedores");
+        mapeoComponentes.put("Registrar Compra", "mRegCompras");
+        mapeoComponentes.put("Reporte Compras", "mRepCompras");
+
+        // Menús de Ventas
+        mapeoComponentes.put("Gestionar Clientes", "mClientes");
+        mapeoComponentes.put("Talonarios de Factura", "mTalonarios");
+        mapeoComponentes.put("Registrar Venta Directa", "mRegVentaDirecta");
+        mapeoComponentes.put("Registrar Ventas", "mRegVentas");
+        mapeoComponentes.put("Reporte Ventas", "mRepVentas");
+
+        // Menús de Stock
+        mapeoComponentes.put("Productos", "mProductos");
+        mapeoComponentes.put("Lista de Precios", "mListaPrecios");
+        mapeoComponentes.put("Ajustar Stock", "mAjustarStock");
+        mapeoComponentes.put("Aprobar Stock", "mAprobarStock");
+        mapeoComponentes.put("Reporte Inventario", "mRepInvent");
+
+        // Menús de Tesorería
+        mapeoComponentes.put("Apertura/Cierre Caja", "mAperturaCierreCaja");
+        mapeoComponentes.put("Ingresar Caja", "mIngCaja");
+        mapeoComponentes.put("Reporte Caja", "mRepCaja");
+
+        // Menús de Seguridad
+        mapeoComponentes.put("Personas", "mPersonas");
+        mapeoComponentes.put("Usuarios", "mUsuarios");
+        mapeoComponentes.put("Roles", "mRoles");
+        mapeoComponentes.put("Permisos", "mPermisos");
+        mapeoComponentes.put("Menus", "mMenus");
+
+        // Menús de Archivo - TAMBIÉN verificar permisos
+        mapeoComponentes.put("Nuevo", "mNuevo");
+        mapeoComponentes.put("Guardar", "mGuardar");
+        mapeoComponentes.put("Borrar", "mBorrar");
+        mapeoComponentes.put("Buscar", "mBuscar");
+        mapeoComponentes.put("Imprimir", "mImprimir");
+        mapeoComponentes.put("Cerrar Ventana", "mCerrarVentana");
+        mapeoComponentes.put("Salir", "mSalir");
+
+        // Menús de Edición - TAMBIÉN verificar permisos
+        mapeoComponentes.put("Primero", "mPrimero");
+        mapeoComponentes.put("Anterior", "mAnterior");
+        mapeoComponentes.put("Siguiente", "mSiguiente");
+        mapeoComponentes.put("Último", "mUltimo");
+        mapeoComponentes.put("Ins. Detalle", "mInsDetalle");
+        mapeoComponentes.put("Del. Detalle", "mDelDetalle");
+
         // Aplicar permisos a submenús
         for (int i = 0; i < menu.getItemCount(); i++) {
             JMenuItem item = menu.getItem(i);
-            // Verificar que no sea null y que tenga texto (los separadores no tienen texto)
             if (item != null && item.getText() != null && !item.getText().trim().isEmpty()) {
-                String nombreItem = item.getActionCommand();
-                if (nombreItem == null || nombreItem.isEmpty()) {
-                    nombreItem = "m" + item.getText().replace(" ", "");
+                String textoItem = item.getText();
+                String nombreItem = mapeoComponentes.get(textoItem);
+
+                if (nombreItem != null) {
+                    // Verificar permisos para TODOS los menús
+                    boolean tienePermisoItem = controlador.tienePermiso(idRol, nombreItem, "ver");
+                    item.setEnabled(tienePermisoItem);
+                } else {
+                    // Si no está en el mapeo, usar la lógica original como fallback
+                    String nombreItemFallback = item.getActionCommand();
+                    if (nombreItemFallback == null || nombreItemFallback.isEmpty()) {
+                        nombreItemFallback = "m" + textoItem.replace(" ", "");
+                    }
+                    boolean tienePermisoItem = controlador.tienePermiso(idRol, nombreItemFallback, "ver");
+                    item.setEnabled(tienePermisoItem);
                 }
-                boolean tienePermisoItem = controlador.tienePermiso(idRol, nombreItem, "ver");
-                item.setEnabled(tienePermisoItem);
             }
         }
     }

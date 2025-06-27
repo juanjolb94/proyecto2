@@ -121,6 +121,8 @@ public class vLogin extends javax.swing.JDialog {
     }//GEN-LAST:event_btnSalirActionPerformed
 
     private static String usuarioAutenticado = "";
+    private static int rolAutenticado;
+    private static int idUsuarioAutenticado;
 
     private void btnAccederActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAccederActionPerformed
         String usuario = txtUsuario.getText();
@@ -135,6 +137,8 @@ public class vLogin extends javax.swing.JDialog {
             System.out.println("Login exitoso con usuario ADMIN hardcodeado");
             System.out.println("=======================");
             usuarioAutenticado = usuario;
+            rolAutenticado = 1;
+            idUsuarioAutenticado = 1;
             loginExitoso = true;
             this.dispose();
             return;
@@ -168,6 +172,8 @@ public class vLogin extends javax.swing.JDialog {
                         System.out.println("✓ LOGIN EXITOSO");
                         System.out.println("=======================");
                         usuarioAutenticado = usuario;
+                        rolAutenticado = Integer.parseInt(datosUsuario[4]);
+                        idUsuarioAutenticado = Integer.parseInt(datosUsuario[0]);
                         loginExitoso = true;
                         this.dispose();
                         return;
@@ -199,6 +205,14 @@ public class vLogin extends javax.swing.JDialog {
 
     public boolean isLoginExitoso() {
         return loginExitoso;
+    }
+
+    public static int getRolAutenticado() {
+        return rolAutenticado;
+    }
+
+    public static int getIdUsuarioAutenticado() {
+        return idUsuarioAutenticado;
     }
 
     public static void main(String args[]) {

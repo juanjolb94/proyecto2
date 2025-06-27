@@ -25,8 +25,14 @@ public class vPrincipal extends javax.swing.JFrame {
     private Map<String, org.kordamp.ikonli.swing.FontIcon> iconCache = new HashMap<>();
     private vMovimientoCaja ventanaMovimientoCaja;
 
+    // Variables para barra de estado
+    private javax.swing.JPanel panelEstado;
+    private javax.swing.JLabel lblUsuarioActivo;
+    private javax.swing.JLabel lblFechaHora;
+
     public vPrincipal() {
         initComponents();
+        configurarBarraEstado();
 
         // Establecer en pantalla completa (maximizado)
         this.setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -39,6 +45,65 @@ public class vPrincipal extends javax.swing.JFrame {
         configurarListeners();
         configurarTodosLosIconos();
         validarIconos();
+        aplicarPermisosSegunRol();
+        iniciarRelojBarraEstado();
+    }
+
+    private void configurarBarraEstado() {
+        // Crear panel de estado
+        panelEstado = new javax.swing.JPanel(new java.awt.BorderLayout());
+        panelEstado.setBorder(javax.swing.BorderFactory.createEtchedBorder());
+        panelEstado.setPreferredSize(new java.awt.Dimension(0, 25));
+
+        // Crear label usuario
+        lblUsuarioActivo = new javax.swing.JLabel();
+        lblUsuarioActivo.setText("Usuario activo: " + vLogin.getUsuarioAutenticado());
+        lblUsuarioActivo.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 10, 2, 10));
+
+        // Crear label fecha/hora
+        lblFechaHora = new javax.swing.JLabel();
+        lblFechaHora.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+        lblFechaHora.setBorder(javax.swing.BorderFactory.createEmptyBorder(2, 10, 2, 10));
+
+        // Actualizar fecha/hora inicial
+        actualizarFechaHora();
+
+        // Agregar labels al panel
+        panelEstado.add(lblUsuarioActivo, java.awt.BorderLayout.WEST);
+        panelEstado.add(lblFechaHora, java.awt.BorderLayout.EAST);
+
+        // Agregar panel al frame (parte inferior)
+        getContentPane().add(panelEstado, java.awt.BorderLayout.SOUTH);
+
+        // Revalidar para mostrar los cambios
+        getContentPane().revalidate();
+        getContentPane().repaint();
+    }
+
+    private void actualizarFechaHora() {
+        java.text.SimpleDateFormat formato = new java.text.SimpleDateFormat("dd/MM/yyyy HH:mm:ss");
+        lblFechaHora.setText(formato.format(new java.util.Date()));
+    }
+
+    private void iniciarRelojBarraEstado() {
+        // Timer para actualizar la hora cada segundo
+        javax.swing.Timer timer = new javax.swing.Timer(1000, e -> actualizarFechaHora());
+        timer.start();
+    }
+
+    // Método para actualizar el usuario cuando cambie (si es necesario)
+    public void actualizarUsuarioActivo() {
+        if (lblUsuarioActivo != null) {
+            lblUsuarioActivo.setText("Usuario activo: " + vLogin.getUsuarioAutenticado());
+        }
+    }
+
+    private void aplicarPermisosSegunRol() {
+        int rolUsuario = vLogin.getRolAutenticado();
+        if (rolUsuario > 0) {
+            vPermisos permisos = new vPermisos();
+            permisos.aplicarPermisosAMenus(rolUsuario);
+        }
     }
 
     private void ajustarTamanoVentana() {
@@ -50,9 +115,7 @@ public class vPrincipal extends javax.swing.JFrame {
         this.pack();
     }
 
-    /**
-     * Método para obtener un icono del caché o crear uno nuevo si no existe
-     */
+    //Método para obtener un icono del caché o crear uno nuevo si no existe
     private org.kordamp.ikonli.swing.FontIcon getOrCreateIcon(String ikonName, int size, Color color) {
         // Verificar si ya existe en el caché
         if (iconCache.containsKey(ikonName)) {
@@ -233,10 +296,7 @@ public class vPrincipal extends javax.swing.JFrame {
         return icon;
     }
 
-    /**
-     * Configura todos los iconos de menú de manera eficiente usando iconos
-     * cacheados
-     */
+    // Configura todos los iconos de menú de manera eficiente usando iconos cacheados
     private void configurarTodosLosIconos() {
         // Solo configurar iconos si no han sido configurados todavía
         if (iconCache == null) {
