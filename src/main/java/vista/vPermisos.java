@@ -52,7 +52,7 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
 
     // Método para cargar menús iniciales
     private void cargarMenusIniciales() {
-        List<mPermiso> menus = controlador.obtenerMenusDelSistema();
+        List<mPermiso> menus = obtenerMenusDesdaInterfaz(); // Leer desde interfaz
         cargarMenusEnTablaDesdeDB(menus);
     }
 
@@ -636,6 +636,58 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
             }
             return true;
         }
+    }
+
+    private List<mPermiso> obtenerMenusDesdaInterfaz() {
+        List<mPermiso> menus = new ArrayList<>();
+
+        vPrincipal ventanaPrincipal = obtenerVentanaPrincipal();
+        if (ventanaPrincipal == null) {
+            // Fallback: usar menús desde BD si no se encuentra vPrincipal
+            return controlador.obtenerMenusDelSistema();
+        }
+
+        JMenuBar menuBar = ventanaPrincipal.getJMenuBar();
+        int menuId = 1;
+
+        // Recorrer cada menú principal
+        for (int i = 0; i < menuBar.getMenuCount(); i++) {
+            JMenu menu = menuBar.getMenu(i);
+            if (menu != null) {
+                // Agregar menú principal
+                mPermiso menuPrincipal = new mPermiso();
+                menuPrincipal.setIdMenu(menuId++);
+                menuPrincipal.setNombreMenu(menu.getText());
+                menuPrincipal.setNombreComponente("m" + menu.getText().replace(" ", ""));
+                menus.add(menuPrincipal);
+
+                // Recorrer submenús
+                for (int j = 0; j < menu.getItemCount(); j++) {
+                    JMenuItem item = menu.getItem(j);
+
+                    if (item != null
+                            && item.getText() != null
+                            && !item.getText().trim().isEmpty()) {
+
+                        mPermiso submenu = new mPermiso();
+                        submenu.setIdMenu(menuId++);
+                        submenu.setNombreMenu(item.getText());
+
+                        String nombreComponente = item.getActionCommand();
+                        if (nombreComponente == null || nombreComponente.isEmpty()) {
+                            nombreComponente = "m" + item.getText()
+                                    .replace(" ", "")
+                                    .replace("/", "")
+                                    .replace(".", "");
+                        }
+                        submenu.setNombreComponente(nombreComponente);
+                        menus.add(submenu);
+                    }
+                }
+            }
+        }
+
+        return menus;
     }
 
     @SuppressWarnings("unchecked")

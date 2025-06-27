@@ -1004,6 +1004,11 @@ public class vPrincipal extends javax.swing.JFrame {
         mSeguridad.add(jSeparator11);
 
         mMenus.setText("Menus");
+        mMenus.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mMenusActionPerformed(evt);
+            }
+        });
         mSeguridad.add(mMenus);
 
         menuBar.add(mSeguridad);
@@ -1518,6 +1523,15 @@ public class vPrincipal extends javax.swing.JFrame {
                     JOptionPane.ERROR_MESSAGE);
         }
     }//GEN-LAST:event_mAprobarStockActionPerformed
+
+    private void mMenusActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mMenusActionPerformed
+        abrirVentanaGenerica(
+                vMenus::new,
+                vMenus.class,
+                "Sincronización de Menús",
+                null
+        );
+    }//GEN-LAST:event_mMenusActionPerformed
 
     public static void main(String args[]) {
         try {
