@@ -1533,6 +1533,10 @@ public class vPrincipal extends javax.swing.JFrame {
         );
     }//GEN-LAST:event_mMenusActionPerformed
 
+    public JDesktopPane getDesktopPane() {
+        return jDesktopPane2;
+    }
+
     public static void main(String args[]) {
         try {
             // Inicializar el registro de iconos de Material Design

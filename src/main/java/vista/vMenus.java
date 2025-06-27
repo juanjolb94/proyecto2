@@ -9,6 +9,7 @@ import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import modelo.mPermiso;
+import util.MenusCache;
 
 public class vMenus extends javax.swing.JInternalFrame implements myInterface {
 
@@ -152,15 +153,30 @@ public class vMenus extends javax.swing.JInternalFrame implements myInterface {
 
         if (opcion == JOptionPane.YES_OPTION) {
             try {
-                // Aquí implementarás la lógica de sincronización
-                // Por ahora, simular éxito
+                // Buscar ventana vPermisos abierta
+                vPermisos ventanaPermisos = buscarVentanaPermisos();
 
-                JOptionPane.showMessageDialog(this,
-                        "Sincronización completada exitosamente.\n"
-                        + menusEncontrados.size() + " elementos procesados.\n\n"
-                        + "Los cambios estarán disponibles al reabrir la ventana de Permisos.",
-                        "Sincronización Exitosa",
-                        JOptionPane.INFORMATION_MESSAGE);
+                if (ventanaPermisos != null) {
+                    // Si está abierta, actualizar directamente
+                    ventanaPermisos.actualizarMenusDesdeVMenus(menusEncontrados);
+
+                    JOptionPane.showMessageDialog(this,
+                            "Sincronización completada exitosamente.\n"
+                            + menusEncontrados.size() + " elementos sincronizados.\n\n"
+                            + "La ventana de Permisos ha sido actualizada.",
+                            "Sincronización Exitosa",
+                            JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    // Si no está abierta, guardar en cache global para uso posterior
+                    MenusCache.getInstance().setMenusDelSistema(menusEncontrados);
+
+                    JOptionPane.showMessageDialog(this,
+                            "Sincronización completada exitosamente.\n"
+                            + menusEncontrados.size() + " elementos almacenados en cache.\n\n"
+                            + "Los cambios estarán disponibles al abrir la ventana de Permisos.",
+                            "Sincronización Exitosa",
+                            JOptionPane.INFORMATION_MESSAGE);
+                }
 
                 // Cerrar la ventana
                 this.dispose();
@@ -172,6 +188,27 @@ public class vMenus extends javax.swing.JInternalFrame implements myInterface {
                         JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+    private vPermisos buscarVentanaPermisos() {
+        // Buscar en el desktop pane si vPermisos está abierta
+        vPrincipal ventanaPrincipal = obtenerVentanaPrincipal();
+        if (ventanaPrincipal != null) {
+            JDesktopPane desktop = ventanaPrincipal.getDesktopPane();
+            if (desktop != null) {
+                for (JInternalFrame frame : desktop.getAllFrames()) {
+                    if (frame instanceof vPermisos) {
+                        return (vPermisos) frame;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+// Método público para obtener los menús encontrados
+    public List<mPermiso> getMenusEncontrados() {
+        return new ArrayList<>(menusEncontrados);
     }
 
     // Implementación de myInterface (métodos requeridos)

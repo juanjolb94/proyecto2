@@ -26,6 +26,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
 import javax.swing.table.TableCellRenderer;
+import util.MenusCache;
 
 public class vPermisos extends javax.swing.JInternalFrame implements myInterface {
 
@@ -116,9 +117,15 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
 
     // Método actualizado para cargar permisos del rol
     private void cargarPermisosDelRol(int idRol) {
-        // Cargar menús del sistema
-        List<mPermiso> menus = controlador.obtenerMenusDelSistema();
-        cargarMenusEnTablaDesdeDB(menus);
+        // Verificar si hay cache válido de vMenus
+        if (MenusCache.getInstance().isCacheValido()) {
+            List<mPermiso> menusCache = MenusCache.getInstance().getMenusDelSistema();
+            cargarMenusEnTablaDesdeCache(menusCache);
+        } else {
+            // Fallback: usar menús desde BD o interfaz
+            List<mPermiso> menus = obtenerMenusDesdaInterfaz();
+            cargarMenusEnTablaDesdeDB(menus);
+        }
 
         // Cargar permisos existentes del rol
         List<mPermiso> permisos = controlador.obtenerPermisosPorRol(idRol);
@@ -638,7 +645,7 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
         }
     }
 
-    private List<mPermiso> obtenerMenusDesdaInterfaz() {
+    public List<mPermiso> obtenerMenusDesdaInterfaz() {
         List<mPermiso> menus = new ArrayList<>();
 
         vPrincipal ventanaPrincipal = obtenerVentanaPrincipal();
@@ -688,6 +695,52 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
         }
 
         return menus;
+    }
+
+    /**
+     * Método para actualizar menús desde vMenus (sincronización directa)
+     */
+    public void actualizarMenusDesdeVMenus(List<mPermiso> menusSincronizados) {
+        // Guardar el rol actualmente seleccionado
+        ComboBoxItem rolSeleccionado = (ComboBoxItem) jComboBox1.getSelectedItem();
+
+        // Actualizar la tabla con los nuevos menús
+        cargarMenusEnTablaDesdeCache(menusSincronizados);
+
+        // Si hay un rol seleccionado, cargar sus permisos
+        if (rolSeleccionado != null) {
+            List<mPermiso> permisos = controlador.obtenerPermisosPorRol(rolSeleccionado.getId());
+            aplicarPermisosEnTabla(permisos);
+        }
+
+        // Indicar que la ventana ha sido actualizada
+        JOptionPane.showMessageDialog(this,
+                "Tabla de menús actualizada con " + menusSincronizados.size() + " elementos.\n"
+                + "Los permisos existentes se han mantenido.",
+                "Actualización Completada",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Cargar menús desde cache en lugar de base de datos
+     */
+    private void cargarMenusEnTablaDesdeCache(List<mPermiso> menus) {
+        DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
+        modelo.setRowCount(0); // Limpiar tabla existente
+
+        for (mPermiso menu : menus) {
+            modelo.addRow(new Object[]{
+                menu.getIdMenu(),
+                menu.getNombreMenu(),
+                false, // VER
+                false, // CREAR
+                false, // LEER
+                false, // ACTUALIZAR
+                false // ELIMINAR
+            });
+        }
+
+        jTable1.repaint();
     }
 
     @SuppressWarnings("unchecked")
