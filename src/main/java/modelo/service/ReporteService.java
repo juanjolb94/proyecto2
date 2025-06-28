@@ -2,6 +2,8 @@ package modelo.service;
 
 import java.io.File;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
@@ -11,6 +13,8 @@ import java.util.stream.Collectors;
 import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
 import javax.print.attribute.standard.Copies;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import modelo.DatabaseConnection;
 import modelo.ProductosDAO;
@@ -159,13 +163,18 @@ public class ReporteService {
             compilarReporteSiEsNecesario(reporteNombre);
 
             // Obtener datos específicos según el reporte
-            if (reporteNombre.equals("inventario_productos")) {
-                return generarReporteInventario(parametros);
-            } else {
-                // Reporte genérico usando la conexión a base de datos
-                JasperReport jasperReport = obtenerReporteCompilado(reporteNombre);
-                Connection connection = DatabaseConnection.getConnection();
-                return JasperFillManager.fillReport(jasperReport, parametros, connection);
+            switch (reporteNombre) {
+                case "inventario_productos":
+                    return generarReporteInventario(parametros);
+                case "reporte_compras":
+                    return generarReporteCompras(parametros);
+                case "reporte_ventas":
+                    return generarReporteVentas(parametros);
+                default:
+                    // Reporte genérico usando la conexión a base de datos
+                    JasperReport jasperReport = obtenerReporteCompilado(reporteNombre);
+                    Connection connection = DatabaseConnection.getConnection();
+                    return JasperFillManager.fillReport(jasperReport, parametros, connection);
             }
         } catch (JRException | SQLException e) {
             System.err.println("Error al generar reporte: " + e.getMessage());
@@ -457,5 +466,273 @@ public class ReporteService {
                     REPORTES_DIR + reporteNombre + ".jasper"
             );
         }
+    }
+
+    /**
+     * Genera específicamente el reporte de compras con filtros
+     */
+    private JasperPrint generarReporteCompras(Map<String, Object> parametros) throws SQLException, JRException {
+        System.out.println("=== GENERANDO REPORTE DE COMPRAS ===");
+
+        // Crear la consulta SQL base
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT ");
+        sql.append("    cc.id_compra, ");
+        sql.append("    cc.fecha_compra, ");
+        sql.append("    COALESCE(p.razon_social, 'Sin proveedor') as proveedor, ");
+        sql.append("    cc.tipo_documento, ");
+        sql.append("    cc.nro_documento, ");
+        sql.append("    cc.timbrado, ");
+        sql.append("    cc.condicion, ");
+        sql.append("    cc.subtotal, ");
+        sql.append("    cc.total_iva, ");
+        sql.append("    cc.total, ");
+        sql.append("    CASE WHEN cc.estado = 1 THEN 'Activo' ELSE 'Anulado' END as estado ");
+        sql.append("FROM compras_cabecera cc ");
+        sql.append("LEFT JOIN proveedores p ON cc.id_proveedor = p.id_proveedor ");
+        sql.append("WHERE 1=1 ");
+
+        List<Object> parametrosSql = new ArrayList<>();
+
+        // Aplicar filtros de fecha
+        if (parametros.containsKey("fecha_desde") && parametros.get("fecha_desde") != null) {
+            sql.append("AND cc.fecha_compra >= ? ");
+            parametrosSql.add(parametros.get("fecha_desde"));
+        }
+
+        if (parametros.containsKey("fecha_hasta") && parametros.get("fecha_hasta") != null) {
+            sql.append("AND cc.fecha_compra <= ? ");
+            parametrosSql.add(parametros.get("fecha_hasta"));
+        }
+
+        // Aplicar filtro de proveedor
+        if (parametros.containsKey("proveedor_id")) {
+            Integer proveedorId = (Integer) parametros.get("proveedor_id");
+            if (proveedorId != null && proveedorId > 0) {
+                sql.append("AND cc.id_proveedor = ? ");
+                parametrosSql.add(proveedorId);
+            }
+        }
+
+        // Aplicar filtro de tipo documento
+        if (parametros.containsKey("tipo_documento") && parametros.get("tipo_documento") != null) {
+            sql.append("AND cc.tipo_documento = ? ");
+            parametrosSql.add(parametros.get("tipo_documento"));
+        }
+
+        // Aplicar filtro de condición
+        if (parametros.containsKey("condicion") && parametros.get("condicion") != null) {
+            sql.append("AND cc.condicion = ? ");
+            parametrosSql.add(parametros.get("condicion"));
+        }
+
+        // Aplicar filtro de número de documento
+        if (parametros.containsKey("numero_documento") && parametros.get("numero_documento") != null) {
+            sql.append("AND cc.nro_documento LIKE ? ");
+            parametrosSql.add("%" + parametros.get("numero_documento") + "%");
+        }
+
+        // Aplicar filtro de timbrado
+        if (parametros.containsKey("timbrado") && parametros.get("timbrado") != null) {
+            sql.append("AND cc.timbrado LIKE ? ");
+            parametrosSql.add("%" + parametros.get("timbrado") + "%");
+        }
+
+        // Aplicar filtro de incluir anulados
+        if (parametros.containsKey("incluir_anulados") && parametros.get("incluir_anulados") != null) {
+            Boolean incluirAnulados = (Boolean) parametros.get("incluir_anulados");
+            if (!incluirAnulados) {
+                sql.append("AND cc.estado = 1 ");
+            }
+        }
+
+        sql.append("ORDER BY cc.fecha_compra DESC, cc.id_compra DESC");
+
+        System.out.println("SQL Compras: " + sql.toString());
+        System.out.println("Parámetros: " + parametrosSql);
+
+        // Ejecutar consulta y crear lista de datos
+        List<Map<String, Object>> datosReporte = new ArrayList<>();
+
+        try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+
+            // Establecer parámetros
+            for (int i = 0; i < parametrosSql.size(); i++) {
+                ps.setObject(i + 1, parametrosSql.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> fila = new HashMap<>();
+                    fila.put("id_compra", rs.getInt("id_compra"));
+                    fila.put("fecha_compra", rs.getDate("fecha_compra"));
+                    fila.put("proveedor", rs.getString("proveedor"));
+                    fila.put("tipo_documento", rs.getString("tipo_documento"));
+                    fila.put("nro_documento", rs.getString("nro_documento"));
+                    fila.put("timbrado", rs.getString("timbrado"));
+                    fila.put("condicion", rs.getString("condicion"));
+                    fila.put("subtotal", rs.getBigDecimal("subtotal"));
+                    fila.put("total_iva", rs.getBigDecimal("total_iva"));
+                    fila.put("total", rs.getBigDecimal("total"));
+                    fila.put("estado", rs.getString("estado"));
+
+                    datosReporte.add(fila);
+                }
+            }
+        }
+
+        System.out.println("Registros encontrados: " + datosReporte.size());
+
+        // IMPORTANTE: Si no hay datos, crear al menos un registro vacío para que se muestre noData
+        if (datosReporte.isEmpty()) {
+            System.out.println("No hay datos - agregando registro vacío para noData");
+            // No agregamos datos, dejamos la lista vacía para que se active noData
+        }
+
+        // Obtener el reporte compilado
+        JasperReport jasperReport = obtenerReporteCompilado("reporte_compras");
+
+        // Generar el reporte con la colección de datos
+        JasperPrint jasperPrint = JasperFillManager.fillReport(
+                jasperReport,
+                parametros,
+                new JRBeanCollectionDataSource(datosReporte)
+        );
+
+        System.out.println("JasperPrint generado - Páginas: " + jasperPrint.getPages().size());
+        return jasperPrint;
+    }
+
+    /**
+     * Genera específicamente el reporte de ventas con filtros
+     */
+    private JasperPrint generarReporteVentas(Map<String, Object> parametros) throws SQLException, JRException {
+        System.out.println("=== GENERANDO REPORTE DE VENTAS ===");
+
+        // Crear la consulta SQL base
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT ");
+        sql.append("    v.id, ");
+        sql.append("    v.fecha, ");
+        sql.append("    v.numero_factura, ");
+        sql.append("    COALESCE(c.nombre, 'Cliente ocasional') as cliente, ");
+        sql.append("    COALESCE(u.NombreUsuario, 'Usuario') as usuario, ");
+        sql.append("    COALESCE(v.tipo_venta, 'CONTADO') as tipo_venta, ");
+        sql.append("    COALESCE(v.estado, 'PENDIENTE') as estado, ");
+        sql.append("    COALESCE(v.subtotal, 0) as subtotal, ");
+        sql.append("    COALESCE(v.impuesto_total, 0) as impuesto_total, ");
+        sql.append("    COALESCE(v.total, 0) as total, ");
+        sql.append("    CASE WHEN v.anulado = 1 THEN 'Sí' ELSE 'No' END as anulado ");
+        sql.append("FROM ventas v ");
+        sql.append("LEFT JOIN clientes c ON v.id_cliente = c.id_cliente ");
+        sql.append("LEFT JOIN usuarios u ON v.id_usuario = u.UsuarioID ");
+        sql.append("WHERE 1=1 ");
+
+        List<Object> parametrosSql = new ArrayList<>();
+
+        // Aplicar filtros de fecha
+        if (parametros.containsKey("fecha_desde") && parametros.get("fecha_desde") != null) {
+            sql.append("AND DATE(v.fecha) >= ? ");
+            parametrosSql.add(parametros.get("fecha_desde"));
+        }
+
+        if (parametros.containsKey("fecha_hasta") && parametros.get("fecha_hasta") != null) {
+            sql.append("AND DATE(v.fecha) <= ? ");
+            parametrosSql.add(parametros.get("fecha_hasta"));
+        }
+
+        // Aplicar filtro de cliente
+        if (parametros.containsKey("cliente_id")) {
+            Integer clienteId = (Integer) parametros.get("cliente_id");
+            if (clienteId != null && clienteId > 0) {
+                sql.append("AND v.id_cliente = ? ");
+                parametrosSql.add(clienteId);
+            }
+        }
+
+        // Aplicar filtro de usuario
+        if (parametros.containsKey("usuario_id")) {
+            Integer usuarioId = (Integer) parametros.get("usuario_id");
+            if (usuarioId != null && usuarioId > 0) {
+                sql.append("AND v.id_usuario = ? ");
+                parametrosSql.add(usuarioId);
+            }
+        }
+
+        // Aplicar filtro de tipo de venta
+        if (parametros.containsKey("tipo_venta") && parametros.get("tipo_venta") != null) {
+            sql.append("AND v.tipo_venta = ? ");
+            parametrosSql.add(parametros.get("tipo_venta"));
+        }
+
+        // Aplicar filtro de estado
+        if (parametros.containsKey("estado") && parametros.get("estado") != null) {
+            sql.append("AND v.estado = ? ");
+            parametrosSql.add(parametros.get("estado"));
+        }
+
+        // Aplicar filtro de número de factura
+        if (parametros.containsKey("numero_factura") && parametros.get("numero_factura") != null) {
+            sql.append("AND v.numero_factura LIKE ? ");
+            parametrosSql.add("%" + parametros.get("numero_factura") + "%");
+        }
+
+        // Aplicar filtro de incluir anulados
+        if (parametros.containsKey("incluir_anulados") && parametros.get("incluir_anulados") != null) {
+            Boolean incluirAnulados = (Boolean) parametros.get("incluir_anulados");
+            if (!incluirAnulados) {
+                sql.append("AND v.anulado = 0 ");
+            }
+        }
+
+        sql.append("ORDER BY v.fecha DESC, v.id DESC");
+
+        System.out.println("SQL Ventas: " + sql.toString());
+        System.out.println("Parámetros: " + parametrosSql);
+
+        // Ejecutar consulta y crear lista de datos
+        List<Map<String, Object>> datosReporte = new ArrayList<>();
+
+        try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement ps = connection.prepareStatement(sql.toString())) {
+
+            // Establecer parámetros
+            for (int i = 0; i < parametrosSql.size(); i++) {
+                ps.setObject(i + 1, parametrosSql.get(i));
+            }
+
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> fila = new HashMap<>();
+                    fila.put("id", rs.getInt("id"));
+                    fila.put("fecha", rs.getTimestamp("fecha"));
+                    fila.put("numero_factura", rs.getString("numero_factura"));
+                    fila.put("cliente", rs.getString("cliente"));
+                    fila.put("usuario", rs.getString("usuario"));
+                    fila.put("tipo_venta", rs.getString("tipo_venta"));
+                    fila.put("estado", rs.getString("estado"));
+                    fila.put("subtotal", rs.getLong("subtotal"));
+                    fila.put("impuesto_total", rs.getLong("impuesto_total"));
+                    fila.put("total", rs.getLong("total"));
+                    fila.put("anulado", rs.getString("anulado"));
+
+                    datosReporte.add(fila);
+                }
+            }
+        }
+
+        System.out.println("Registros encontrados: " + datosReporte.size());
+
+        // Obtener el reporte compilado
+        JasperReport jasperReport = obtenerReporteCompilado("reporte_ventas");
+
+        // Generar el reporte con la colección de datos
+        JasperPrint jasperPrint = JasperFillManager.fillReport(
+                jasperReport,
+                parametros,
+                new JRBeanCollectionDataSource(datosReporte)
+        );
+
+        System.out.println("JasperPrint generado - Páginas: " + jasperPrint.getPages().size());
+        return jasperPrint;
     }
 }

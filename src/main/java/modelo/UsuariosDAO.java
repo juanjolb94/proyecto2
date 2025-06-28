@@ -1,6 +1,8 @@
 package modelo;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UsuariosDAO {
 
@@ -148,6 +150,32 @@ public class UsuariosDAO {
         Connection connection = DatabaseConnection.getConnection();
         PreparedStatement ps = connection.prepareStatement(sql);
         return ps.executeQuery();
+    }
+
+    // Método para listar todos los usuarios (para combobox)
+    public List<Object[]> listarUsuarios() throws SQLException {
+        List<Object[]> usuarios = new ArrayList<>();
+        String sql = "SELECT u.UsuarioID, u.NombreUsuario, u.PersonaID, u.RolID, u.Activo, "
+                + "CONCAT(p.nombre, ' ', p.apellido) as persona_completa "
+                + "FROM usuarios u "
+                + "LEFT JOIN personas p ON u.PersonaID = p.id_persona "
+                + "WHERE u.Activo = 1 " // Solo usuarios activos
+                + "ORDER BY u.NombreUsuario";
+
+        try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement ps = connection.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                usuarios.add(new Object[]{
+                    rs.getInt("UsuarioID"),
+                    rs.getString("NombreUsuario"),
+                    rs.getInt("PersonaID"),
+                    rs.getInt("RolID"),
+                    rs.getBoolean("Activo"),
+                    rs.getString("persona_completa")
+                });
+            }
+        }
+        return usuarios;
     }
 
     // Método para verificar si existe un nombre de usuario

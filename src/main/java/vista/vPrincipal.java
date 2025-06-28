@@ -846,6 +846,11 @@ public class vPrincipal extends javax.swing.JFrame {
         mCompras.add(jSeparator2);
 
         mRepCompras.setText("Reporte Compras");
+        mRepCompras.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mRepComprasActionPerformed(evt);
+            }
+        });
         mCompras.add(mRepCompras);
 
         menuBar.add(mCompras);
@@ -889,6 +894,11 @@ public class vPrincipal extends javax.swing.JFrame {
         mVentas.add(jSeparator4);
 
         mRepVentas.setText("Reporte Ventas");
+        mRepVentas.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mRepVentasActionPerformed(evt);
+            }
+        });
         mVentas.add(mRepVentas);
 
         menuBar.add(mVentas);
@@ -1532,6 +1542,62 @@ public class vPrincipal extends javax.swing.JFrame {
                 null
         );
     }//GEN-LAST:event_mMenusActionPerformed
+
+    private void mRepComprasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRepComprasActionPerformed
+        abrirVentanaGenerica(
+                () -> {
+                    vReport reporte = new vReport("reporte_compras", "filtroCompras");
+                    // Configurar tamaño
+                    int maxWidth = (int) (jDesktopPane2.getWidth() * 0.9);
+                    int maxHeight = (int) (jDesktopPane2.getHeight() * 0.9);
+                    double aspectRatio = 1.53;
+                    int width, height;
+
+                    if (maxWidth * aspectRatio <= maxHeight) {
+                        width = maxWidth;
+                        height = (int) (width * aspectRatio);
+                    } else {
+                        height = maxHeight;
+                        width = (int) (height / aspectRatio);
+                    }
+
+                    reporte.setSize(width, height);
+                    reporte.setPreferredSize(new Dimension(width, height));
+                    return reporte;
+                },
+                vReport.class,
+                "Reporte de Compras",
+                vReport::imFiltrar
+        );
+    }//GEN-LAST:event_mRepComprasActionPerformed
+
+    private void mRepVentasActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRepVentasActionPerformed
+        abrirVentanaGenerica(
+                () -> {
+                    vReport reporte = new vReport("reporte_ventas", "filtroVentas");
+                    // Configurar tamaño
+                    int maxWidth = (int) (jDesktopPane2.getWidth() * 0.9);
+                    int maxHeight = (int) (jDesktopPane2.getHeight() * 0.9);
+                    double aspectRatio = 1.53;
+                    int width, height;
+
+                    if (maxWidth * aspectRatio <= maxHeight) {
+                        width = maxWidth;
+                        height = (int) (width * aspectRatio);
+                    } else {
+                        height = maxHeight;
+                        width = (int) (height / aspectRatio);
+                    }
+
+                    reporte.setSize(width, height);
+                    reporte.setPreferredSize(new Dimension(width, height));
+                    return reporte;
+                },
+                vReport.class,
+                "Reporte de Ventas",
+                vReport::imFiltrar
+        );
+    }//GEN-LAST:event_mRepVentasActionPerformed
 
     public JDesktopPane getDesktopPane() {
         return jDesktopPane2;

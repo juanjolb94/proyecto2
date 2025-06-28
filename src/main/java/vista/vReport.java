@@ -25,6 +25,9 @@ import net.sf.jasperreports.view.save.JRMultipleSheetsXlsSaveContributor;
 import net.sf.jasperreports.view.save.JRRtfSaveContributor;
 import net.sf.jasperreports.view.save.JRHtmlSaveContributor;
 import net.sf.jasperreports.view.save.JRCsvSaveContributor;
+import vista.vFiltroCompras;
+import vista.vFiltroVentas;
+import java.text.SimpleDateFormat;
 
 public class vReport extends JInternalFrame implements myInterface {
 
@@ -32,6 +35,7 @@ public class vReport extends JInternalFrame implements myInterface {
     private String filtroVista;
     private JPanel jpReporte;
     private ReporteService reporteService;
+    private SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
 
     /**
      * Constructor para el visor de reportes
@@ -248,12 +252,66 @@ public class vReport extends JInternalFrame implements myInterface {
 
             case "filtroCompras":
                 // Filtro para reporte de compras
-                // Implementar cuando se cree la vista de filtro de compras
-                return true;
+                vFiltroCompras filtroComp = new vFiltroCompras(null, true);
+                filtroComp.setVisible(true);
+
+                if (filtroComp.isAceptado()) {
+                    // Agregar los parámetros específicos para el reporte de compras
+                    parametros.put("fecha_desde", filtroComp.getFechaDesde());
+                    parametros.put("fecha_hasta", filtroComp.getFechaHasta());
+                    parametros.put("proveedor_id", filtroComp.getProveedorId());
+                    parametros.put("tipo_documento", filtroComp.getTipoDocumento());
+                    parametros.put("condicion", filtroComp.getCondicion());
+                    parametros.put("numero_documento", filtroComp.getNumeroDocumento());
+                    parametros.put("timbrado", filtroComp.getTimbrado());
+                    parametros.put("incluir_anulados", filtroComp.getIncluirAnulados());
+
+                    // Parámetros adicionales para mostrar en el reporte - CORREGIDO
+                    parametros.put("PROVEEDOR_FILTRO", filtroComp.getProveedorTexto());
+
+                    // Manejar fechas null - CORREGIDO
+                    if (filtroComp.getFechaDesde() != null && filtroComp.getFechaHasta() != null) {
+                        parametros.put("FECHA_FILTRO", sdf.format(filtroComp.getFechaDesde()) + " - " + sdf.format(filtroComp.getFechaHasta()));
+                    } else {
+                        parametros.put("FECHA_FILTRO", "Todas las fechas");
+                    }
+
+                    return true;
+                } else {
+                    return false; // Usuario canceló
+                }
 
             case "filtroVentas":
-                // Implementar para ventas si es necesario
-                return true;
+                // Filtro para reporte de ventas
+                vFiltroVentas filtroVent = new vFiltroVentas(null, true);
+                filtroVent.setVisible(true);
+
+                if (filtroVent.isAceptado()) {
+                    // Agregar los parámetros específicos para el reporte de ventas
+                    parametros.put("fecha_desde", filtroVent.getFechaDesde());
+                    parametros.put("fecha_hasta", filtroVent.getFechaHasta());
+                    parametros.put("cliente_id", filtroVent.getClienteId());
+                    parametros.put("usuario_id", filtroVent.getUsuarioId());
+                    parametros.put("tipo_venta", filtroVent.getTipoVenta());
+                    parametros.put("estado", filtroVent.getEstado());
+                    parametros.put("numero_factura", filtroVent.getNumeroFactura());
+                    parametros.put("incluir_anulados", filtroVent.getIncluirAnulados());
+
+                    // Parámetros adicionales para mostrar en el reporte - CORREGIDO
+                    parametros.put("CLIENTE_FILTRO", filtroVent.getClienteTexto());
+                    parametros.put("USUARIO_FILTRO", filtroVent.getUsuarioTexto());
+
+                    // Manejar fechas null - CORREGIDO
+                    if (filtroVent.getFechaDesde() != null && filtroVent.getFechaHasta() != null) {
+                        parametros.put("FECHA_FILTRO", sdf.format(filtroVent.getFechaDesde()) + " - " + sdf.format(filtroVent.getFechaHasta()));
+                    } else {
+                        parametros.put("FECHA_FILTRO", "Todas las fechas");
+                    }
+
+                    return true;
+                } else {
+                    return false; // Usuario canceló
+                }
 
             default:
                 // Si no hay un filtro específico, solo usar los parámetros por defecto

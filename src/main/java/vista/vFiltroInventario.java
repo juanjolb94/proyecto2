@@ -15,9 +15,6 @@ public class vFiltroInventario extends JDialog {
 
     /**
      * Constructor para el diálogo de filtro de inventario
-     *
-     * @param parent Ventana padre
-     * @param modal True para hacer el diálogo modal
      */
     public vFiltroInventario(Frame parent, boolean modal) {
         super(parent, "Filtro de Inventario", modal);
@@ -82,8 +79,6 @@ public class vFiltroInventario extends JDialog {
 
     /**
      * Validar que los filtros sean coherentes
-     *
-     * @return true si los filtros son válidos
      */
     private boolean validarFiltros() {
         int stockMin = getStockMinimo();
@@ -103,8 +98,6 @@ public class vFiltroInventario extends JDialog {
 
     /**
      * Carga las categorías disponibles en el ComboBox
-     *
-     * @throws SQLException si ocurre un error en la base de datos
      */
     private void cargarCategorias() throws SQLException {
         // Limpiar el combo
@@ -134,8 +127,6 @@ public class vFiltroInventario extends JDialog {
 
     /**
      * Carga las marcas disponibles en el ComboBox
-     *
-     * @throws SQLException si ocurre un error en la base de datos
      */
     private void cargarMarcas() throws SQLException {
         // Limpiar el combo
@@ -186,8 +177,6 @@ public class vFiltroInventario extends JDialog {
 
     /**
      * Obtener el ID de categoría seleccionada
-     *
-     * @return ID de categoría (0 para todas)
      */
     public int getCategoriaId() {
         ItemCombo<Integer> item = (ItemCombo<Integer>) comboCategorias.getSelectedItem();
@@ -196,8 +185,6 @@ public class vFiltroInventario extends JDialog {
 
     /**
      * Obtener el ID de marca seleccionada
-     *
-     * @return ID de marca (0 para todas)
      */
     public int getMarcaId() {
         ItemCombo<Integer> item = (ItemCombo<Integer>) comboMarcas.getSelectedItem();
@@ -206,8 +193,6 @@ public class vFiltroInventario extends JDialog {
 
     /**
      * Verificar si se deben mostrar productos inactivos
-     *
-     * @return true si se deben mostrar inactivos
      */
     public boolean getMostrarInactivos() {
         return chkMostrarInactivos.isSelected();
@@ -215,8 +200,6 @@ public class vFiltroInventario extends JDialog {
 
     /**
      * Obtener el valor mínimo de stock para filtrar
-     *
-     * @return valor mínimo de stock
      */
     public int getStockMinimo() {
         return (Integer) spinnerStockDesde.getValue();
@@ -224,8 +207,6 @@ public class vFiltroInventario extends JDialog {
 
     /**
      * Obtener el valor máximo de stock para filtrar
-     *
-     * @return valor máximo de stock
      */
     public int getStockMaximo() {
         return (Integer) spinnerStockHasta.getValue();
@@ -233,8 +214,6 @@ public class vFiltroInventario extends JDialog {
 
     /**
      * Verificar si el usuario aceptó el filtro
-     *
-     * @return true si se aceptó, false si se canceló
      */
     public boolean isAceptado() {
         return aceptado;
@@ -327,7 +306,6 @@ public class vFiltroInventario extends JDialog {
                         .addGroup(panelFiltrosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(comboMarcas, javax.swing.GroupLayout.PREFERRED_SIZE, 182, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(comboCategorias, javax.swing.GroupLayout.PREFERRED_SIZE, 182, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                    .addComponent(chkMostrarInactivos)
                     .addGroup(panelFiltrosLayout.createSequentialGroup()
                         .addGroup(panelFiltrosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addComponent(lblDesde)
@@ -337,6 +315,9 @@ public class vFiltroInventario extends JDialog {
                             .addComponent(spinnerStockHasta, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                             .addComponent(spinnerStockDesde, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+            .addGroup(panelFiltrosLayout.createSequentialGroup()
+                .addComponent(chkMostrarInactivos)
+                .addGap(0, 0, Short.MAX_VALUE))
         );
         panelFiltrosLayout.setVerticalGroup(
             panelFiltrosLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -376,7 +357,7 @@ public class vFiltroInventario extends JDialog {
                 .addContainerGap()
                 .addComponent(btnAceptar, javax.swing.GroupLayout.PREFERRED_SIZE, 75, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                .addComponent(btnCancelar, javax.swing.GroupLayout.PREFERRED_SIZE, 75, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(btnCancelar, javax.swing.GroupLayout.PREFERRED_SIZE, 81, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(btnLimpiar, javax.swing.GroupLayout.PREFERRED_SIZE, 75, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
@@ -386,10 +367,10 @@ public class vFiltroInventario extends JDialog {
             .addGroup(panelBotonesLayout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(panelBotonesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(btnLimpiar, javax.swing.GroupLayout.DEFAULT_SIZE, 40, Short.MAX_VALUE)
-                    .addGroup(panelBotonesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                        .addComponent(btnAceptar, javax.swing.GroupLayout.DEFAULT_SIZE, 40, Short.MAX_VALUE)
-                        .addComponent(btnCancelar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                    .addComponent(btnAceptar, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(panelBotonesLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(btnCancelar, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(btnLimpiar, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
 
