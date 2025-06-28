@@ -1,7 +1,6 @@
 package vista;
 
 import java.awt.BorderLayout;
-import java.io.File;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -10,14 +9,10 @@ import javax.swing.JInternalFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import interfaces.myInterface;
-import java.awt.Component;
-import java.awt.Dimension;
 import javax.swing.SwingUtilities;
-import modelo.DatabaseConnection;
 import modelo.service.ReporteService;
 import net.sf.jasperreports.engine.JasperPrint;
 import net.sf.jasperreports.swing.JRViewer;
-import net.sf.jasperreports.view.JasperViewer;
 import net.sf.jasperreports.view.save.JRPdfSaveContributor;
 import net.sf.jasperreports.view.save.JRSingleSheetXlsSaveContributor;
 import net.sf.jasperreports.view.save.JRDocxSaveContributor;
@@ -25,8 +20,6 @@ import net.sf.jasperreports.view.save.JRMultipleSheetsXlsSaveContributor;
 import net.sf.jasperreports.view.save.JRRtfSaveContributor;
 import net.sf.jasperreports.view.save.JRHtmlSaveContributor;
 import net.sf.jasperreports.view.save.JRCsvSaveContributor;
-import vista.vFiltroCompras;
-import vista.vFiltroVentas;
 import java.text.SimpleDateFormat;
 
 public class vReport extends JInternalFrame implements myInterface {
@@ -304,6 +297,35 @@ public class vReport extends JInternalFrame implements myInterface {
                     // Manejar fechas null - CORREGIDO
                     if (filtroVent.getFechaDesde() != null && filtroVent.getFechaHasta() != null) {
                         parametros.put("FECHA_FILTRO", sdf.format(filtroVent.getFechaDesde()) + " - " + sdf.format(filtroVent.getFechaHasta()));
+                    } else {
+                        parametros.put("FECHA_FILTRO", "Todas las fechas");
+                    }
+
+                    return true;
+                } else {
+                    return false; // Usuario canceló
+                }
+
+            case "filtroIngresosEgresos":
+                // Filtro para reporte de ingresos-egresos
+                vFiltroIngresosEgresos filtroIE = new vFiltroIngresosEgresos(null, true);
+                filtroIE.setVisible(true);
+
+                if (filtroIE.isAceptado()) {
+                    // Agregar los parámetros específicos para el reporte de ingresos-egresos
+                    parametros.put("fecha_desde", filtroIE.getFechaDesde());
+                    parametros.put("fecha_hasta", filtroIE.getFechaHasta());
+                    parametros.put("usuario_id", filtroIE.getUsuarioId());
+                    parametros.put("tipo_movimiento", filtroIE.getTipoMovimiento());
+                    parametros.put("incluir_anulados", filtroIE.getIncluirAnulados());
+
+                    // Parámetros adicionales para mostrar en el reporte
+                    parametros.put("USUARIO_FILTRO", filtroIE.getUsuarioTexto());
+                    parametros.put("TIPO_FILTRO", filtroIE.getTipoMovimiento());
+
+                    // Manejar fechas null
+                    if (filtroIE.getFechaDesde() != null && filtroIE.getFechaHasta() != null) {
+                        parametros.put("FECHA_FILTRO", sdf.format(filtroIE.getFechaDesde()) + " - " + sdf.format(filtroIE.getFechaHasta()));
                     } else {
                         parametros.put("FECHA_FILTRO", "Todas las fechas");
                     }

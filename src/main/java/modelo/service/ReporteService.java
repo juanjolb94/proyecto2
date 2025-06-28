@@ -170,6 +170,8 @@ public class ReporteService {
                     return generarReporteCompras(parametros);
                 case "reporte_ventas":
                     return generarReporteVentas(parametros);
+                case "reporte_ingresos_egresos":
+                    return generarReporteIngresosEgresos(parametros);
                 default:
                     // Reporte genérico usando la conexión a base de datos
                     JasperReport jasperReport = obtenerReporteCompilado(reporteNombre);
@@ -734,5 +736,182 @@ public class ReporteService {
 
         System.out.println("JasperPrint generado - Páginas: " + jasperPrint.getPages().size());
         return jasperPrint;
+    }
+
+    /**
+     * Genera específicamente el reporte de ingresos-egresos con filtros
+     */
+    private JasperPrint generarReporteIngresosEgresos(Map<String, Object> parametros) throws SQLException, JRException {
+        System.out.println("=== GENERANDO REPORTE DE INGRESOS-EGRESOS ===");
+
+        List<Map<String, Object>> datosReporte = new ArrayList<>();
+
+        // Consultar INGRESOS
+        StringBuilder sqlIngresos = new StringBuilder();
+        sqlIngresos.append("SELECT ");
+        sqlIngresos.append("    ic.id, ");
+        sqlIngresos.append("    ic.fecha, ");
+        sqlIngresos.append("    ic.monto, ");
+        sqlIngresos.append("    ic.concepto, ");
+        sqlIngresos.append("    ic.usuario, ");
+        sqlIngresos.append("    'INGRESO' as tipo_movimiento, ");
+        sqlIngresos.append("    CASE WHEN ic.anulado = 1 THEN 'SI' ELSE 'NO' END as anulado, ");
+        sqlIngresos.append("    ic.id_caja ");
+        sqlIngresos.append("FROM ingresos_caja ic ");
+        sqlIngresos.append("WHERE 1=1 ");
+
+        List<Object> parametrosIngresos = new ArrayList<>();
+
+        // Aplicar filtros para ingresos
+        aplicarFiltrosMovimientos(sqlIngresos, parametrosIngresos, parametros, "ic", true);
+
+        // Consultar EGRESOS
+        StringBuilder sqlEgresos = new StringBuilder();
+        sqlEgresos.append("SELECT ");
+        sqlEgresos.append("    g.id, ");
+        sqlEgresos.append("    g.fecha, ");
+        sqlEgresos.append("    g.monto, ");
+        sqlEgresos.append("    g.concepto, ");
+        sqlEgresos.append("    g.usuario, ");
+        sqlEgresos.append("    'EGRESO' as tipo_movimiento, ");
+        sqlEgresos.append("    CASE WHEN g.anulado = 1 THEN 'SI' ELSE 'NO' END as anulado, ");
+        sqlEgresos.append("    g.id_caja ");
+        sqlEgresos.append("FROM gastos g ");
+        sqlEgresos.append("WHERE 1=1 ");
+
+        List<Object> parametrosEgresos = new ArrayList<>();
+
+        // Aplicar filtros para egresos
+        aplicarFiltrosMovimientos(sqlEgresos, parametrosEgresos, parametros, "g", false);
+
+        try (Connection connection = DatabaseConnection.getConnection()) {
+
+            // Ejecutar consulta de INGRESOS
+            if (debeIncluirTipo(parametros, "INGRESO")) {
+                try (PreparedStatement ps = connection.prepareStatement(sqlIngresos.toString())) {
+                    for (int i = 0; i < parametrosIngresos.size(); i++) {
+                        ps.setObject(i + 1, parametrosIngresos.get(i));
+                    }
+
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            datosReporte.add(crearFilaMovimiento(rs));
+                        }
+                    }
+                }
+            }
+
+            // Ejecutar consulta de EGRESOS
+            if (debeIncluirTipo(parametros, "EGRESO")) {
+                try (PreparedStatement ps = connection.prepareStatement(sqlEgresos.toString())) {
+                    for (int i = 0; i < parametrosEgresos.size(); i++) {
+                        ps.setObject(i + 1, parametrosEgresos.get(i));
+                    }
+
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            datosReporte.add(crearFilaMovimiento(rs));
+                        }
+                    }
+                }
+            }
+        }
+
+        // Ordenar por fecha descendente
+        datosReporte.sort((a, b) -> {
+            java.sql.Timestamp fechaA = (java.sql.Timestamp) a.get("fecha");
+            java.sql.Timestamp fechaB = (java.sql.Timestamp) b.get("fecha");
+            return fechaB.compareTo(fechaA);
+        });
+
+        System.out.println("Registros encontrados: " + datosReporte.size());
+
+        // Obtener el reporte compilado
+        JasperReport jasperReport = obtenerReporteCompilado("reporte_ingresos_egresos");
+
+        // Generar el reporte con la colección de datos
+        JasperPrint jasperPrint = JasperFillManager.fillReport(
+                jasperReport,
+                parametros,
+                new JRBeanCollectionDataSource(datosReporte)
+        );
+
+        System.out.println("JasperPrint generado - Páginas: " + jasperPrint.getPages().size());
+        return jasperPrint;
+    }
+
+    /**
+     * Aplica filtros comunes para movimientos de caja
+     */
+    private void aplicarFiltrosMovimientos(StringBuilder sql, List<Object> parametrosSql,
+            Map<String, Object> parametros, String alias, boolean esIngreso) {
+
+        // Filtros de fecha
+        if (parametros.containsKey("fecha_desde") && parametros.get("fecha_desde") != null) {
+            sql.append("AND DATE(").append(alias).append(".fecha) >= ? ");
+            parametrosSql.add(parametros.get("fecha_desde"));
+        }
+
+        if (parametros.containsKey("fecha_hasta") && parametros.get("fecha_hasta") != null) {
+            sql.append("AND DATE(").append(alias).append(".fecha) <= ? ");
+            parametrosSql.add(parametros.get("fecha_hasta"));
+        }
+
+        // Filtro de usuario
+        if (parametros.containsKey("usuario_id")) {
+            Integer usuarioId = (Integer) parametros.get("usuario_id");
+            if (usuarioId != null && usuarioId > 0) {
+                sql.append("AND ").append(alias).append(".usuario = (SELECT NombreUsuario FROM usuarios WHERE UsuarioID = ?) ");
+                parametrosSql.add(usuarioId);
+            }
+        }
+
+        // Filtro de incluir anulados
+        if (parametros.containsKey("incluir_anulados") && parametros.get("incluir_anulados") != null) {
+            Boolean incluirAnulados = (Boolean) parametros.get("incluir_anulados");
+            if (!incluirAnulados) {
+                sql.append("AND ").append(alias).append(".anulado = 0 ");
+            }
+        }
+
+        sql.append("ORDER BY ").append(alias).append(".fecha DESC");
+    }
+
+    /**
+     * Determina si debe incluir un tipo de movimiento según los filtros
+     */
+    private boolean debeIncluirTipo(Map<String, Object> parametros, String tipo) {
+        if (!parametros.containsKey("tipo_movimiento")) {
+            return true; // Incluir todos por defecto
+        }
+
+        String tipoFiltro = (String) parametros.get("tipo_movimiento");
+
+        switch (tipoFiltro) {
+            case "TODOS LOS MOVIMIENTOS":
+                return true;
+            case "SOLO INGRESOS":
+                return "INGRESO".equals(tipo);
+            case "SOLO EGRESOS":
+                return "EGRESO".equals(tipo);
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Crea una fila de datos para el reporte desde un ResultSet
+     */
+    private Map<String, Object> crearFilaMovimiento(ResultSet rs) throws SQLException {
+        Map<String, Object> fila = new HashMap<>();
+        fila.put("id", rs.getInt("id"));
+        fila.put("fecha", rs.getTimestamp("fecha"));
+        fila.put("monto", rs.getBigDecimal("monto"));
+        fila.put("concepto", rs.getString("concepto"));
+        fila.put("usuario", rs.getString("usuario"));
+        fila.put("tipo_movimiento", rs.getString("tipo_movimiento"));
+        fila.put("anulado", rs.getString("anulado"));
+        fila.put("id_caja", rs.getInt("id_caja"));
+        return fila;
     }
 }

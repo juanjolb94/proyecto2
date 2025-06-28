@@ -1179,6 +1179,11 @@ public class vPrincipal extends javax.swing.JFrame {
         mTesoreria.add(jSeparator8);
 
         mRepCaja.setText("Reporte de Ingresos - Egresos");
+        mRepCaja.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mRepCajaActionPerformed(evt);
+            }
+        });
         mTesoreria.add(mRepCaja);
 
         menuBar.add(mTesoreria);
@@ -1806,6 +1811,10 @@ public class vPrincipal extends javax.swing.JFrame {
                 vReport::imFiltrar
         );
     }//GEN-LAST:event_mRepVentasActionPerformed
+
+    private void mRepCajaActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRepCajaActionPerformed
+        mostrarReporteRefactorizado("ingresos_egresos", "filtroIngresosEgresos");
+    }//GEN-LAST:event_mRepCajaActionPerformed
 
     public JDesktopPane getDesktopPane() {
         return jDesktopPane2;
