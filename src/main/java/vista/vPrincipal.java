@@ -16,6 +16,7 @@ import java.util.function.Supplier;
 import javax.swing.JOptionPane;
 import javax.swing.event.InternalFrameAdapter;
 import javax.swing.event.InternalFrameEvent;
+import modelo.PermisosDAO;
 
 public class vPrincipal extends javax.swing.JFrame {
 
@@ -32,6 +33,7 @@ public class vPrincipal extends javax.swing.JFrame {
 
     public vPrincipal() {
         initComponents();
+        configurarActionCommands();
         configurarBarraEstado();
 
         // Establecer en pantalla completa (maximizado)
@@ -98,12 +100,218 @@ public class vPrincipal extends javax.swing.JFrame {
         }
     }
 
+    private void configurarActionCommands() {
+        // ==============================================
+        // MENÚS PRINCIPALES
+        // ==============================================
+        mArchivo.setActionCommand("mArchivo");
+        mEdicion.setActionCommand("mEdicion");
+        mCompras.setActionCommand("mCompras");
+        mVentas.setActionCommand("mVentas");
+        mStock.setActionCommand("mStock");
+        mTesoreria.setActionCommand("mTesoreria");
+        mSeguridad.setActionCommand("mSeguridad");
+
+        // ==============================================
+        // MENÚ ARCHIVO
+        // ==============================================
+        mNuevo.setActionCommand("mNuevo");
+        mGuardar.setActionCommand("mGuardar");
+        mBorrar.setActionCommand("mBorrar");
+        mBuscar.setActionCommand("mBuscar");
+        mImprimir.setActionCommand("mImprimir");
+        mCerrarVentana.setActionCommand("mCerrarVentana");
+        mSalir.setActionCommand("mSalir");
+
+        // ==============================================
+        // MENÚ EDICIÓN
+        // ==============================================
+        mPrimero.setActionCommand("mPrimero");
+        mAnterior.setActionCommand("mAnterior");
+        mSiguiente.setActionCommand("mSiguiente");
+        mUltimo.setActionCommand("mUltimo");
+        mInsDetalle.setActionCommand("mInsDetalle");
+        mDelDetalle.setActionCommand("mDelDetalle");
+
+        // ==============================================
+        // MENÚ COMPRAS
+        // ==============================================
+        mProveedores.setActionCommand("mProveedores");
+        mRegCompras.setActionCommand("mRegCompras");
+        mRepCompras.setActionCommand("mRepCompras");
+
+        // ==============================================
+        // MENÚ VENTAS
+        // ==============================================
+        mClientes.setActionCommand("mClientes");
+        mTalonarios.setActionCommand("mTalonarios");
+        mRegVentaDirecta.setActionCommand("mRegVentaDirecta");
+        mRegVentas.setActionCommand("mRegVentas");
+        mRepVentas.setActionCommand("mRepVentas");
+
+        // ==============================================
+        // MENÚ STOCK
+        // ==============================================
+        mProductos.setActionCommand("mProductos");
+        mListaPrecios.setActionCommand("mListaPrecios");
+        mAjustarStock.setActionCommand("mAjustarStock");
+        mAprobarStock.setActionCommand("mAprobarStock");
+        mRepInvent.setActionCommand("mRepInvent");
+
+        // ==============================================
+        // MENÚ TESORERÍA (LOS MÁS IMPORTANTES PARA EL PROBLEMA)
+        // ==============================================
+        mAperturaCierreCaja.setActionCommand("mAperturaCierreCaja");
+        mIngCaja.setActionCommand("mIngCaja");
+        mRepCaja.setActionCommand("mRepCaja");
+
+        // ==============================================
+        // MENÚ SEGURIDAD
+        // ==============================================
+        mPersonas.setActionCommand("mPersonas");
+        mUsuarios.setActionCommand("mUsuarios");
+        mRoles.setActionCommand("mRoles");
+        mPermisos.setActionCommand("mPermisos");
+        mMenus.setActionCommand("mMenus");
+    }
+
     private void aplicarPermisosSegunRol() {
         int rolUsuario = vLogin.getRolAutenticado();
         if (rolUsuario > 0) {
-            vPermisos permisos = new vPermisos();
-            permisos.aplicarPermisosAMenus(rolUsuario);
+            // Aplicar permisos directamente en esta ventana
+            aplicarPermisosDirectamente(rolUsuario);
         }
+    }
+
+    private void aplicarPermisosDirectamente(int idRol) {
+        JMenuBar menuBar = this.getJMenuBar();
+        if (menuBar == null) {
+            return;
+        }
+
+        // Usar PermisosDAO directamente
+        PermisosDAO permisosDAO = new PermisosDAO();
+
+        // Aplicar permisos a cada menú
+        aplicarPermisosAMenuEspecifico(menuBar.getMenu(0), idRol, permisosDAO); // Archivo
+        aplicarPermisosAMenuEspecifico(menuBar.getMenu(1), idRol, permisosDAO); // Edición
+        aplicarPermisosAMenuEspecifico(menuBar.getMenu(2), idRol, permisosDAO); // Compras
+        aplicarPermisosAMenuEspecifico(menuBar.getMenu(3), idRol, permisosDAO); // Ventas
+        aplicarPermisosAMenuEspecifico(menuBar.getMenu(4), idRol, permisosDAO); // Stock
+        aplicarPermisosAMenuEspecifico(menuBar.getMenu(5), idRol, permisosDAO); // Tesorería
+        aplicarPermisosAMenuEspecifico(menuBar.getMenu(6), idRol, permisosDAO); // Seguridad
+    }
+
+    private void aplicarPermisosAMenuEspecifico(JMenu menu, int idRol, PermisosDAO permisosDAO) {
+        if (menu == null) {
+            return;
+        }
+
+        // Si es Administrador (rol ID = 1), habilitar todo
+        if (idRol == 1) {
+            menu.setEnabled(true);
+            for (int i = 0; i < menu.getItemCount(); i++) {
+                JMenuItem item = menu.getItem(i);
+                if (item != null && item.getText() != null && !item.getText().trim().isEmpty()) {
+                    item.setEnabled(true);
+                }
+            }
+            return;
+        }
+
+        try {
+            // Crear el mapeo completo de textos a nombres de componentes
+            Map<String, String> mapeoComponentes = crearMapeoComponentes();
+
+            // Verificar permiso para el menú principal
+            String nombreMenu = "m" + menu.getText().replace(" ", "");
+            boolean tienePermiso = permisosDAO.tienePermiso(idRol, nombreMenu, "ver");
+            menu.setEnabled(tienePermiso);
+
+            // Si el menú principal no tiene permisos, deshabilitar todos los submenús
+            if (!tienePermiso) {
+                for (int i = 0; i < menu.getItemCount(); i++) {
+                    JMenuItem item = menu.getItem(i);
+                    if (item != null) {
+                        item.setEnabled(false);
+                    }
+                }
+                return;
+            }
+
+            // Aplicar permisos a submenús usando el mapeo
+            for (int i = 0; i < menu.getItemCount(); i++) {
+                JMenuItem item = menu.getItem(i);
+                if (item != null && item.getText() != null && !item.getText().trim().isEmpty()) {
+                    String textoItem = item.getText();
+                    String nombreComponente = mapeoComponentes.get(textoItem);
+
+                    if (nombreComponente != null) {
+                        boolean tienePermisoItem = permisosDAO.tienePermiso(idRol, nombreComponente, "ver");
+                        item.setEnabled(tienePermisoItem);
+                    } else {
+                        // Fallback para menús no mapeados
+                        item.setEnabled(false);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error aplicando permisos a menú " + menu.getText() + ": " + e.getMessage());
+        }
+    }
+
+    private Map<String, String> crearMapeoComponentes() {
+        Map<String, String> mapeoComponentes = new HashMap<>();
+
+        // Menús de Compras
+        mapeoComponentes.put("Gestionar Proveedores", "mProveedores");
+        mapeoComponentes.put("Registrar Compra", "mRegCompras");
+        mapeoComponentes.put("Reporte Compras", "mRepCompras");
+
+        // Menús de Ventas
+        mapeoComponentes.put("Gestionar Clientes", "mClientes");
+        mapeoComponentes.put("Talonarios de Factura", "mTalonarios");
+        mapeoComponentes.put("Registrar Venta Directa", "mRegVentaDirecta");
+        mapeoComponentes.put("Registrar Ventas", "mRegVentas");
+        mapeoComponentes.put("Reporte Ventas", "mRepVentas");
+
+        // Menús de Stock
+        mapeoComponentes.put("Gestionar Productos", "mProductos");
+        mapeoComponentes.put("Lista de Precios", "mListaPrecios");
+        mapeoComponentes.put("Ajustar Stock", "mAjustarStock");
+        mapeoComponentes.put("Aprobar Ajuste de Stock", "mAprobarStock");
+        mapeoComponentes.put("Reporte de Inventario", "mRepInvent");
+
+        // Menús de Tesorería - AJUSTAR A LOS TEXTOS REALES
+        mapeoComponentes.put("Apertura / Cierre de caja", "mAperturaCierreCaja");
+        mapeoComponentes.put("Registrar Movimiento de Caja", "mIngCaja");
+        mapeoComponentes.put("Reporte de Ingresos - Egresos", "mRepCaja");
+
+        // Menús de Seguridad
+        mapeoComponentes.put("Personas", "mPersonas");
+        mapeoComponentes.put("Usuarios", "mUsuarios");
+        mapeoComponentes.put("Roles", "mRoles");
+        mapeoComponentes.put("Permisos", "mPermisos");
+        mapeoComponentes.put("Menus", "mMenus");
+
+        // Menús de Archivo
+        mapeoComponentes.put("Nuevo", "mNuevo");
+        mapeoComponentes.put("Guardar", "mGuardar");
+        mapeoComponentes.put("Borrar", "mBorrar");
+        mapeoComponentes.put("Buscar", "mBuscar");
+        mapeoComponentes.put("Imprimir", "mImprimir");
+        mapeoComponentes.put("Cerrar Ventana", "mCerrarVentana");
+        mapeoComponentes.put("Salir", "mSalir");
+
+        // Menús de Edición
+        mapeoComponentes.put("Primero", "mPrimero");
+        mapeoComponentes.put("Anterior", "mAnterior");
+        mapeoComponentes.put("Siguiente", "mSiguiente");
+        mapeoComponentes.put("Ultimo", "mUltimo");
+        mapeoComponentes.put("Ins. Detalle", "mInsDetalle");
+        mapeoComponentes.put("Del. Detalle", "mDelDetalle");
+
+        return mapeoComponentes;
     }
 
     private void ajustarTamanoVentana() {
