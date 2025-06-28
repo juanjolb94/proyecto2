@@ -11,6 +11,7 @@
               rightMargin="20" 
               topMargin="20" 
               bottomMargin="20" 
+              whenNoDataType="AllSectionsNoDetail"
               uuid="4eedbb89-b4f6-4469-9ab6-f642a1688cf9">
 
     <property name="com.jaspersoft.studio.data.defaultdataadapter" value="One Empty Record"/>
