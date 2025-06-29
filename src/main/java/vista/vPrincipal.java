@@ -274,6 +274,7 @@ public class vPrincipal extends javax.swing.JFrame {
         mapeoComponentes.put("Registrar Venta Directa", "mRegVentaDirecta");
         mapeoComponentes.put("Registrar Ventas", "mRegVentas");
         mapeoComponentes.put("Reporte Ventas", "mRepVentas");
+        mapeoComponentes.put("Reporte Productos Más Vendidos", "mRepProductosMasVendidos");
 
         // Menús de Stock
         mapeoComponentes.put("Gestionar Productos", "mProductos");
@@ -416,6 +417,18 @@ public class vPrincipal extends javax.swing.JFrame {
                 case "CHART_LINE":
                     icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignC.CHART_LINE);
                     break;
+                case "STOREFRONT":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignS.STOREFRONT);
+                    break;
+                case "STAR":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignS.STAR);
+                    break;
+                case "FLASH":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignF.FLASH);
+                    break;
+                case "RECEIPT":
+                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignR.RECEIPT);
+                    break;
 
                 // Menú Stock
                 case "PACKAGE":
@@ -548,8 +561,10 @@ public class vPrincipal extends javax.swing.JFrame {
         // Menú Ventas
         setIconSafely(mClientes, "ACCOUNT_MULTIPLE", iconSize, menuIconColor);
         setIconSafely(mTalonarios, "BOOK_OPEN_PAGE_VARIANT", iconSize, menuIconColor);
+        setIconSafely(mRegVentaDirecta, "STOREFRONT", iconSize, menuIconColor);
         setIconSafely(mRegVentas, "CASH_REGISTER", iconSize, menuIconColor);
         setIconSafely(mRepVentas, "CHART_LINE", iconSize, menuIconColor);
+        setIconSafely(mRepProductosMasVendidos, "STAR", iconSize, menuIconColor);
 
         // Menú Stock
         setIconSafely(mProductos, "PACKAGE_VARIANT_CLOSED", iconSize, menuIconColor);
@@ -604,7 +619,7 @@ public class vPrincipal extends javax.swing.JFrame {
             // Menú Compras
             mProveedores, mRegCompras, mRepCompras,
             // Menú Ventas
-            mClientes, mTalonarios, mRegVentas, mRepVentas,
+            mClientes, mTalonarios, mRegVentas, mRepVentas, mRepProductosMasVendidos,
             // Menú Stock
             mProductos, mAjustarStock, mListaPrecios, mRepInvent,
             // Menú Tesorería
@@ -871,6 +886,7 @@ public class vPrincipal extends javax.swing.JFrame {
         mRegVentas = new javax.swing.JMenuItem();
         jSeparator4 = new javax.swing.JPopupMenu.Separator();
         mRepVentas = new javax.swing.JMenuItem();
+        mRepProductosMasVendidos = new javax.swing.JMenuItem();
         mStock = new javax.swing.JMenu();
         mProductos = new javax.swing.JMenuItem();
         jSeparator5 = new javax.swing.JPopupMenu.Separator();
@@ -1108,6 +1124,14 @@ public class vPrincipal extends javax.swing.JFrame {
             }
         });
         mVentas.add(mRepVentas);
+
+        mRepProductosMasVendidos.setText("Reporte Productos Mas Vendidos");
+        mRepProductosMasVendidos.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mRepProductosMasVendidosActionPerformed(evt);
+            }
+        });
+        mVentas.add(mRepProductosMasVendidos);
 
         menuBar.add(mVentas);
 
@@ -1816,6 +1840,34 @@ public class vPrincipal extends javax.swing.JFrame {
         mostrarReporteRefactorizado("ingresos_egresos", "filtroIngresosEgresos");
     }//GEN-LAST:event_mRepCajaActionPerformed
 
+    private void mRepProductosMasVendidosActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRepProductosMasVendidosActionPerformed
+        abrirVentanaGenerica(
+                () -> {
+                    vReport reporte = new vReport("productos_mas_vendidos", "filtroProductosMasVendidos");
+                    // Configurar tamaño
+                    int maxWidth = (int) (jDesktopPane2.getWidth() * 0.9);
+                    int maxHeight = (int) (jDesktopPane2.getHeight() * 0.9);
+                    double aspectRatio = 1.53;
+                    int width, height;
+
+                    if (maxWidth * aspectRatio <= maxHeight) {
+                        width = maxWidth;
+                        height = (int) (width * aspectRatio);
+                    } else {
+                        height = maxHeight;
+                        width = (int) (height / aspectRatio);
+                    }
+
+                    reporte.setSize(width, height);
+                    reporte.setPreferredSize(new Dimension(width, height));
+                    return reporte;
+                },
+                vReport.class,
+                "Reporte de Productos Más Vendidos",
+                vReport::imFiltrar
+        );
+    }//GEN-LAST:event_mRepProductosMasVendidosActionPerformed
+
     public JDesktopPane getDesktopPane() {
         return jDesktopPane2;
     }
@@ -1895,6 +1947,7 @@ public class vPrincipal extends javax.swing.JFrame {
     private javax.swing.JMenuItem mRepCaja;
     private javax.swing.JMenuItem mRepCompras;
     private javax.swing.JMenuItem mRepInvent;
+    private javax.swing.JMenuItem mRepProductosMasVendidos;
     private javax.swing.JMenuItem mRepVentas;
     private javax.swing.JMenuItem mRoles;
     private javax.swing.JMenuItem mSalir;

@@ -533,6 +533,7 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
         mapeoComponentes.put("Registrar Venta Directa", "mRegVentaDirecta");
         mapeoComponentes.put("Registrar Ventas", "mRegVentas");
         mapeoComponentes.put("Reporte Ventas", "mRepVentas");
+        mapeoComponentes.put("Reporte Productos Más Vendidos", "mRepProductosMasVendidos");
 
         // Menús de Stock
         mapeoComponentes.put("Productos", "mProductos");

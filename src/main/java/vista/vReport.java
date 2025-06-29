@@ -335,6 +335,29 @@ public class vReport extends JInternalFrame implements myInterface {
                     return false; // Usuario canceló
                 }
 
+            case "filtroProductosMasVendidos":
+                // Filtro para reporte de productos más vendidos
+                vFiltroProductosMasVendidos filtroProds = new vFiltroProductosMasVendidos(null, true);
+                filtroProds.setVisible(true);
+
+                if (filtroProds.isAceptado()) {
+                    // Agregar los parámetros específicos para el reporte de productos más vendidos
+                    parametros.put("fecha_desde", filtroProds.getFechaDesde());
+                    parametros.put("fecha_hasta", filtroProds.getFechaHasta());
+                    parametros.put("limite_productos", filtroProds.getLimiteProductos());
+                    parametros.put("tipo_ordenamiento", filtroProds.getTipoOrdenamiento());
+                    parametros.put("incluir_anulados", filtroProds.getIncluirAnulados());
+
+                    // Parámetros adicionales para mostrar en el reporte
+                    parametros.put("FECHA_FILTRO", filtroProds.getFechaTexto());
+                    parametros.put("ORDENAMIENTO_FILTRO", filtroProds.getTipoOrdenamiento());
+                    parametros.put("LIMITE_FILTRO", String.valueOf(filtroProds.getLimiteProductos()));
+
+                    return true;
+                } else {
+                    return false; // Usuario canceló
+                }
+
             default:
                 // Si no hay un filtro específico, solo usar los parámetros por defecto
                 return true;
