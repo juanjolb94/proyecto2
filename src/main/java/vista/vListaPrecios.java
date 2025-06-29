@@ -475,6 +475,7 @@ public class vListaPrecios extends javax.swing.JInternalFrame implements myInter
         jLabel5 = new javax.swing.JLabel();
         jScrollPane1 = new javax.swing.JScrollPane();
         txtObservaciones = new javax.swing.JTextArea();
+        btnEstablecerDefecto = new javax.swing.JButton();
         panelDetalles = new javax.swing.JPanel();
         jScrollPane2 = new javax.swing.JScrollPane();
         tblDetalles = new javax.swing.JTable();
@@ -494,6 +495,13 @@ public class vListaPrecios extends javax.swing.JInternalFrame implements myInter
         txtObservaciones.setColumns(20);
         txtObservaciones.setRows(5);
         jScrollPane1.setViewportView(txtObservaciones);
+
+        btnEstablecerDefecto.setText("Establecer como Defecto");
+        btnEstablecerDefecto.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                btnEstablecerDefectoActionPerformed(evt);
+            }
+        });
 
         javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
         jPanel1.setLayout(jPanel1Layout);
@@ -528,7 +536,9 @@ public class vListaPrecios extends javax.swing.JInternalFrame implements myInter
                                 .addComponent(cboMoneda, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addGap(172, 172, 172))
                             .addComponent(jScrollPane1))))
-                .addContainerGap(226, Short.MAX_VALUE))
+                .addGap(18, 18, 18)
+                .addComponent(btnEstablecerDefecto, javax.swing.GroupLayout.PREFERRED_SIZE, 160, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -552,7 +562,8 @@ public class vListaPrecios extends javax.swing.JInternalFrame implements myInter
                 .addGap(18, 18, 18)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                     .addComponent(jLabel5)
-                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                    .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                    .addComponent(btnEstablecerDefecto, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addContainerGap(25, Short.MAX_VALUE))
         );
 
@@ -600,7 +611,17 @@ public class vListaPrecios extends javax.swing.JInternalFrame implements myInter
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
+    private void btnEstablecerDefectoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEstablecerDefectoActionPerformed
+        int idActual = getIdCabecera();
+        if (idActual > 0) {
+            controlador.establecerComoDefectoVenta(idActual);
+        } else {
+            mostrarError("Debe seleccionar una lista de precios válida");
+        }
+    }//GEN-LAST:event_btnEstablecerDefectoActionPerformed
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
+    private javax.swing.JButton btnEstablecerDefecto;
     private javax.swing.JComboBox<String> cboMoneda;
     private javax.swing.JCheckBox chkActivo;
     private com.toedter.calendar.JDateChooser dcFechaCreacion;

@@ -396,6 +396,49 @@ public class cListaPrecios implements myInterface {
         JOptionPane.showMessageDialog(vista, mensaje, "Información", JOptionPane.INFORMATION_MESSAGE);
     }
 
+    public void establecerComoDefectoVenta(int idPrecio) {
+        try {
+            if (idPrecio <= 0) {
+                mostrarError("Debe seleccionar una lista de precios válida");
+                return;
+            }
+
+            // Verificar que la lista existe y está activa
+            mPrecioCabecera precio = cabeceraDAO.obtenerPrecioPorId(idPrecio);
+            if (precio == null) {
+                mostrarError("No se encontró la lista de precios");
+                return;
+            }
+
+            if (!precio.isActivo()) {
+                mostrarError("Solo se puede establecer como defecto una lista activa");
+                return;
+            }
+
+            // Confirmar acción
+            int confirmacion = JOptionPane.showConfirmDialog(
+                    vista,
+                    "¿Establecer '" + precio.getNombre() + "' como lista por defecto para ventas?",
+                    "Confirmar Lista por Defecto",
+                    JOptionPane.YES_NO_OPTION
+            );
+
+            if (confirmacion == JOptionPane.YES_OPTION) {
+                // Desactivar todas las listas como defecto
+                cabeceraDAO.limpiarDefectoVenta();
+
+                // Establecer la seleccionada como defecto
+                cabeceraDAO.establecerDefectoVenta(idPrecio);
+
+                mostrarMensaje("Lista '" + precio.getNombre() + "' establecida como defecto para ventas");
+
+            }
+
+        } catch (SQLException e) {
+            mostrarError("Error al establecer lista por defecto: " + e.getMessage());
+        }
+    }
+
     // Implementación de métodos de navegación requeridos por la interfaz myInterface
     @Override
     public void imGrabar() {
