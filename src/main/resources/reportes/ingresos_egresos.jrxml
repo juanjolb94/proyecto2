@@ -41,6 +41,10 @@
     <parameter name="FECHA_FILTRO" class="java.lang.String" isForPrompting="false"/>
     <parameter name="USUARIO_FILTRO" class="java.lang.String" isForPrompting="false"/>
     <parameter name="TIPO_FILTRO" class="java.lang.String" isForPrompting="false"/>
+    
+    <queryString>
+        <![CDATA[]]>
+    </queryString>
 
     <!-- Campos -->
     <field name="id" class="java.lang.Integer"/>
@@ -315,11 +319,11 @@
     <summary>
         <band height="80" splitType="Stretch">
             <rectangle>
-                <reportElement mode="Opaque" x="0" y="0" width="802" height="80" forecolor="#CCCCCC" backcolor="#E8E8E8" uuid="summary-bg"/>
+                <reportElement mode="Opaque" x="0" y="0" width="802" height="80" forecolor="#CCCCCC" backcolor="#E8E8E8" uuid="8a4b0b2c-5a46-4d2b-9a11-5b7c7b4e6e8f"/>
             </rectangle>
 
             <staticText>
-                <reportElement style="Column header" x="10" y="10" width="80" height="15" uuid="sum-title"/>
+                <reportElement style="Column header" x="10" y="10" width="80" height="15" uuid="2dbd4708-4ef9-4a87-b612-d9f0a3a75ecf"/>
                 <textElement verticalAlignment="Middle">
                     <font size="10" isBold="true"/>
                 </textElement>
@@ -327,7 +331,7 @@
             </staticText>
 
             <staticText>
-                <reportElement x="50" y="30" width="100" height="15" uuid="lbl-ingresos"/>
+                <reportElement x="50" y="30" width="100" height="15" uuid="3dbd4708-4ef9-4a87-b612-d9f0a3a75ecf"/>
                 <textElement verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
                 </textElement>
@@ -335,7 +339,7 @@
             </staticText>
 
             <textField pattern="#,##0" isBlankWhenNull="true">
-                <reportElement x="150" y="30" width="80" height="15" uuid="val-ingresos"/>
+                <reportElement x="150" y="30" width="80" height="15" uuid="4dbd4708-4ef9-4a87-b612-d9f0a3a75ecf"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
                 </textElement>
@@ -343,7 +347,7 @@
             </textField>
 
             <staticText>
-                <reportElement x="250" y="30" width="100" height="15" uuid="lbl-egresos"/>
+                <reportElement x="250" y="30" width="100" height="15" uuid="5dbd4708-4ef9-4a87-b612-d9f0a3a75ecf"/>
                 <textElement verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
                 </textElement>
@@ -351,7 +355,7 @@
             </staticText>
 
             <textField pattern="#,##0" isBlankWhenNull="true">
-                <reportElement x="350" y="30" width="80" height="15" uuid="val-egresos"/>
+                <reportElement x="350" y="30" width="80" height="15" uuid="6dbd4708-4ef9-4a87-b612-d9f0a3a75ecf"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
                 </textElement>
@@ -359,7 +363,7 @@
             </textField>
 
             <staticText>
-                <reportElement x="450" y="30" width="100" height="15" uuid="lbl-saldo"/>
+                <reportElement x="450" y="30" width="100" height="15" uuid="7dbd4708-4ef9-4a87-b612-d9f0a3a75ecf"/>
                 <textElement verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
                 </textElement>
@@ -367,7 +371,7 @@
             </staticText>
 
             <textField pattern="#,##0" isBlankWhenNull="true">
-                <reportElement x="550" y="30" width="80" height="15" uuid="val-saldo"/>
+                <reportElement x="550" y="30" width="80" height="15" uuid="8dbd4708-4ef9-4a87-b612-d9f0a3a75ecf"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
                 </textElement>
@@ -375,7 +379,7 @@
             </textField>
 
             <staticText>
-                <reportElement x="50" y="50" width="100" height="15" uuid="lbl-registros"/>
+                <reportElement x="50" y="50" width="100" height="15" uuid="9dbd4708-4ef9-4a87-b612-d9f0a3a75ecf"/>
                 <textElement verticalAlignment="Middle">
                     <font size="9"/>
                 </textElement>
@@ -383,7 +387,7 @@
             </staticText>
 
             <textField isBlankWhenNull="true">
-                <reportElement x="150" y="50" width="50" height="15" uuid="val-registros"/>
+                <reportElement x="150" y="50" width="50" height="15" uuid="adbd4708-4ef9-4a87-b612-d9f0a3a75ecf"/>
                 <textElement textAlignment="Right" verticalAlignment="Middle">
                     <font size="9" isBold="true"/>
                 </textElement>
