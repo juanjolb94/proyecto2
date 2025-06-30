@@ -19,6 +19,12 @@
     <parameter name="FECHA_GENERACION" class="java.util.Date" isForPrompting="false">
         <defaultValueExpression><![CDATA[new java.util.Date()]]></defaultValueExpression>
     </parameter>
+    <parameter name="ES_REIMPRESION" class="java.lang.Boolean" isForPrompting="false">
+        <defaultValueExpression><![CDATA[false]]></defaultValueExpression>
+    </parameter>
+    <parameter name="MARCA_REIMPRESION" class="java.lang.String" isForPrompting="false">
+        <defaultValueExpression><![CDATA[""]]></defaultValueExpression>
+    </parameter>
 
     <!-- Query mejorado con todos los datos necesarios -->
     <queryString>

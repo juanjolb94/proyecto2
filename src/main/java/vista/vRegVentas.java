@@ -2,7 +2,6 @@ package vista;
 
 import controlador.cRegVentas;
 import interfaces.myInterface;
-import java.awt.Color;
 import java.awt.Frame;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -734,8 +733,12 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
     // Imprimir factura (llamado desde vPrincipal)
     private void imprimirFactura() {
-        // TODO: Implementar impresión de factura
-        mostrarMensaje("Función de impresión en desarrollo.");
+        try {
+            // Llamar al método de impresión del controlador
+            controlador.imImprimir();
+        } catch (Exception e) {
+            mostrarError("Error al imprimir: " + e.getMessage());
+        }
     }
 
     // MÉTODOS PÚBLICOS PARA EL CONTROLADOR
@@ -821,19 +824,26 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
     }
 
     public void cargarDatosVenta(mVentas venta) {
+        // Cargar datos básicos
         txtIdVenta.setText(String.valueOf(venta.getIdVenta()));
         txtFecha.setText(sdf.format(venta.getFecha()));
         chkAnulado.setSelected(venta.isAnulado());
-        txtObservaciones.setText(venta.getObservaciones());
+        txtObservaciones.setText(venta.getObservaciones() != null ? venta.getObservaciones() : "");
 
         // Seleccionar cliente
-        for (int i = 0; i < comboCliente.getItemCount(); i++) {
-            cRegVentas.ItemCombo item = (cRegVentas.ItemCombo) comboCliente.getItemAt(i);
-            if ((int) item.getValor() == venta.getIdCliente()) {
-                comboCliente.setSelectedIndex(i);
-                break;
-            }
+        seleccionarClientePorId(venta.getIdCliente());
+
+        // Actualizar datos del talonario si existen
+        if (venta.getNumeroFactura() != null) {
+            // Puedes mostrar el número de factura en algún label si existe
+            System.out.println("Factura cargada: " + venta.getNumeroFactura());
         }
+
+        // Actualizar totales
+        txtTotal.setText(dfNumeros.format(venta.getTotal()));
+
+        // Recalcular totales basado en detalles
+        recalcularTotales();
     }
 
     public void limpiarFormulario() {

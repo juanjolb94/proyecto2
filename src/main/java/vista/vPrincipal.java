@@ -970,6 +970,11 @@ public class vPrincipal extends javax.swing.JFrame {
 
         mImprimir.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_P, java.awt.event.InputEvent.CTRL_DOWN_MASK));
         mImprimir.setText("Imprimir");
+        mImprimir.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mImprimirActionPerformed(evt);
+            }
+        });
         mArchivo.add(mImprimir);
 
         mCerrarVentana.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_W, java.awt.event.InputEvent.CTRL_DOWN_MASK));
@@ -1867,6 +1872,18 @@ public class vPrincipal extends javax.swing.JFrame {
                 vReport::imFiltrar
         );
     }//GEN-LAST:event_mRepProductosMasVendidosActionPerformed
+
+    private void mImprimirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mImprimirActionPerformed
+        myInterface ventanaActiva = getCurrentWindow();
+        if (ventanaActiva != null) {
+            ventanaActiva.imImprimir(); // Llama al método imImprimir de la ventana activa
+        } else {
+            JOptionPane.showMessageDialog(this,
+                    "No hay ninguna ventana activa para imprimir.",
+                    "Información",
+                    JOptionPane.INFORMATION_MESSAGE);
+        }
+    }//GEN-LAST:event_mImprimirActionPerformed
 
     public JDesktopPane getDesktopPane() {
         return jDesktopPane2;
