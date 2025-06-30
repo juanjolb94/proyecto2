@@ -17,7 +17,7 @@
 
     <!-- Query para obtener datos de la venta -->
     <queryString>
-        <![CDATA[
+    <![CDATA[
     SELECT 
         v.id as id_venta,
         v.fecha,
@@ -31,10 +31,17 @@
         COALESCE(vd.precio_unitario, 0) as precio_unitario,
         COALESCE(vd.subtotal, 0) as subtotal,
         COALESCE(vd.codigo_barra, 'SIN-CODIGO') as codigo_barra,
-        COALESCE(vd.descripcion_producto, 'Producto sin descripción') as producto_descripcion,
+        COALESCE(
+            vd.descripcion_producto,
+            CONCAT(pc.nombre, ' - ', pd.descripcion),
+            pc.nombre,
+            'Producto'
+        ) as producto_descripcion,
         1 as item_numero
     FROM ventas v
     LEFT JOIN ventas_detalle vd ON v.id = vd.id_venta
+    LEFT JOIN productos_cabecera pc ON vd.id_producto = pc.id_producto
+    LEFT JOIN productos_detalle pd ON vd.id_producto = pd.id_producto AND vd.codigo_barra = pd.cod_barra
     WHERE v.id = $P{ID_VENTA}
     ORDER BY vd.id
     ]]>
@@ -69,7 +76,7 @@
                 <textElement textAlignment="Center">
                     <font fontName="Monospaced" size="10" isBold="true"/>
                 </textElement>
-                <text><![CDATA[NOMBRE DE TU EMPRESA]]></text>
+                <text><![CDATA[ROCK & CHOPP VILLARRICA]]></text>
             </staticText>
             
             <staticText>
@@ -77,7 +84,7 @@
                 <textElement textAlignment="Center">
                     <font fontName="Monospaced" size="8"/>
                 </textElement>
-                <text><![CDATA[RUC: 80000000-0]]></text>
+                <text><![CDATA[RUC: 3818632-2]]></text>
             </staticText>
             
             <staticText>
@@ -85,7 +92,7 @@
                 <textElement textAlignment="Center">
                     <font fontName="Monospaced" size="8"/>
                 </textElement>
-                <text><![CDATA[Dir: Tu dirección comercial]]></text>
+                <text><![CDATA[Bvard Bicentenario y Cnel Martinez]]></text>
             </staticText>
             
             <staticText>
@@ -93,7 +100,7 @@
                 <textElement textAlignment="Center">
                     <font fontName="Monospaced" size="8"/>
                 </textElement>
-                <text><![CDATA[Tel: (021) 000-000]]></text>
+                <text><![CDATA[Tel: (0971) 456-189]]></text>
             </staticText>
 
             <line>
@@ -176,43 +183,36 @@
     </detail>
 
     <!-- Pie de página -->
-    <pageFooter>
+    <summary>
         <band height="80" splitType="Stretch">
+            <!-- Mismo contenido del footer aquí -->
             <line>
                 <reportElement x="0" y="5" width="186" height="1"/>
             </line>
-
+        
             <textField>
                 <reportElement x="0" y="15" width="186" height="15"/>
                 <textElement textAlignment="Right">
                     <font fontName="Monospaced" size="10" isBold="true"/>
                 </textElement>
-                <textFieldExpression><![CDATA[String.format("TOTAL: Gs. %,d", $V{total_venta})]]></textFieldExpression>
+                <textFieldExpression><![CDATA["TOTAL: Gs. " + new java.text.DecimalFormat("#,##0").format($V{total_venta})]]></textFieldExpression>
             </textField>
-
-            <textField isBlankWhenNull="true">
-                <reportElement x="0" y="35" width="186" height="12"/>
-                <textElement>
-                    <font fontName="Monospaced" size="8"/>
-                </textElement>
-                <textFieldExpression><![CDATA[$F{observaciones} != null ? "Obs: " + $F{observaciones} : ""]]></textFieldExpression>
-            </textField>
-
+        
             <staticText>
-                <reportElement x="0" y="55" width="186" height="12"/>
+                <reportElement x="0" y="40" width="186" height="12"/>
                 <textElement textAlignment="Center">
                     <font fontName="Monospaced" size="8"/>
                 </textElement>
                 <text><![CDATA[¡Gracias por su compra!]]></text>
             </staticText>
-
-            <textField pattern="dd/MM/yyyy HH:mm">
-                <reportElement x="0" y="67" width="186" height="10"/>
+        
+            <textField>
+                <reportElement x="0" y="55" width="186" height="10"/>
                 <textElement textAlignment="Center">
                     <font fontName="Monospaced" size="6"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Impreso: " + new SimpleDateFormat("dd/MM/yyyy HH:mm").format(new java.util.Date())]]></textFieldExpression>
             </textField>
         </band>
-    </pageFooter>
+    </summary>
 </jasperReport>

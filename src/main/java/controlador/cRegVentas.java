@@ -11,6 +11,7 @@ import javax.swing.JInternalFrame;
 import javax.swing.table.DefaultTableModel;
 import modelo.VentasDAO;
 import modelo.mVentas;
+import modelo.service.ReporteService;
 import vista.vRegVentas;
 import servicio.sTalonarios;
 import vista.vTalonarios;
@@ -353,7 +354,7 @@ public class cRegVentas implements myInterface {
     // Método para guardar la venta
     public void guardarVenta() {
         try {
-            // Validaciones
+            // Validaciones existentes...
             if (ventaActual.getDetalles().isEmpty()) {
                 vista.mostrarError("No hay productos en la venta.");
                 return;
@@ -364,9 +365,7 @@ public class cRegVentas implements myInterface {
                 return;
             }
 
-            // VERIFICAR que el usuario esté establecido
             if (ventaActual.getIdUsuario() == 0) {
-                // Intentar establecerlo nuevamente si no está
                 ventaActual.setIdUsuario(vLogin.getIdUsuarioAutenticado());
 
                 if (ventaActual.getIdUsuario() == 0) {
@@ -386,9 +385,23 @@ public class cRegVentas implements myInterface {
             int idVenta = modelo.insertarVentaConTalonario(ventaActual);
 
             if (idVenta > 0) {
+                // ✅ VERIFICAR que el ID se estableció correctamente
+                System.out.println("=== DESPUÉS DE GUARDAR ===");
+                System.out.println("ID retornado: " + idVenta);
+                System.out.println("ID en ventaActual: " + ventaActual.getIdVenta());
+                System.out.println("==========================");
+
                 vista.mostrarMensaje("Venta guardada correctamente.\nFactura: "
                         + datosVenta.getNumeroFactura()
                         + "\nTimbrado: " + datosVenta.getNumeroTimbrado());
+
+                try {
+                    ReporteService reporteService = new ReporteService();
+                    reporteService.generarYGuardarTicket(ventaActual.getIdVenta());
+                } catch (Exception e) {
+                    System.err.println("Error al guardar PDF del ticket: " + e.getMessage());
+                    // No interrumpir el flujo si falla el guardado del PDF
+                }
 
                 // Actualizar para la siguiente venta
                 cargarDatosTalonarioActivo();
@@ -396,14 +409,19 @@ public class cRegVentas implements myInterface {
                 // Notificar cambio a ventana de talonarios
                 notificarVentanaTalonarios();
 
-                // Limpiar formulario para nueva venta
+                // ✅ PREGUNTAR IMPRESIÓN ANTES DE LIMPIAR
+                vista.preguntarImprimirFactura(ventaActual.getIdVenta());
+
+                // Limpiar formulario para nueva venta (DESPUÉS de la impresión)
                 limpiarFormulario();
 
             } else {
                 vista.mostrarError("Error al guardar la venta.");
             }
-        } catch (Exception e) {
+
+        } catch (SQLException e) {
             vista.mostrarError("Error al guardar venta: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

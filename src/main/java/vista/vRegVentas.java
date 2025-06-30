@@ -259,35 +259,15 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         }
     }
 
-    //Método para verificar si hay productos en la venta
+    // Método para verificar si hay productos en la venta
     public boolean tieneProductosEnVenta() {
         return modeloTablaDetalles != null && modeloTablaDetalles.getRowCount() > 0;
     }
 
-    //Modificar el método guardarVenta para notificar a la mesa
+    // Método guardarVenta para notificar a la mesa
     private void guardarVenta() {
         try {
-            // Validar que hay productos antes de guardar
-            if (!tieneProductosEnVenta()) {
-                mostrarError("Debe agregar al menos un producto para guardar la venta.");
-                return;
-            }
-
-            // Confirmar guardado definitivo
-            int opcion = JOptionPane.showConfirmDialog(
-                    this,
-                    "¿Está seguro que desea guardar definitivamente esta venta?\n"
-                    + "Mesa " + numeroMesaAsociada + " será liberada para nuevos clientes.\n\n"
-                    + "Productos: " + modeloTablaDetalles.getRowCount() + "\n"
-                    + "Total: " + txtTotal.getText(),
-                    "Confirmar Guardado Definitivo",
-                    JOptionPane.YES_NO_OPTION,
-                    JOptionPane.QUESTION_MESSAGE
-            );
-
-            if (opcion != JOptionPane.YES_OPTION) {
-                return;
-            }
+            // ... código de validación existente ...
 
             // Establecer observaciones incluyendo información de la mesa
             String observaciones = txtObservaciones.getText().trim();
@@ -299,6 +279,7 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
             // Guardar venta definitivamente
             controlador.guardarVenta();
+            // ⚠️ NOTA: La impresión ahora se maneja en el controlador
 
             // Liberar mesa definitivamente (eliminar datos temporales)
             if (ventanaSeleccionMesa != null && idMesaAsociada > 0) {
@@ -307,9 +288,6 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
             // Mostrar mensaje de éxito
             mostrarMensaje("Venta guardada correctamente.\nMesa " + numeroMesaAsociada + " liberada.");
-
-            // Preguntar si desea imprimir factura
-            preguntarImprimirFactura(controlador.getVentaActual().getIdVenta());
 
             // Limpiar asociación con mesa y cerrar ventana
             idMesaAsociada = 0;

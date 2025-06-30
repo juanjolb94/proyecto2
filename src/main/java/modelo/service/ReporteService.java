@@ -6,7 +6,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -14,6 +13,7 @@ import javax.print.attribute.HashPrintRequestAttributeSet;
 import javax.print.attribute.PrintRequestAttributeSet;
 import javax.print.attribute.standard.Copies;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 
 import modelo.DatabaseConnection;
@@ -1056,5 +1056,71 @@ public class ReporteService {
         JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parametros, conexion);
 
         return jasperPrint;
+    }
+
+    public void generarYGuardarTicket(int idVenta) throws Exception {
+        try {
+            Map<String, Object> parametros = new HashMap<>();
+            parametros.put("ID_VENTA", idVenta);
+            parametros.put("REPORT_TITLE", "Ticket de Venta");
+            parametros.put("FECHA_GENERACION", new Date());
+
+            JasperPrint jasperPrint = generarJasperPrint("ticket_venta", parametros);
+
+            if (jasperPrint != null) {
+                // Crear estructura de fechas
+                Date ahora = new Date();
+                String año = new SimpleDateFormat("yyyy").format(ahora);
+                String mes = new SimpleDateFormat("MM").format(ahora);
+                String dia = new SimpleDateFormat("dd").format(ahora);
+                String horaMinSeg = new SimpleDateFormat("HHmmss").format(ahora);
+
+                // Construir ruta paso a paso para mejor control
+                String rutaBase = "tickets_respaldo";
+                String rutaAño = rutaBase + File.separator + año;
+                String rutaMes = rutaAño + File.separator + mes;
+                String rutaDia = rutaMes + File.separator + dia;
+
+                // Crear cada nivel de carpeta
+                crearCarpetaSiNoExiste(rutaBase);
+                crearCarpetaSiNoExiste(rutaAño);
+                crearCarpetaSiNoExiste(rutaMes);
+                crearCarpetaSiNoExiste(rutaDia);
+
+                // Nombre del archivo
+                String nombreArchivo = String.format("ticket_venta_%d_%s%s%s_%s.pdf",
+                        idVenta, año, mes, dia, horaMinSeg);
+
+                String rutaCompleta = rutaDia + File.separator + nombreArchivo;
+
+                // Guardar PDF
+                JasperExportManager.exportReportToPdfFile(jasperPrint, rutaCompleta);
+
+                System.out.println("✅ Ticket guardado exitosamente:");
+                System.out.println("   Ruta: " + rutaCompleta);
+                System.out.println("   Tamaño: " + new File(rutaCompleta).length() + " bytes");
+
+            } else {
+                System.err.println("❌ Error: No se pudo generar el JasperPrint");
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error al guardar ticket: " + e.getMessage());
+            e.printStackTrace();
+            throw e; // Propagar el error si es crítico
+        }
+    }
+
+    // Método auxiliar para crear carpetas
+    private void crearCarpetaSiNoExiste(String ruta) {
+        File carpeta = new File(ruta);
+        if (!carpeta.exists()) {
+            boolean creada = carpeta.mkdir();
+            if (creada) {
+                System.out.println("📁 Carpeta creada: " + ruta);
+            } else {
+                System.err.println("❌ No se pudo crear carpeta: " + ruta);
+            }
+        }
     }
 }

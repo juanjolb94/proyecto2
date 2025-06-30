@@ -34,7 +34,7 @@ public class VentasDAO {
             psCabecera.setBoolean(6, venta.isAnulado());
             psCabecera.setString(7, venta.getObservaciones());
             psCabecera.setString(8, venta.getNumeroFactura());
-            psCabecera.setString(9, venta.getNumeroTimbrado());  // ← NUEVO CAMPO
+            psCabecera.setString(9, venta.getNumeroTimbrado());
 
             psCabecera.executeUpdate();
 
@@ -42,7 +42,15 @@ public class VentasDAO {
             ResultSet rs = psCabecera.getGeneratedKeys();
             if (rs.next()) {
                 idVenta = rs.getInt(1);
+
+                // ✅ CRÍTICO: Establecer el ID en el objeto venta
                 venta.setIdVenta(idVenta);
+
+                // 🔍 AGREGAR LOG PARA DEBUG
+                System.out.println("=== VENTA GUARDADA ===");
+                System.out.println("ID generado: " + idVenta);
+                System.out.println("ID en objeto: " + venta.getIdVenta());
+                System.out.println("=====================");
 
                 // Insertar detalles (código existente)
                 for (mVentas.DetalleVenta detalle : venta.getDetalles()) {
@@ -52,7 +60,7 @@ public class VentasDAO {
             }
 
             conexion.commit();
-            return idVenta;
+            return idVenta;  // ✅ Devolver el ID correcto
 
         } catch (SQLException e) {
             conexion.rollback();
@@ -114,8 +122,11 @@ public class VentasDAO {
 
     // Método para insertar un detalle de venta
     private void insertarDetalleVenta(int idVenta, mVentas.DetalleVenta detalle) throws SQLException {
+        // Obtener descripción del producto
+        String descripcionProducto = obtenerDescripcionProducto(detalle.getIdProducto(), detalle.getCodigoBarra());
+
         String sql = "INSERT INTO ventas_detalle (id_venta, id_producto, codigo_barra, "
-                + "cantidad, precio_unitario, subtotal) VALUES (?, ?, ?, ?, ?, ?)";
+                + "cantidad, precio_unitario, subtotal, descripcion_producto) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
             ps.setInt(1, idVenta);
@@ -124,12 +135,34 @@ public class VentasDAO {
             ps.setInt(4, detalle.getCantidad());
             ps.setInt(5, detalle.getPrecioUnitario());
             ps.setInt(6, detalle.getSubtotal());
+            ps.setString(7, descripcionProducto);
 
             ps.executeUpdate();
         }
     }
 
-    // Método para actualizar el stock al realizar una venta (adaptado a tu estructura)
+    // Método auxiliar para obtener descripción
+    private String obtenerDescripcionProducto(int idProducto, String codigoBarra) {
+        String sql = "SELECT CONCAT(pc.nombre, ' - ', pd.descripcion) as descripcion "
+                + "FROM productos_cabecera pc "
+                + "INNER JOIN productos_detalle pd ON pc.id_producto = pd.id_producto "
+                + "WHERE pc.id_producto = ? AND pd.cod_barra = ?";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setInt(1, idProducto);
+            ps.setString(2, codigoBarra);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("descripcion");
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error al obtener descripción: " + e.getMessage());
+        }
+        return "Producto";
+    }
+
+    // Método para actualizar el stock al realizar una venta
     private void actualizarStockVenta(int idProducto, String codigoBarra, int cantidadVendida) throws SQLException {
         String sql = "UPDATE stock SET cantidad_disponible = cantidad_disponible - ? "
                 + "WHERE id_producto = ? AND cod_barra = ?";
