@@ -1,9 +1,5 @@
 package modelo;
 
-/**
- * Modelo de datos para Productos Representa la información completa de un
- * producto incluyendo datos de cabecera y detalle
- */
 public class mProducto {
 
     // Campos de productos_cabecera
@@ -16,13 +12,13 @@ public class mProducto {
 
     // Campos de productos_detalle
     private String descripcion;
-    private String codigo;           // cod_barra de productos_detalle 
+    private String codigo;
     private String presentacion;
 
     // Campos adicionales para reportes y manejo de inventario
     private int stock;
-    private int precio;              // Precio en guaraníes (entero)
-    private int precioCompra;        // Precio de compra en guaraníes
+    private int precio;
+    private int precioCompra;
     private String unidadMedidaCompra;
     private String unidadMedidaStock;
 
@@ -76,9 +72,7 @@ public class mProducto {
     }
 
     // ======================== GETTERS Y SETTERS ========================
-    /**
-     * ID único del producto
-     */
+    // ID único del producto
     public int getIdProducto() {
         return idProducto;
     }
@@ -87,9 +81,7 @@ public class mProducto {
         this.idProducto = idProducto;
     }
 
-    /**
-     * Nombre del producto
-     */
+    // Nombre del producto
     public String getNombre() {
         return nombre;
     }
@@ -98,9 +90,7 @@ public class mProducto {
         this.nombre = nombre;
     }
 
-    /**
-     * Descripción detallada del producto (viene de productos_detalle)
-     */
+    // Descripción detallada del producto (viene de productos_detalle)
     public String getDescripcion() {
         return descripcion;
     }
@@ -109,9 +99,7 @@ public class mProducto {
         this.descripcion = descripcion;
     }
 
-    /**
-     * Código de barras del producto
-     */
+    // Código de barras del producto
     public String getCodigo() {
         return codigo;
     }
@@ -120,9 +108,7 @@ public class mProducto {
         this.codigo = codigo;
     }
 
-    /**
-     * Presentación del producto (LATA, BOTELLA, etc.)
-     */
+    // Presentación del producto (LATA, BOTELLA, etc.)
     public String getPresentacion() {
         return presentacion;
     }
@@ -131,9 +117,7 @@ public class mProducto {
         this.presentacion = presentacion;
     }
 
-    /**
-     * ID de la categoría del producto
-     */
+    // ID de la categoría del producto
     public int getIdCategoria() {
         return idCategoria;
     }
@@ -142,9 +126,7 @@ public class mProducto {
         this.idCategoria = idCategoria;
     }
 
-    /**
-     * ID de la marca del producto
-     */
+    // ID de la marca del producto
     public int getIdMarca() {
         return idMarca;
     }
@@ -153,9 +135,7 @@ public class mProducto {
         this.idMarca = idMarca;
     }
 
-    /**
-     * Porcentaje de IVA aplicable al producto
-     */
+    // Porcentaje de IVA aplicable al producto
     public double getIva() {
         return iva;
     }
@@ -164,9 +144,7 @@ public class mProducto {
         this.iva = iva;
     }
 
-    /**
-     * Estado del producto (activo/inactivo)
-     */
+    // Estado del producto (activo/inactivo)
     public boolean isEstado() {
         return estado;
     }
@@ -175,9 +153,7 @@ public class mProducto {
         this.estado = estado;
     }
 
-    /**
-     * Cantidad en stock
-     */
+    // Cantidad en stock
     public int getStock() {
         return stock;
     }
@@ -186,9 +162,7 @@ public class mProducto {
         this.stock = stock;
     }
 
-    /**
-     * Precio de venta en guaraníes
-     */
+    // Precio de venta en guaraníes
     public int getPrecio() {
         return precio;
     }
@@ -197,9 +171,7 @@ public class mProducto {
         this.precio = precio;
     }
 
-    /**
-     * Precio de compra en guaraníes
-     */
+    // Precio de compra en guaraníes
     public int getPrecioCompra() {
         return precioCompra;
     }
@@ -208,9 +180,7 @@ public class mProducto {
         this.precioCompra = precioCompra;
     }
 
-    /**
-     * Unidad de medida para compras
-     */
+    // Unidad de medida para compras
     public String getUnidadMedidaCompra() {
         return unidadMedidaCompra;
     }
@@ -219,9 +189,7 @@ public class mProducto {
         this.unidadMedidaCompra = unidadMedidaCompra;
     }
 
-    /**
-     * Unidad de medida para stock
-     */
+    // Unidad de medida para stock
     public String getUnidadMedidaStock() {
         return unidadMedidaStock;
     }
@@ -230,9 +198,7 @@ public class mProducto {
         this.unidadMedidaStock = unidadMedidaStock;
     }
 
-    /**
-     * Nombre de la categoría (campo auxiliar para reportes)
-     */
+    // Nombre de la categoría (campo auxiliar para reportes)
     public String getNombreCategoria() {
         return nombreCategoria;
     }

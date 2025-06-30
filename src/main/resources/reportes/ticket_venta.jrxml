@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" 
+              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd"
+              name="ticket_venta" pageWidth="226" pageHeight="842" 
+              columnWidth="186" leftMargin="20" rightMargin="20" 
+              topMargin="20" bottomMargin="20">
+
+    <!-- Parámetros -->
+    <parameter name="ID_VENTA" class="java.lang.Integer"/>
+    <parameter name="REPORT_TITLE" class="java.lang.String" isForPrompting="false">
+        <defaultValueExpression><![CDATA["Ticket de Venta"]]></defaultValueExpression>
+    </parameter>
+    <parameter name="FECHA_GENERACION" class="java.util.Date" isForPrompting="false">
+        <defaultValueExpression><![CDATA[new java.util.Date()]]></defaultValueExpression>
+    </parameter>
+
+    <!-- Query para obtener datos de la venta -->
+    <queryString>
+        <![CDATA[
+    SELECT 
+        v.id as id_venta,
+        v.fecha,
+        v.total,
+        COALESCE(v.numero_factura, 'SIN-FACTURA') as numero_factura,
+        COALESCE(v.numero_timbrado, 'SIN-TIMBRADO') as numero_timbrado,
+        COALESCE(v.observaciones, '') as observaciones,
+        'CLIENTE CONTADO' as cliente_nombre,
+        'N/A' as cliente_documento,
+        COALESCE(vd.cantidad, 1) as cantidad,
+        COALESCE(vd.precio_unitario, 0) as precio_unitario,
+        COALESCE(vd.subtotal, 0) as subtotal,
+        COALESCE(vd.codigo_barra, 'SIN-CODIGO') as codigo_barra,
+        COALESCE(vd.descripcion_producto, 'Producto sin descripción') as producto_descripcion,
+        1 as item_numero
+    FROM ventas v
+    LEFT JOIN ventas_detalle vd ON v.id = vd.id_venta
+    WHERE v.id = $P{ID_VENTA}
+    ORDER BY vd.id
+    ]]>
+    </queryString>
+
+    <!-- Campos -->
+    <field name="id_venta" class="java.lang.Integer"/>
+    <field name="fecha" class="java.sql.Timestamp"/>
+    <field name="total" class="java.lang.Long"/>
+    <field name="numero_factura" class="java.lang.String"/>
+    <field name="numero_timbrado" class="java.lang.String"/>
+    <field name="observaciones" class="java.lang.String"/>
+    <field name="cliente_nombre" class="java.lang.String"/>
+    <field name="cliente_documento" class="java.lang.String"/>
+    <field name="cantidad" class="java.lang.Integer"/>
+    <field name="precio_unitario" class="java.lang.Long"/>
+    <field name="subtotal" class="java.lang.Long"/>
+    <field name="codigo_barra" class="java.lang.String"/>
+    <field name="producto_descripcion" class="java.lang.String"/>
+    <field name="item_numero" class="java.lang.Long"/>
+
+    <!-- Variables -->
+    <variable name="total_venta" class="java.lang.Long" resetType="Report" calculation="First">
+        <variableExpression><![CDATA[$F{total}]]></variableExpression>
+    </variable>
+
+    <!-- Encabezado del reporte -->
+    <pageHeader>
+        <band height="120" splitType="Stretch">
+            <staticText>
+                <reportElement x="0" y="0" width="186" height="15"/>
+                <textElement textAlignment="Center">
+                    <font fontName="Monospaced" size="10" isBold="true"/>
+                </textElement>
+                <text><![CDATA[NOMBRE DE TU EMPRESA]]></text>
+            </staticText>
+            
+            <staticText>
+                <reportElement x="0" y="15" width="186" height="12"/>
+                <textElement textAlignment="Center">
+                    <font fontName="Monospaced" size="8"/>
+                </textElement>
+                <text><![CDATA[RUC: 80000000-0]]></text>
+            </staticText>
+            
+            <staticText>
+                <reportElement x="0" y="27" width="186" height="12"/>
+                <textElement textAlignment="Center">
+                    <font fontName="Monospaced" size="8"/>
+                </textElement>
+                <text><![CDATA[Dir: Tu dirección comercial]]></text>
+            </staticText>
+            
+            <staticText>
+                <reportElement x="0" y="39" width="186" height="12"/>
+                <textElement textAlignment="Center">
+                    <font fontName="Monospaced" size="8"/>
+                </textElement>
+                <text><![CDATA[Tel: (021) 000-000]]></text>
+            </staticText>
+
+            <line>
+                <reportElement x="0" y="55" width="186" height="1"/>
+            </line>
+
+            <textField>
+                <reportElement x="0" y="60" width="186" height="12"/>
+                <textElement>
+                    <font fontName="Monospaced" size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Factura: " + $F{numero_factura}]]></textFieldExpression>
+            </textField>
+
+            <textField pattern="dd/MM/yyyy HH:mm">
+                <reportElement x="0" y="72" width="186" height="12"/>
+                <textElement>
+                    <font fontName="Monospaced" size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Fecha: " + new SimpleDateFormat("dd/MM/yyyy HH:mm").format($F{fecha})]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="84" width="186" height="12"/>
+                <textElement>
+                    <font fontName="Monospaced" size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Timbrado: " + $F{numero_timbrado}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="96" width="186" height="12"/>
+                <textElement>
+                    <font fontName="Monospaced" size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Cliente: " + $F{cliente_nombre}]]></textFieldExpression>
+            </textField>
+
+            <line>
+                <reportElement x="0" y="112" width="186" height="1"/>
+            </line>
+        </band>
+    </pageHeader>
+
+    <!-- Encabezado de columnas -->
+    <columnHeader>
+        <band height="20" splitType="Stretch">
+            <staticText>
+                <reportElement x="0" y="5" width="186" height="12"/>
+                <textElement>
+                    <font fontName="Monospaced" size="8" isBold="true"/>
+                </textElement>
+                <text><![CDATA[Producto - Cant x Precio = Total]]></text>
+            </staticText>
+        </band>
+    </columnHeader>
+
+    <!-- Detalle -->
+    <detail>
+        <band height="30" splitType="Stretch">
+            <textField isStretchWithOverflow="true">
+                <reportElement x="0" y="0" width="186" height="12" stretchType="RelativeToTallestObject"/>
+                <textElement>
+                    <font fontName="Monospaced" size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{producto_descripcion}]]></textFieldExpression>
+            </textField>
+
+            <textField>
+                <reportElement x="0" y="12" width="186" height="12"/>
+                <textElement>
+                    <font fontName="Monospaced" size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[String.format("%d x %,d = %,d", 
+                    $F{cantidad}, 
+                    $F{precio_unitario}, 
+                    $F{subtotal})]]></textFieldExpression>
+            </textField>
+        </band>
+    </detail>
+
+    <!-- Pie de página -->
+    <pageFooter>
+        <band height="80" splitType="Stretch">
+            <line>
+                <reportElement x="0" y="5" width="186" height="1"/>
+            </line>
+
+            <textField>
+                <reportElement x="0" y="15" width="186" height="15"/>
+                <textElement textAlignment="Right">
+                    <font fontName="Monospaced" size="10" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[String.format("TOTAL: Gs. %,d", $V{total_venta})]]></textFieldExpression>
+            </textField>
+
+            <textField isBlankWhenNull="true">
+                <reportElement x="0" y="35" width="186" height="12"/>
+                <textElement>
+                    <font fontName="Monospaced" size="8"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$F{observaciones} != null ? "Obs: " + $F{observaciones} : ""]]></textFieldExpression>
+            </textField>
+
+            <staticText>
+                <reportElement x="0" y="55" width="186" height="12"/>
+                <textElement textAlignment="Center">
+                    <font fontName="Monospaced" size="8"/>
+                </textElement>
+                <text><![CDATA[¡Gracias por su compra!]]></text>
+            </staticText>
+
+            <textField pattern="dd/MM/yyyy HH:mm">
+                <reportElement x="0" y="67" width="186" height="10"/>
+                <textElement textAlignment="Center">
+                    <font fontName="Monospaced" size="6"/>
+                </textElement>
+                <textFieldExpression><![CDATA["Impreso: " + new SimpleDateFormat("dd/MM/yyyy HH:mm").format(new java.util.Date())]]></textFieldExpression>
+            </textField>
+        </band>
+    </pageFooter>
+</jasperReport>

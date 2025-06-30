@@ -15,6 +15,7 @@ import vista.vRegVentas;
 import servicio.sTalonarios;
 import vista.vTalonarios;
 import servicio.sTalonarios;
+import vista.vLogin;
 
 public class cRegVentas implements myInterface {
 
@@ -99,14 +100,13 @@ public class cRegVentas implements myInterface {
             this.ventaActual.setFecha(new Date());
             this.ventaActual.setAnulado(false);
 
-            // Ejecutar diagnóstico la primera vez (solo para debug)
-            // modelo.diagnosticarEstructuraProductos(); // Descomenta para ver estructura
             // Obtener ID de caja activa
             int idCaja = modelo.obtenerIdCajaActiva();
             this.ventaActual.setIdCaja(idCaja);
 
-            // Aquí podrías establecer el usuario actual desde la sesión
-            // this.ventaActual.setIdUsuario(SesionUsuario.getIdUsuario());
+            // Establecer el usuario actual desde la sesión de login
+            this.ventaActual.setIdUsuario(vLogin.getIdUsuarioAutenticado());
+
         } catch (SQLException e) {
             vista.mostrarError("Error al inicializar venta: " + e.getMessage());
         }
@@ -238,57 +238,64 @@ public class cRegVentas implements myInterface {
             int idProducto = (int) producto[0];
             String nombre = (String) producto[1];
             int precioVenta = (int) producto[4];
-            int stock = (int) producto[5]; // Será 0 porque no tienes stock en BD
 
-            // Por ahora no validar stock porque no tienes el campo en la BD
-            // TODO: Cuando agregues stock a productos_detalle, descomenta:
-            /*
-            if (stock < cantidad) {
-                vista.mostrarError("Stock insuficiente. Disponible: " + stock);
+            // NUEVA VALIDACIÓN DE STOCK
+            int stockDisponible = obtenerStockDisponible(idProducto, codBarra);
+            if (stockDisponible < cantidad) {
+                vista.mostrarError("Stock insuficiente.\nDisponible: " + stockDisponible
+                        + "\nSolicitado: " + cantidad);
                 return;
             }
-             */
-            // Verificar si el producto ya está en la venta
+
+            // Verificar stock total si ya existe el producto en la venta
+            int cantidadYaEnVenta = 0;
+            for (mVentas.DetalleVenta detalle : ventaActual.getDetalles()) {
+                if (detalle.getIdProducto() == idProducto && detalle.getCodigoBarra().equals(codBarra)) {
+                    cantidadYaEnVenta = detalle.getCantidad();
+                    break;
+                }
+            }
+
+            int cantidadTotal = cantidadYaEnVenta + cantidad;
+            if (stockDisponible < cantidadTotal) {
+                vista.mostrarError("Stock insuficiente para cantidad total.\nDisponible: " + stockDisponible
+                        + "\nYa en venta: " + cantidadYaEnVenta
+                        + "\nTotal solicitado: " + cantidadTotal);
+                return;
+            }
+
+            // Resto del código existente...
             boolean productoExistente = false;
             for (mVentas.DetalleVenta detalle : ventaActual.getDetalles()) {
-                if (detalle.getIdProducto() == idProducto
-                        && detalle.getCodigoBarra().equals(codBarra)) {
-
-                    // Actualizar cantidad existente
+                if (detalle.getIdProducto() == idProducto && detalle.getCodigoBarra().equals(codBarra)) {
                     int nuevaCantidad = detalle.getCantidad() + cantidad;
-
-                    // TODO: Cuando tengas stock, descomenta esta validación:
-                    /*
-                    if (stock < nuevaCantidad) {
-                        vista.mostrarError("Stock insuficiente para cantidad total: " + nuevaCantidad);
-                        return;
-                    }
-                     */
                     detalle.actualizar(nuevaCantidad, precioVenta);
                     productoExistente = true;
                     break;
                 }
             }
 
-            // Si el producto no existe, agregarlo como nuevo detalle
             if (!productoExistente) {
                 mVentas.DetalleVenta detalle = new mVentas.DetalleVenta(
-                        ventaActual.getIdVenta(),
-                        idProducto,
-                        codBarra,
-                        cantidad,
-                        precioVenta
-                );
-
+                        ventaActual.getIdVenta(), idProducto, codBarra, cantidad, precioVenta);
                 ventaActual.agregarDetalle(detalle);
             }
 
-            // Actualizar la vista
             vista.actualizarTablaDetalles();
             vista.actualizarTotalVenta(ventaActual.getTotal());
 
         } catch (Exception e) {
             vista.mostrarError("Error al agregar producto: " + e.getMessage());
+        }
+    }
+
+    // Método para obtener stock disponible
+    private int obtenerStockDisponible(int idProducto, String codBarra) {
+        try {
+            return modelo.obtenerStockDisponible(idProducto, codBarra);
+        } catch (SQLException e) {
+            System.err.println("Error al obtener stock: " + e.getMessage());
+            return 0; // Si hay error, asumir que no hay stock
         }
     }
 
@@ -346,7 +353,7 @@ public class cRegVentas implements myInterface {
     // Método para guardar la venta
     public void guardarVenta() {
         try {
-            // Validaciones existentes...
+            // Validaciones
             if (ventaActual.getDetalles().isEmpty()) {
                 vista.mostrarError("No hay productos en la venta.");
                 return;
@@ -357,9 +364,15 @@ public class cRegVentas implements myInterface {
                 return;
             }
 
+            // VERIFICAR que el usuario esté establecido
             if (ventaActual.getIdUsuario() == 0) {
-                vista.mostrarError("No se ha establecido el usuario de la venta.");
-                return;
+                // Intentar establecerlo nuevamente si no está
+                ventaActual.setIdUsuario(vLogin.getIdUsuarioAutenticado());
+
+                if (ventaActual.getIdUsuario() == 0) {
+                    vista.mostrarError("Error del sistema: Usuario no identificado. Reinicie sesión.");
+                    return;
+                }
             }
 
             // Consumir número de factura del talonario

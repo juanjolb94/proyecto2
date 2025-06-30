@@ -131,7 +131,8 @@ public class VentasDAO {
 
     // Método para actualizar el stock al realizar una venta (adaptado a tu estructura)
     private void actualizarStockVenta(int idProducto, String codigoBarra, int cantidadVendida) throws SQLException {
-        String sql = "UPDATE productos_detalle SET stock = stock - ? WHERE id_producto = ? AND cod_barra = ?";
+        String sql = "UPDATE stock SET cantidad_disponible = cantidad_disponible - ? "
+                + "WHERE id_producto = ? AND cod_barra = ?";
 
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
             ps.setInt(1, cantidadVendida);
@@ -139,8 +140,23 @@ public class VentasDAO {
             ps.setString(3, codigoBarra);
 
             int filasAfectadas = ps.executeUpdate();
+
+            // Si no se actualizó ninguna fila, es porque no existe registro en stock
             if (filasAfectadas == 0) {
-                throw new SQLException("No se pudo actualizar el stock del producto: " + codigoBarra);
+                System.out.println("ADVERTENCIA: No se encontró stock para el producto "
+                        + codigoBarra + ". Se insertará registro con stock negativo.");
+
+                // Insertar nuevo registro con stock negativo (para registrar la venta)
+                String sqlInsert = "INSERT INTO stock (id_producto, cod_barra, cantidad_disponible, "
+                        + "fecha_ultima_actualizacion, costo_promedio) "
+                        + "VALUES (?, ?, ?, NOW(), 0.00)";
+
+                try (PreparedStatement psInsert = conexion.prepareStatement(sqlInsert)) {
+                    psInsert.setInt(1, idProducto);
+                    psInsert.setString(2, codigoBarra);
+                    psInsert.setInt(3, -cantidadVendida); // Stock negativo
+                    psInsert.executeUpdate();
+                }
             }
         }
     }
@@ -487,5 +503,24 @@ public class VentasDAO {
     // Método público para obtener conexión (para uso del controlador)
     public Connection getConnection() throws SQLException {
         return DatabaseConnection.getConnection();
+    }
+
+    // Método para obtener stock disponible de un producto
+    public int obtenerStockDisponible(int idProducto, String codBarra) throws SQLException {
+        String sql = "SELECT COALESCE(cantidad_disponible, 0) as stock "
+                + "FROM stock WHERE id_producto = ? AND cod_barra = ?";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setInt(1, idProducto);
+            ps.setString(2, codBarra);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("stock");
+                } else {
+                    return 0; // Si no existe registro, stock es 0
+                }
+            }
+        }
     }
 }

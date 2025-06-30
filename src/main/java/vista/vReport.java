@@ -499,6 +499,59 @@ public class vReport extends JInternalFrame implements myInterface {
         }
     }
 
+    /**
+     * Configura el reporte con parámetros específicos sin mostrar diálogo
+     */
+    public void configurarReporteConParametros(String nombreReporte, Map<String, Object> parametros) {
+        this.reporteNombre = nombreReporte;
+
+        // Verificar si el servicio de reportes está inicializado
+        if (reporteService == null) {
+            inicializarServicioReportes();
+            if (reporteService == null) {
+                JOptionPane.showMessageDialog(this,
+                        "No se pudo inicializar el servicio de reportes.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+
+        // Añadir parámetros básicos por defecto
+        parametros.put("REPORT_TITLE", "Ticket de Venta");
+        parametros.put("FECHA_GENERACION", new Date());
+
+        try {
+            // Generar el reporte
+            JasperPrint jasperPrint = reporteService.generarJasperPrint(nombreReporte, parametros);
+
+            if (jasperPrint != null) {
+                // Crear visor
+                JRViewer visorReporte = crearVisorMejorado(jasperPrint);
+
+                // Actualizar el panel
+                jpReporte.removeAll();
+                jpReporte.add(visorReporte, BorderLayout.CENTER);
+                jpReporte.revalidate();
+                jpReporte.repaint();
+
+                // Actualizar título de la ventana
+                setTitle("Ticket de Venta");
+            } else {
+                JOptionPane.showMessageDialog(this,
+                        "No se pudo generar el ticket.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error al generar el ticket: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     @Override
     public void imInsDet() {
         // No aplicable para reportes

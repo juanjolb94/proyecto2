@@ -506,7 +506,7 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         // Asignar el menú popup a la tabla
         tblDetalles.setComponentPopupMenu(popupMenu);
 
-        // **LISTENER ADICIONAL PARA ENTER: Detectar Enter después de editar**
+        // LISTENER PARA ENTER: Detectar Enter después de editar**
         tblDetalles.addKeyListener(new java.awt.event.KeyAdapter() {
             @Override
             public void keyPressed(java.awt.event.KeyEvent evt) {
@@ -677,7 +677,6 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
             controlador.setCliente(idCliente);
 
-            // **SIMPLIFICADO: Ya no necesitas manejar el caso ID 0**
             Object[] datosCliente = controlador.obtenerDatosCliente(idCliente);
             if (datosCliente != null) {
                 txtNombreCliente.setText((String) datosCliente[0]);
@@ -762,10 +761,9 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
     }
 
     // MÉTODOS PÚBLICOS PARA EL CONTROLADOR
-    // ====================================
     public void actualizarTablaDetalles() {
-        DefaultTableModel modelo = controlador.getModeloTablaDetalles();
-        tblDetalles.setModel(modelo);
+        modeloTablaDetalles = controlador.getModeloTablaDetalles();
+        tblDetalles.setModel(modeloTablaDetalles);
 
         configurarColumnasTabla();
         recalcularTotales();
@@ -927,17 +925,79 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
     }
 
     public void preguntarImprimirFactura(int idVenta) {
+        // AGREGAR LOGS DE DIAGNÓSTICO
+        System.out.println("=== DEBUG TICKET ===");
+        System.out.println("ID Venta recibido: " + idVenta);
+        System.out.println("==================");
+
         int opcion = JOptionPane.showConfirmDialog(
                 this,
-                "Venta guardada correctamente.\n¿Desea imprimir la factura?",
-                "Imprimir Factura",
+                "¿Desea ver el ticket de la venta?\nID Venta: " + idVenta, // Mostrar ID en el diálogo
+                "Visualizar Ticket",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.QUESTION_MESSAGE
         );
 
         if (opcion == JOptionPane.YES_OPTION) {
-            imprimirFactura();
+            try {
+                // VERIFICAR QUE LA VENTA EXISTE EN BD
+                if (verificarVentaExiste(idVenta)) {
+                    System.out.println("✓ Venta existe en BD");
+
+                    // Crear nueva ventana de reporte para el ticket
+                    vista.vReport ventanaReporte = new vista.vReport("ticket_venta", null);
+
+                    // Agregar parámetro del ID de venta
+                    java.util.Map<String, Object> parametros = new java.util.HashMap<>();
+                    parametros.put("ID_VENTA", idVenta);
+
+                    // DEBUG: Mostrar parámetros
+                    System.out.println("Parámetros enviados al reporte:");
+                    parametros.forEach((k, v) -> System.out.println("  " + k + " = " + v));
+
+                    // Configurar y mostrar el reporte
+                    ventanaReporte.configurarReporteConParametros("ticket_venta", parametros);
+
+                    // Agregar la ventana al desktop
+                    if (getDesktopPane() != null) {
+                        getDesktopPane().add(ventanaReporte);
+                        ventanaReporte.setVisible(true);
+                        ventanaReporte.toFront();
+                    }
+                } else {
+                    System.err.println("✗ La venta ID " + idVenta + " no existe en la base de datos");
+                    mostrarError("Error: La venta no se encuentra en la base de datos.");
+                }
+
+            } catch (Exception e) {
+                System.err.println("✗ Error al mostrar ticket: " + e.getMessage());
+                e.printStackTrace();
+                mostrarError("Error al mostrar ticket: " + e.getMessage());
+            }
         }
+    }
+
+    // Método auxiliar para verificar si la venta existe
+    private boolean verificarVentaExiste(int idVenta) {
+        try {
+            // Usar el controlador o crear consulta directa
+            java.sql.Connection conn = modelo.DatabaseConnection.getConnection();
+            String sql = "SELECT COUNT(*) FROM ventas WHERE id = ?";
+
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, idVenta);
+                try (java.sql.ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        int count = rs.getInt(1);
+                        System.out.println("Venta " + idVenta + " - registros encontrados: " + count);
+                        return count > 0;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error al verificar venta: " + e.getMessage());
+        }
+        return false;
     }
 
     //Método para finalizar atención de mesa (liberar mesa explícitamente)
@@ -1469,12 +1529,13 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
             jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(jPanel2Layout.createSequentialGroup()
                 .addContainerGap()
-                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                    .addComponent(jLabel6)
-                    .addComponent(txtCodigoBarra, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(jLabel7)
-                    .addComponent(spinnerCantidad, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btnAgregarProducto, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                    .addComponent(btnAgregarProducto, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                    .addGroup(jPanel2Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                        .addComponent(jLabel6)
+                        .addComponent(txtCodigoBarra, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jLabel7)
+                        .addComponent(spinnerCantidad, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 188, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)

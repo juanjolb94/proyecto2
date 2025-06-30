@@ -176,6 +176,8 @@ public class ReporteService {
                     return generarReporteVentas(parametros);
                 case "reporte_ingresos_egresos":
                     return generarReporteIngresosEgresos(parametros);
+                case "ticket_venta":
+                    return generarReporteTicketVenta(parametros);
                 default:
                     // Reporte genérico usando la conexión a base de datos
                     JasperReport jasperReport = obtenerReporteCompilado(reporteNombre);
@@ -1037,5 +1039,22 @@ public class ReporteService {
         }
 
         return productos;
+    }
+
+    /**
+     * Genera específicamente el reporte de ticket de venta
+     */
+    private JasperPrint generarReporteTicketVenta(Map<String, Object> parametros) throws SQLException, JRException {
+        // Obtener conexión a la base de datos
+        Connection conexion = DatabaseConnection.getConnection();
+
+        // Compilar y llenar el reporte
+        String rutaReporte = REPORTES_DIR + "ticket_venta.jrxml";
+        JasperReport jasperReport = JasperCompileManager.compileReport(rutaReporte);
+
+        // Llenar el reporte con la conexión y parámetros
+        JasperPrint jasperPrint = JasperFillManager.fillReport(jasperReport, parametros, conexion);
+
+        return jasperPrint;
     }
 }
