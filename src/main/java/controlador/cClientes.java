@@ -8,6 +8,7 @@ import java.util.List;
 import javax.swing.JOptionPane;
 
 public class cClientes implements myInterface {
+
     private vClientes vista;
     private ClientesDAO modelo;
 
@@ -77,9 +78,9 @@ public class cClientes implements myInterface {
     }
 
     // Método para insertar un nuevo cliente
-    public boolean insertarCliente(String nombre, String ci, String telefono, 
-                                   String direccion, String email, boolean estado,
-                                   int idPersona) {
+    public boolean insertarCliente(String nombre, String ci, String telefono,
+            String direccion, String email, boolean estado,
+            int idPersona) {
         try {
             return modelo.insertarCliente(nombre, ci, telefono, direccion, email, estado, idPersona);
         } catch (SQLException e) {
@@ -89,14 +90,52 @@ public class cClientes implements myInterface {
     }
 
     // Método para actualizar un cliente existente
-    public boolean actualizarCliente(int id, String nombre, String ci, String telefono, 
-                                     String direccion, String email, boolean estado,
-                                     int idPersona) {
+    public boolean actualizarCliente(int id, String nombre, String ci, String telefono,
+            String direccion, String email, boolean estado,
+            int idPersona) {
         try {
-            return modelo.actualizarCliente(id, nombre, ci, telefono, direccion, email, estado, idPersona);
+            boolean exito = modelo.actualizarCliente(id, nombre, ci, telefono, direccion, email, estado, idPersona);
+
+            // Si la actualización fue exitosa, notificar al formulario de ventas
+            if (exito) {
+                notificarActualizacionCliente();
+            }
+
+            return exito;
         } catch (SQLException e) {
             mostrarError("Error al actualizar el cliente: " + e.getMessage());
             return false;
+        }
+    }
+
+// Método para notificar al formulario de ventas que recargue la lista de clientes
+    private void notificarActualizacionCliente() {
+        try {
+            // Buscar en todas las ventanas principales
+            for (java.awt.Window window : java.awt.Window.getWindows()) {
+                if (window instanceof javax.swing.JFrame) {
+                    javax.swing.JFrame mainFrame = (javax.swing.JFrame) window;
+
+                    // Buscar JDesktopPane en el frame principal
+                    java.awt.Component[] components = mainFrame.getContentPane().getComponents();
+                    for (java.awt.Component comp : components) {
+                        if (comp instanceof javax.swing.JDesktopPane) {
+                            javax.swing.JDesktopPane desktop = (javax.swing.JDesktopPane) comp;
+
+                            // Buscar vRegVentas en el desktop
+                            for (javax.swing.JInternalFrame frame : desktop.getAllFrames()) {
+                                if (frame instanceof vista.vRegVentas && !frame.isClosed()) {
+                                    ((vista.vRegVentas) frame).recargarClientes();
+                                    System.out.println("Lista de clientes recargada en formulario de ventas");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error al notificar actualización de cliente: " + e.getMessage());
+            // No mostrar error al usuario, es una funcionalidad secundaria
         }
     }
 

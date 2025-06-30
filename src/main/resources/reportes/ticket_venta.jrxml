@@ -108,7 +108,7 @@
 
     <!-- Encabezado del reporte -->
     <pageHeader>
-        <band height="150" splitType="Stretch">
+        <band height="158" splitType="Stretch">
             <!-- Nombre de la empresa -->
             <staticText>
                 <reportElement x="0" y="0" width="186" height="15" uuid="a1b2c3d4-e5f6-7890-abcd-ef1234567890"/>
@@ -145,68 +145,79 @@
                 <text><![CDATA[Tel: (0971) 456-189]]></text>
             </staticText>
 
-            <!-- Línea separadora -->
+            <!-- ✅ MARCA DE REIMPRESIÓN -->
+            <textField isBlankWhenNull="true">
+                <reportElement x="0" y="51" width="186" height="12" uuid="aa11bb22-cc33-dd44-eeff-112233445566">
+                    <printWhenExpression><![CDATA[$P{ES_REIMPRESION} != null && $P{ES_REIMPRESION}]]></printWhenExpression>
+                </reportElement>
+                <textElement textAlignment="Center">
+                    <font fontName="Monospaced" size="9" isBold="true"/>
+                </textElement>
+                <textFieldExpression><![CDATA[$P{MARCA_REIMPRESION}]]></textFieldExpression>
+            </textField>
+
+            <!-- Línea separadora (movida hacia abajo) -->
             <line>
-                <reportElement x="0" y="55" width="186" height="1" uuid="e5f6a7b8-c9d0-1234-efab-567890123456"/>
+                <reportElement x="0" y="63" width="186" height="1" uuid="e5f6a7b8-c9d0-1234-efab-567890123456"/>
             </line>
 
-            <!-- Número de factura -->
+            <!-- Número de factura (movido hacia abajo +8) -->
             <textField>
-                <reportElement x="0" y="60" width="186" height="12" uuid="f6a7b8c9-d0e1-2345-fabc-678901234567"/>
+                <reportElement x="0" y="68" width="186" height="12" uuid="f6a7b8c9-d0e1-2345-fabc-678901234567"/>
                 <textElement>
                     <font fontName="Monospaced" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Factura: " + $F{numero_factura}]]></textFieldExpression>
             </textField>
 
-            <!-- Fecha y hora -->
+            <!-- Fecha y hora (movido hacia abajo +8) -->
             <textField pattern="dd/MM/yyyy HH:mm">
-                <reportElement x="0" y="72" width="186" height="12" uuid="a7b8c9d0-e1f2-3456-abcd-789012345678"/>
+                <reportElement x="0" y="80" width="186" height="12" uuid="a7b8c9d0-e1f2-3456-abcd-789012345678"/>
                 <textElement>
                     <font fontName="Monospaced" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Fecha: " + new SimpleDateFormat("dd/MM/yyyy HH:mm").format($F{fecha})]]></textFieldExpression>
             </textField>
 
-            <!-- Número de timbrado -->
+            <!-- Número de timbrado (movido hacia abajo +8) -->
             <textField>
-                <reportElement x="0" y="84" width="186" height="12" uuid="b8c9d0e1-f2a3-4567-bcde-890123456789"/>
+                <reportElement x="0" y="92" width="186" height="12" uuid="b8c9d0e1-f2a3-4567-bcde-890123456789"/>
                 <textElement>
                     <font fontName="Monospaced" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Timbrado: " + $F{numero_timbrado}]]></textFieldExpression>
             </textField>
 
-            <!-- Fecha de vencimiento del timbrado -->
+            <!-- Fecha de vencimiento del timbrado (movido hacia abajo +8) -->
             <textField pattern="dd/MM/yyyy">
-                <reportElement x="0" y="96" width="186" height="12" uuid="c9d0e1f2-a3b4-5678-cdef-901234567890"/>
+                <reportElement x="0" y="104" width="186" height="12" uuid="c9d0e1f2-a3b4-5678-cdef-901234567890"/>
                 <textElement>
                     <font fontName="Monospaced" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Venc. Timbrado: " + new SimpleDateFormat("dd/MM/yyyy").format($F{fecha_vencimiento_timbrado})]]></textFieldExpression>
             </textField>
 
-            <!-- Nombre del cliente -->
+            <!-- Nombre del cliente (movido hacia abajo +8) -->
             <textField>
-                <reportElement x="0" y="108" width="186" height="12" uuid="d0e1f2a3-b4c5-6789-defa-012345678901"/>
+                <reportElement x="0" y="116" width="186" height="12" uuid="d0e1f2a3-b4c5-6789-defa-012345678901"/>
                 <textElement>
                     <font fontName="Monospaced" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA["Cliente: " + $F{cliente_nombre}]]></textFieldExpression>
             </textField>
 
-            <!-- RUC/CI del cliente -->
+            <!-- RUC/CI del cliente (movido hacia abajo +8) -->
             <textField>
-                <reportElement x="0" y="120" width="186" height="12" uuid="e1f2a3b4-c5d6-7890-efab-123456789012"/>
+                <reportElement x="0" y="128" width="186" height="12" uuid="e1f2a3b4-c5d6-7890-efab-123456789012"/>
                 <textElement>
                     <font fontName="Monospaced" size="8"/>
                 </textElement>
                 <textFieldExpression><![CDATA["RUC/CI: " + $F{cliente_ruc}]]></textFieldExpression>
             </textField>
 
-            <!-- Línea separadora -->
+            <!-- Línea separadora (movida hacia abajo +8) -->
             <line>
-                <reportElement x="0" y="135" width="186" height="1" uuid="f2a3b4c5-d6e7-8901-fabc-234567890123"/>
+                <reportElement x="0" y="143" width="186" height="1" uuid="f2a3b4c5-d6e7-8901-fabc-234567890123"/>
             </line>
         </band>
     </pageHeader>

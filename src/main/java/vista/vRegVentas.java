@@ -405,6 +405,22 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         configurarMenuContextual();
     }
 
+    // Método público para recargar clientes (llamar después de actualizar)
+    public void recargarClientes() {
+        // Guardar el cliente seleccionado actualmente
+        int clienteSeleccionado = 0;
+        if (comboCliente.getSelectedItem() != null) {
+            clienteSeleccionado = (int) ((cRegVentas.ItemCombo) comboCliente.getSelectedItem()).getValor();
+        }
+
+        // Recargar lista de clientes
+        cargarClientes();
+
+        // Restaurar selección del cliente
+        seleccionarClientePorId(clienteSeleccionado);
+        actualizarDatosCliente();
+    }
+
     // Configurar eventos de los componentes
     private void configurarEventos() {
         // Evento para código de barras (Enter para agregar)

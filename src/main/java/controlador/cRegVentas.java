@@ -238,10 +238,9 @@ public class cRegVentas implements myInterface {
             }
 
             int idProducto = (int) producto[0];
-            String nombre = (String) producto[1];
             int precioVenta = (int) producto[4];
 
-            // NUEVA VALIDACIÓN DE STOCK
+            // AGREGAR VALIDACIÓN DE STOCK
             int stockDisponible = obtenerStockDisponible(idProducto, codBarra);
             if (stockDisponible < cantidad) {
                 vista.mostrarError("Stock insuficiente.\nDisponible: " + stockDisponible
@@ -249,27 +248,22 @@ public class cRegVentas implements myInterface {
                 return;
             }
 
-            // Verificar stock total si ya existe el producto en la venta
-            int cantidadYaEnVenta = 0;
-            for (mVentas.DetalleVenta detalle : ventaActual.getDetalles()) {
-                if (detalle.getIdProducto() == idProducto && detalle.getCodigoBarra().equals(codBarra)) {
-                    cantidadYaEnVenta = detalle.getCantidad();
-                    break;
-                }
-            }
-
-            int cantidadTotal = cantidadYaEnVenta + cantidad;
-            if (stockDisponible < cantidadTotal) {
-                vista.mostrarError("Stock insuficiente para cantidad total.\nDisponible: " + stockDisponible
-                        + "\nYa en venta: " + cantidadYaEnVenta
-                        + "\nTotal solicitado: " + cantidadTotal);
-                return;
-            }
-
-            // Resto del código existente...
+            // Verificar si el producto ya está en la venta
             boolean productoExistente = false;
             for (mVentas.DetalleVenta detalle : ventaActual.getDetalles()) {
-                if (detalle.getIdProducto() == idProducto && detalle.getCodigoBarra().equals(codBarra)) {
+                if (detalle.getIdProducto() == idProducto
+                        && detalle.getCodigoBarra().equals(codBarra)) {
+
+                    // Validar stock total incluyendo lo que ya está en venta
+                    int cantidadTotal = detalle.getCantidad() + cantidad;
+                    if (stockDisponible < cantidadTotal) {
+                        vista.mostrarError("Stock insuficiente para cantidad total.\nDisponible: " + stockDisponible
+                                + "\nYa en venta: " + detalle.getCantidad()
+                                + "\nTotal solicitado: " + cantidadTotal);
+                        return;
+                    }
+
+                    // Actualizar cantidad existente
                     int nuevaCantidad = detalle.getCantidad() + cantidad;
                     detalle.actualizar(nuevaCantidad, precioVenta);
                     productoExistente = true;
@@ -277,12 +271,20 @@ public class cRegVentas implements myInterface {
                 }
             }
 
+            // Si el producto no existe, agregarlo como nuevo detalle
             if (!productoExistente) {
                 mVentas.DetalleVenta detalle = new mVentas.DetalleVenta(
-                        ventaActual.getIdVenta(), idProducto, codBarra, cantidad, precioVenta);
+                        ventaActual.getIdVenta(),
+                        idProducto,
+                        codBarra,
+                        cantidad,
+                        precioVenta
+                );
+
                 ventaActual.agregarDetalle(detalle);
             }
 
+            // Actualizar la vista
             vista.actualizarTablaDetalles();
             vista.actualizarTotalVenta(ventaActual.getTotal());
 
@@ -328,18 +330,14 @@ public class cRegVentas implements myInterface {
                     return;
                 }
 
-                // TODO: Cuando tengas stock en productos_detalle, descomenta esta validación:
-                /*
-                // Verificar stock disponible
-                Object[] producto = buscarProductoPorCodBarra(detalle.getCodigoBarra());
-                if (producto != null) {
-                    int stockDisponible = (int) producto[5];
-                    if (stockDisponible < nuevaCantidad) {
-                        vista.mostrarError("Stock insuficiente. Disponible: " + stockDisponible);
-                        return;
-                    }
+                // VALIDACIÓN DE STOCK:
+                int stockDisponible = obtenerStockDisponible(detalle.getIdProducto(), detalle.getCodigoBarra());
+                if (stockDisponible < nuevaCantidad) {
+                    vista.mostrarError("Stock insuficiente.\nDisponible: " + stockDisponible
+                            + "\nSolicitado: " + nuevaCantidad);
+                    return;
                 }
-                 */
+
                 // Actualizar cantidad
                 detalle.setCantidad(nuevaCantidad);
 

@@ -300,9 +300,11 @@ public class ReporteService {
 
         if (parametros.containsKey("mostrar_inactivos")
                 && !((Boolean) parametros.get("mostrar_inactivos"))) {
+            System.out.println("Aplicando filtro de estados. Productos antes del filtro: " + productos.size());
             productos = productos.stream()
                     .filter(mProducto::isEstado)
                     .toList();
+            System.out.println("Productos después del filtro: " + productos.size());
         }
 
         // Aplicar filtros de stock si existen
