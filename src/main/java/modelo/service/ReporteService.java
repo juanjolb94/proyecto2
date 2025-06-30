@@ -1123,4 +1123,60 @@ public class ReporteService {
             }
         }
     }
+
+    public void generarYGuardarTicketReimpresion(int idVenta) throws Exception {
+        try {
+            Map<String, Object> parametros = new HashMap<>();
+            parametros.put("ID_VENTA", idVenta);
+            parametros.put("ES_REIMPRESION", true);
+            parametros.put("MARCA_REIMPRESION", "*** REIMPRESIÓN ***");
+            parametros.put("REPORT_TITLE", "Ticket de Venta - REIMPRESIÓN");
+            parametros.put("FECHA_GENERACION", new Date());
+
+            // Generar ticket con marca de reimpresión
+            JasperPrint jasperPrint = generarJasperPrint("ticket_venta", parametros);
+
+            if (jasperPrint != null) {
+                // Crear estructura de fechas
+                Date ahora = new Date();
+                String año = new SimpleDateFormat("yyyy").format(ahora);
+                String mes = new SimpleDateFormat("MM").format(ahora);
+                String dia = new SimpleDateFormat("dd").format(ahora);
+                String horaMinSeg = new SimpleDateFormat("HHmmss").format(ahora);
+
+                // Construir ruta (igual que el método original)
+                String rutaBase = "tickets_respaldo";
+                String rutaAño = rutaBase + File.separator + año;
+                String rutaMes = rutaAño + File.separator + mes;
+                String rutaDia = rutaMes + File.separator + dia;
+
+                // Crear carpetas si no existen
+                crearCarpetaSiNoExiste(rutaBase);
+                crearCarpetaSiNoExiste(rutaAño);
+                crearCarpetaSiNoExiste(rutaMes);
+                crearCarpetaSiNoExiste(rutaDia);
+
+                // Nombre del archivo CON MARCA DE REIMPRESIÓN
+                String nombreArchivo = String.format("REIMPRESION_ticket_venta_%d_%s%s%s_%s.pdf",
+                        idVenta, año, mes, dia, horaMinSeg);
+
+                String rutaCompleta = rutaDia + File.separator + nombreArchivo;
+
+                // AQUÍ SE USAN LAS VARIABLES: Guardar PDF
+                JasperExportManager.exportReportToPdfFile(jasperPrint, rutaCompleta);
+
+                System.out.println("✅ Ticket REIMPRESIÓN guardado exitosamente:");
+                System.out.println("   Ruta: " + rutaCompleta);
+                System.out.println("   Tamaño: " + new File(rutaCompleta).length() + " bytes");
+
+            } else {
+                System.err.println("❌ Error: No se pudo generar el JasperPrint para reimpresión");
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ Error al guardar ticket de reimpresión: " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
+    }
 }

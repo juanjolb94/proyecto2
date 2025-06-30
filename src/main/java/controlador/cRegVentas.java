@@ -13,7 +13,6 @@ import modelo.VentasDAO;
 import modelo.mVentas;
 import modelo.service.ReporteService;
 import vista.vRegVentas;
-import servicio.sTalonarios;
 import vista.vTalonarios;
 import servicio.sTalonarios;
 import vista.vLogin;
@@ -27,6 +26,8 @@ public class cRegVentas implements myInterface {
     private sTalonarios servicioTalonarios;
     private String numeroFacturaActual;
     private sTalonarios.DatosTalonario datosTalonarioActual;
+    private DefaultTableModel modeloTablaDetalles;
+    private boolean ventaCargadaDesdeBD = false;
 
     public cRegVentas(vRegVentas vista) throws SQLException {
         this.vista = vista;
@@ -425,6 +426,63 @@ public class cRegVentas implements myInterface {
         }
     }
 
+    public void reimprimir() {
+        if (ventaActual.getIdVenta() > 0) {
+            // Confirmar reimpresión
+            int confirmacion = javax.swing.JOptionPane.showConfirmDialog(
+                    null, // Cambié vista por null para evitar problemas de referencia
+                    "¿Desea reimprimir la factura " + ventaActual.getNumeroFactura() + "?\n"
+                    + "Esta será marcada como REIMPRESIÓN.",
+                    "Confirmar Reimpresión",
+                    javax.swing.JOptionPane.YES_NO_OPTION
+            );
+
+            if (confirmacion == javax.swing.JOptionPane.YES_OPTION) {
+                try {
+                    // Generar y guardar ticket de reimpresión
+                    ReporteService reporteService = new ReporteService();
+                    reporteService.generarYGuardarTicketReimpresion(ventaActual.getIdVenta());
+
+                    // Registrar la reimpresión en auditoría
+                    registrarReimpresion(ventaActual.getIdVenta(), "Solicitada por usuario desde sistema");
+
+                    vista.mostrarMensaje("Ticket reimpreso correctamente\n"
+                            + "Archivo guardado con marca de REIMPRESIÓN");
+
+                } catch (Exception e) {
+                    vista.mostrarError("Error al reimprimir: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            vista.mostrarError("No hay una venta seleccionada para reimprimir");
+        }
+    }
+
+    /**
+     * Registra una reimpresión en la tabla de auditoría
+     */
+    private void registrarReimpresion(int idVenta, String motivo) {
+        try {
+            java.sql.Connection conn = modelo.getConnection();
+            String sql = "INSERT INTO reimpresiones (id_venta, fecha_reimpresion, usuario_id, motivo) VALUES (?, NOW(), ?, ?)";
+
+            try (java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, idVenta);
+                ps.setInt(2, vLogin.getIdUsuarioAutenticado()); // Usuario actual
+                ps.setString(3, motivo);
+
+                int filasAfectadas = ps.executeUpdate();
+                if (filasAfectadas > 0) {
+                    System.out.println("✅ Reimpresión registrada en auditoría - Venta ID: " + idVenta);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error al registrar reimpresión en auditoría: " + e.getMessage());
+            // No lanzar excepción para no interrumpir la reimpresión
+        }
+    }
+
     /**
      * Busca y actualiza la ventana de talonarios si está abierta
      */
@@ -452,6 +510,7 @@ public class cRegVentas implements myInterface {
 
             if (venta != null) {
                 this.ventaActual = venta;
+                this.ventaCargadaDesdeBD = true; // ✅ MARCAR COMO CARGADA DESDE BD
 
                 // Actualizar la vista con los datos de la venta
                 vista.cargarDatosVenta(venta);
@@ -504,6 +563,7 @@ public class cRegVentas implements myInterface {
     // Método para limpiar el formulario
     public void limpiarFormulario() {
         inicializarVentaNueva();
+        this.ventaCargadaDesdeBD = false;
         vista.limpiarFormulario();
         vista.actualizarTablaDetalles();
         vista.actualizarTotalVenta(0);
@@ -526,7 +586,7 @@ public class cRegVentas implements myInterface {
 
     // Método para obtener el modelo de tabla de detalles
     public DefaultTableModel getModeloTablaDetalles() {
-        DefaultTableModel modelo = new DefaultTableModel(
+        this.modeloTablaDetalles = new DefaultTableModel(
                 new Object[]{"#", "Código", "Descripción", "Cantidad", "Precio Unit.", "Subtotal"}, 0
         ) {
             @Override
@@ -555,7 +615,7 @@ public class cRegVentas implements myInterface {
             // Obtener descripción del producto
             String descripcion = obtenerDescripcionProducto(detalle.getIdProducto(), detalle.getCodigoBarra());
 
-            modelo.addRow(new Object[]{
+            modeloTablaDetalles.addRow(new Object[]{
                 i + 1, // Número de ítem
                 detalle.getCodigoBarra(),
                 descripcion,
@@ -565,7 +625,7 @@ public class cRegVentas implements myInterface {
             });
         }
 
-        return modelo;
+        return modeloTablaDetalles;
     }
 
     // Método auxiliar para obtener descripción del producto
@@ -759,17 +819,33 @@ public class cRegVentas implements myInterface {
 
     @Override
     public void imImprimir() {
-        // Implementar impresión de factura
         try {
             if (ventaActual.getIdVenta() > 0) {
-                vista.mostrarMensaje("Imprimiendo factura de venta #" + ventaActual.getIdVenta());
-                // TODO: Implementar lógica de impresión real
+                // Verificar si es una venta nueva (recién creada) o existente
+                if (esVentaNueva()) {
+                    // Impresión normal para venta nueva
+                    vista.mostrarMensaje("Imprimiendo factura de venta #" + ventaActual.getIdVenta());
+                    // TODO: Implementar lógica de impresión normal si es necesario
+                } else {
+                    // Es una venta existente - llamar a reimpresión
+                    reimprimir();
+                }
             } else {
                 vista.mostrarError("No hay una venta seleccionada para imprimir.");
             }
         } catch (Exception e) {
             vista.mostrarError("Error al imprimir: " + e.getMessage());
         }
+    }
+
+    /**
+     * Verifica si es una venta recién creada o una existente
+     */
+    private boolean esVentaNueva() {
+        // Considerar nueva si no tiene detalles cargados desde BD
+        // o si fue creada en esta sesión
+        return modeloTablaDetalles.getRowCount() > 0
+                && !ventaCargadaDesdeBD; // Variable que debes agregar para controlar esto
     }
 
     @Override
