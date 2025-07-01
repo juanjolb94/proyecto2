@@ -46,7 +46,7 @@
     <field name="fecha_compra" class="java.sql.Date"/>
     <field name="proveedor" class="java.lang.String"/>
     <field name="tipo_documento" class="java.lang.String"/>
-    <field name="nro_documento" class="java.lang.String"/>
+    <field name="numero_factura" class="java.lang.String"/>
     <field name="timbrado" class="java.lang.String"/>
     <field name="condicion" class="java.lang.String"/>
     <field name="subtotal" class="java.math.BigDecimal"/>
@@ -292,7 +292,7 @@
                 <textElement textAlignment="Center" verticalAlignment="Middle">
                     <font size="7"/>
                 </textElement>
-                <textFieldExpression><![CDATA[$F{nro_documento}]]></textFieldExpression>
+                <textFieldExpression><![CDATA[$F{numero_factura}]]></textFieldExpression>
             </textField>
 
             <textField isBlankWhenNull="true">

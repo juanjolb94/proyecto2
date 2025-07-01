@@ -47,9 +47,6 @@ public class ComprasDAO {
                 // Insertar detalles de compra
                 for (mCompras.DetalleCompra detalle : compra.getDetalles()) {
                     insertarDetalleCompra(idCompra, detalle);
-                    // Actualizar stock con procedimiento almacenado
-                    actualizarStock(detalle.getIdProducto(), detalle.getCodBarra(),
-                            detalle.getCantidad(), 1, detalle.getPrecioUnitario());
                 }
             }
 

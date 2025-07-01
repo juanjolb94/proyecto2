@@ -491,7 +491,7 @@ public class ReporteService {
         sql.append("    cc.fecha_compra, ");
         sql.append("    COALESCE(p.razon_social, 'Sin proveedor') as proveedor, ");
         sql.append("    cc.tipo_documento, ");
-        sql.append("    cc.nro_documento, ");
+        sql.append("    cc.numero_factura, ");
         sql.append("    cc.timbrado, ");
         sql.append("    cc.condicion, ");
         sql.append("    cc.subtotal, ");
@@ -538,7 +538,7 @@ public class ReporteService {
 
         // Aplicar filtro de número de documento
         if (parametros.containsKey("numero_documento") && parametros.get("numero_documento") != null) {
-            sql.append("AND cc.nro_documento LIKE ? ");
+            sql.append("AND cc.numero_factura LIKE ? ");
             parametrosSql.add("%" + parametros.get("numero_documento") + "%");
         }
 
@@ -578,7 +578,7 @@ public class ReporteService {
                     fila.put("fecha_compra", rs.getDate("fecha_compra"));
                     fila.put("proveedor", rs.getString("proveedor"));
                     fila.put("tipo_documento", rs.getString("tipo_documento"));
-                    fila.put("nro_documento", rs.getString("nro_documento"));
+                    fila.put("numero_factura", rs.getString("numero_factura"));
                     fila.put("timbrado", rs.getString("timbrado"));
                     fila.put("condicion", rs.getString("condicion"));
                     fila.put("subtotal", rs.getBigDecimal("subtotal"));
