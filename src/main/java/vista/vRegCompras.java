@@ -1,10 +1,7 @@
 package vista;
 
-import controlador.cGestProd.ItemCombo;
 import controlador.cRegCompras;
 import interfaces.myInterface;
-import java.awt.BorderLayout;
-import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
@@ -15,8 +12,6 @@ import java.util.Date;
 import java.util.List;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.text.DefaultFormatterFactory;
-import javax.swing.text.NumberFormatter;
 import modelo.mCompras;
 
 public class vRegCompras extends javax.swing.JInternalFrame implements myInterface {
@@ -738,12 +733,18 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
                 System.out.println("DEBUG IMGRABAR: WARNING - No hay proveedor seleccionado");
             }
 
-            // Establecer número de factura
+            // Establecer tipo de documento
             String tipoDoc = comboTipo.getSelectedItem().toString();
-            String numero = txtNumero.getText().trim();
-            String timbrado = txtTimbrado.getText().trim();
+            controlador.setTipoDocumento(tipoDoc);
 
-            // Formatear número de factura
+            // Establecer timbrado
+            String timbrado = txtTimbrado.getText().trim();
+            controlador.setTimbrado(timbrado);
+            // ============================================
+
+            // Establecer número de factura
+            String numero = txtNumero.getText().trim();
+            // Formatear número de factura (timbrado-numero)
             String numeroFactura = timbrado + "-" + numero;
             controlador.setNumeroFactura(numeroFactura);
 

@@ -10,6 +10,8 @@ public class mCompras {
     private int idProveedor;
     private Date fechaCompra;
     private String numeroFactura;
+    private String tipoDocumento;
+    private String timbrado;
     private double totalCompra;
     private String observaciones;
     private boolean estado;
@@ -80,6 +82,22 @@ public class mCompras {
 
     public void setObservaciones(String observaciones) {
         this.observaciones = observaciones;
+    }
+
+    public String getTipoDocumento() {
+        return tipoDocumento;
+    }
+
+    public void setTipoDocumento(String tipoDocumento) {
+        this.tipoDocumento = tipoDocumento;
+    }
+
+    public String getTimbrado() {
+        return timbrado;
+    }
+
+    public void setTimbrado(String timbrado) {
+        this.timbrado = timbrado;
     }
 
     public boolean isEstado() {

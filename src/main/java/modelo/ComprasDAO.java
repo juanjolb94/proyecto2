@@ -26,17 +26,19 @@ public class ComprasDAO {
 
         try {
             // Insertar cabecera de compra
-            String sqlCabecera = "INSERT INTO compras_cabecera (id_proveedor, fecha_compra, numero_factura, "
-                    + "total_compra, observaciones, estado) VALUES (?, ?, ?, ?, ?, ?)";
+            String sqlCabecera = "INSERT INTO compras_cabecera (id_proveedor, fecha_compra, tipo_documento, "
+                    + "numero_factura, timbrado, total_compra, observaciones, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
+            // Actualizar los parámetros:
             PreparedStatement psCabecera = conexion.prepareStatement(sqlCabecera, Statement.RETURN_GENERATED_KEYS);
             psCabecera.setInt(1, compra.getIdProveedor());
             psCabecera.setDate(2, new Date(compra.getFechaCompra().getTime()));
-            psCabecera.setString(3, compra.getNumeroFactura());
-            psCabecera.setDouble(4, compra.getTotalCompra());
-            psCabecera.setString(5, compra.getObservaciones());
-            psCabecera.setBoolean(6, compra.isEstado());
-
+            psCabecera.setString(3, compra.getTipoDocumento());  // NUEVO
+            psCabecera.setString(4, compra.getNumeroFactura());
+            psCabecera.setString(5, compra.getTimbrado());       // NUEVO
+            psCabecera.setDouble(6, compra.getTotalCompra());
+            psCabecera.setString(7, compra.getObservaciones());
+            psCabecera.setBoolean(8, compra.isEstado());
             psCabecera.executeUpdate();
 
             // Obtener el ID generado para la cabecera

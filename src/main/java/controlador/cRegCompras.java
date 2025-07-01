@@ -635,4 +635,12 @@ public class cRegCompras implements myInterface {
     public void setRegistroSeleccionado(int id) {
         buscarCompraPorId(id);
     }
+
+    public void setTipoDocumento(String tipoDocumento) {
+        compraActual.setTipoDocumento(tipoDocumento);
+    }
+
+    public void setTimbrado(String timbrado) {
+        compraActual.setTimbrado(timbrado);
+    }
 }
