@@ -99,22 +99,6 @@ public class ComprasDAO {
         }
     }
 
-    // Método para actualizar el stock utilizando procedimiento almacenado
-    private void actualizarStock(int idProducto, String codBarra, int cantidad,
-            int unidadesPorEmpaque, double precioUnitario) throws SQLException {
-        String sql = "{CALL actualizar_stock_compra(?, ?, ?, ?, ?)}";
-
-        try (CallableStatement cs = conexion.prepareCall(sql)) {
-            cs.setInt(1, idProducto);
-            cs.setString(2, codBarra);
-            cs.setInt(3, cantidad);
-            cs.setInt(4, unidadesPorEmpaque);
-            cs.setDouble(5, precioUnitario);
-
-            cs.execute();
-        }
-    }
-
     // Método para buscar una compra por ID
     public mCompras buscarCompraPorId(int id) throws SQLException {
         String sqlCabecera = "SELECT * FROM compras_cabecera WHERE id_compra = ?";
