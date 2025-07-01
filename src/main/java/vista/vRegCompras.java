@@ -727,7 +727,6 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
             // Establecer proveedor
             cRegCompras.ItemCombo proveedor = (cRegCompras.ItemCombo) comboProveedor.getSelectedItem();
             if (proveedor != null) {
-                // Hacemos cast explícito a int
                 controlador.setProveedor((int) proveedor.getValor());
             } else {
                 System.out.println("DEBUG IMGRABAR: WARNING - No hay proveedor seleccionado");
@@ -740,16 +739,60 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
             // Establecer timbrado
             String timbrado = txtTimbrado.getText().trim();
             controlador.setTimbrado(timbrado);
-            // ============================================
+
+            // Establecer condición (CONTADO/CRÉDITO)
+            String condicion = comboCondicion.getSelectedItem().toString();
+            controlador.setCondicion(condicion);
+
+            // Establecer fecha de vencimiento
+            Date fechaVencimiento = null;
+            try {
+                if (!txtVencimiento.getText().trim().isEmpty()) {
+                    fechaVencimiento = sdf.parse(txtVencimiento.getText());
+                }
+            } catch (ParseException e) {
+                System.out.println("DEBUG IMGRABAR: Error al parsear fecha de vencimiento: " + e.getMessage());
+                // No es crítico, continúa sin fecha de vencimiento
+            }
+            controlador.setFechaVencimiento(fechaVencimiento);
+
+            // Establecer totales desde los campos de la interfaz
+            try {
+                // Parsear valores numéricos eliminando separadores de miles
+                String subtotalText = txtSubtotal.getText().replace(".", "").replace(",", ".");
+                String iva5Text = txtIVA5.getText().replace(".", "").replace(",", ".");
+                String iva10Text = txtIVA10.getText().replace(".", "").replace(",", ".");
+                String totalIvaText = txtTotalIVA.getText().replace(".", "").replace(",", ".");
+                String totalText = txtTotal.getText().replace(".", "").replace(",", ".");
+
+                double subtotal = Double.parseDouble(subtotalText.isEmpty() ? "0" : subtotalText);
+                double iva5 = Double.parseDouble(iva5Text.isEmpty() ? "0" : iva5Text);
+                double iva10 = Double.parseDouble(iva10Text.isEmpty() ? "0" : iva10Text);
+                double totalIva = Double.parseDouble(totalIvaText.isEmpty() ? "0" : totalIvaText);
+                double total = Double.parseDouble(totalText.isEmpty() ? "0" : totalText);
+
+                controlador.setSubtotal(subtotal);
+                controlador.setTotalIva5(iva5);
+                controlador.setTotalIva10(iva10);
+                controlador.setTotalIva(totalIva);
+
+                // El total de compra ya se establece automáticamente al calcular
+            } catch (NumberFormatException e) {
+                System.out.println("DEBUG IMGRABAR: Error al parsear totales: " + e.getMessage());
+                mostrarError("Error en los valores numéricos de los totales");
+                return;
+            }
 
             // Establecer número de factura
             String numero = txtNumero.getText().trim();
-            // Formatear número de factura (timbrado-numero)
             String numeroFactura = timbrado + "-" + numero;
             controlador.setNumeroFactura(numeroFactura);
 
             // Establecer observaciones
             controlador.setObservaciones(txtObservaciones.getText());
+
+            // Establecer número de planilla (opcional - puede estar vacío)
+            controlador.setNroPlanilla(""); // Por ahora vacío
 
             // Guardar la compra
             controlador.guardarCompra();

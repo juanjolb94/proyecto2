@@ -25,20 +25,36 @@ public class ComprasDAO {
         conexion.setAutoCommit(false);
 
         try {
-            // Insertar cabecera de compra
+            // Insertar cabecera de compra con TODOS los campos
             String sqlCabecera = "INSERT INTO compras_cabecera (id_proveedor, fecha_compra, tipo_documento, "
-                    + "numero_factura, timbrado, total_compra, observaciones, estado) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    + "numero_factura, timbrado, fecha_vencimiento, condicion, subtotal, total_iva5, "
+                    + "total_iva10, total_iva, total_compra, nro_planilla, observaciones, estado) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-            // Actualizar los parámetros:
             PreparedStatement psCabecera = conexion.prepareStatement(sqlCabecera, Statement.RETURN_GENERATED_KEYS);
             psCabecera.setInt(1, compra.getIdProveedor());
             psCabecera.setDate(2, new Date(compra.getFechaCompra().getTime()));
-            psCabecera.setString(3, compra.getTipoDocumento());  // NUEVO
+            psCabecera.setString(3, compra.getTipoDocumento());
             psCabecera.setString(4, compra.getNumeroFactura());
-            psCabecera.setString(5, compra.getTimbrado());       // NUEVO
-            psCabecera.setDouble(6, compra.getTotalCompra());
-            psCabecera.setString(7, compra.getObservaciones());
-            psCabecera.setBoolean(8, compra.isEstado());
+            psCabecera.setString(5, compra.getTimbrado());
+
+            // Fecha de vencimiento (puede ser null)
+            if (compra.getFechaVencimiento() != null) {
+                psCabecera.setDate(6, new Date(compra.getFechaVencimiento().getTime()));
+            } else {
+                psCabecera.setNull(6, java.sql.Types.DATE);
+            }
+
+            psCabecera.setString(7, compra.getCondicion());
+            psCabecera.setDouble(8, compra.getSubtotal());
+            psCabecera.setDouble(9, compra.getTotalIva5());
+            psCabecera.setDouble(10, compra.getTotalIva10());
+            psCabecera.setDouble(11, compra.getTotalIva());
+            psCabecera.setDouble(12, compra.getTotalCompra());
+            psCabecera.setString(13, compra.getNroPlanilla());
+            psCabecera.setString(14, compra.getObservaciones());
+            psCabecera.setBoolean(15, compra.isEstado());
+
             psCabecera.executeUpdate();
 
             // Obtener el ID generado para la cabecera

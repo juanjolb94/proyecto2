@@ -643,4 +643,32 @@ public class cRegCompras implements myInterface {
     public void setTimbrado(String timbrado) {
         compraActual.setTimbrado(timbrado);
     }
+
+    public void setCondicion(String condicion) {
+        compraActual.setCondicion(condicion);
+    }
+
+    public void setFechaVencimiento(Date fechaVencimiento) {
+        compraActual.setFechaVencimiento(fechaVencimiento);
+    }
+
+    public void setSubtotal(double subtotal) {
+        compraActual.setSubtotal(subtotal);
+    }
+
+    public void setTotalIva5(double totalIva5) {
+        compraActual.setTotalIva5(totalIva5);
+    }
+
+    public void setTotalIva10(double totalIva10) {
+        compraActual.setTotalIva10(totalIva10);
+    }
+
+    public void setTotalIva(double totalIva) {
+        compraActual.setTotalIva(totalIva);
+    }
+
+    public void setNroPlanilla(String nroPlanilla) {
+        compraActual.setNroPlanilla(nroPlanilla);
+    }
 }

@@ -12,6 +12,13 @@ public class mCompras {
     private String numeroFactura;
     private String tipoDocumento;
     private String timbrado;
+    private String condicion;
+    private Date fechaVencimiento;        // CAMPO AGREGADO
+    private double subtotal;
+    private double totalIva5;             // CAMPO AGREGADO
+    private double totalIva10;            // CAMPO AGREGADO
+    private double totalIva;
+    private String nroPlanilla;           // CAMPO AGREGADO
     private double totalCompra;
     private String observaciones;
     private boolean estado;
@@ -35,7 +42,7 @@ public class mCompras {
         this.detalles = new ArrayList<>();
     }
 
-    // Getters y Setters
+    // ======================== GETTERS Y SETTERS ========================
     public int getIdCompra() {
         return idCompra;
     }
@@ -68,22 +75,6 @@ public class mCompras {
         this.numeroFactura = numeroFactura;
     }
 
-    public double getTotalCompra() {
-        return totalCompra;
-    }
-
-    public void setTotalCompra(double totalCompra) {
-        this.totalCompra = totalCompra;
-    }
-
-    public String getObservaciones() {
-        return observaciones;
-    }
-
-    public void setObservaciones(String observaciones) {
-        this.observaciones = observaciones;
-    }
-
     public String getTipoDocumento() {
         return tipoDocumento;
     }
@@ -98,6 +89,80 @@ public class mCompras {
 
     public void setTimbrado(String timbrado) {
         this.timbrado = timbrado;
+    }
+
+    public String getCondicion() {
+        return condicion;
+    }
+
+    public void setCondicion(String condicion) {
+        this.condicion = condicion;
+    }
+
+    // ========== GETTERS Y SETTERS DE CAMPOS AGREGADOS ==========
+    public Date getFechaVencimiento() {
+        return fechaVencimiento;
+    }
+
+    public void setFechaVencimiento(Date fechaVencimiento) {
+        this.fechaVencimiento = fechaVencimiento;
+    }
+
+    public double getSubtotal() {
+        return subtotal;
+    }
+
+    public void setSubtotal(double subtotal) {
+        this.subtotal = subtotal;
+    }
+
+    public double getTotalIva5() {
+        return totalIva5;
+    }
+
+    public void setTotalIva5(double totalIva5) {
+        this.totalIva5 = totalIva5;
+    }
+
+    public double getTotalIva10() {
+        return totalIva10;
+    }
+
+    public void setTotalIva10(double totalIva10) {
+        this.totalIva10 = totalIva10;
+    }
+
+    public double getTotalIva() {
+        return totalIva;
+    }
+
+    public void setTotalIva(double totalIva) {
+        this.totalIva = totalIva;
+    }
+
+    public String getNroPlanilla() {
+        return nroPlanilla;
+    }
+
+    public void setNroPlanilla(String nroPlanilla) {
+        this.nroPlanilla = nroPlanilla;
+    }
+
+    // ========== GETTERS Y SETTERS EXISTENTES ==========
+    public double getTotalCompra() {
+        return totalCompra;
+    }
+
+    public void setTotalCompra(double totalCompra) {
+        this.totalCompra = totalCompra;
+    }
+
+    public String getObservaciones() {
+        return observaciones;
+    }
+
+    public void setObservaciones(String observaciones) {
+        this.observaciones = observaciones;
     }
 
     public boolean isEstado() {
@@ -116,6 +181,7 @@ public class mCompras {
         this.detalles = detalles;
     }
 
+    // ======================== MÉTODOS DE NEGOCIO ========================
     // Método para agregar un detalle a la compra
     public void agregarDetalle(DetalleCompra detalle) {
         this.detalles.add(detalle);
@@ -133,11 +199,21 @@ public class mCompras {
     // Método para calcular el total de la compra a partir de los detalles
     private void calcularTotal() {
         this.totalCompra = 0.0;
+        this.subtotal = 0.0;
+        this.totalIva5 = 0.0;
+        this.totalIva10 = 0.0;
+        this.totalIva = 0.0;
+
         for (DetalleCompra detalle : detalles) {
             this.totalCompra += detalle.getSubtotal();
+            this.subtotal += detalle.getSubtotal() - detalle.getImpuesto();
+            this.totalIva10 += detalle.getImpuesto(); // Asumiendo que todo es IVA 10%
         }
+
+        this.totalIva = this.totalIva5 + this.totalIva10;
     }
 
+    // ======================== CLASE INTERNA DETALLECOMPRA ========================
     // Clase interna para manejar los detalles de compra
     public static class DetalleCompra {
 
@@ -191,7 +267,7 @@ public class mCompras {
             }
         }
 
-        // Getters y Setters
+        // ========== GETTERS Y SETTERS DE DETALLECOMPRA ==========
         public int getIdCompra() {
             return idCompra;
         }
@@ -238,11 +314,6 @@ public class mCompras {
             return subtotal;
         }
 
-        // Método para calcular el subtotal
-        private void calcularSubtotal() {
-            this.subtotal = this.cantidad * this.precioUnitario;
-        }
-
         public int getBaseImponible() {
             return baseImponible;
         }
@@ -257,6 +328,12 @@ public class mCompras {
 
         public void setImpuesto(int impuesto) {
             this.impuesto = impuesto;
+        }
+
+        // ========== MÉTODOS DE CÁLCULO ==========
+        // Método para calcular el subtotal
+        private void calcularSubtotal() {
+            this.subtotal = this.cantidad * this.precioUnitario;
         }
 
         // Método para establecer el subtotal directamente
@@ -296,6 +373,7 @@ public class mCompras {
             this.subtotal = subtotalRedondeado;
         }
 
+        // ========== MÉTODOS AUXILIARES ==========
         // Método para actualizar valores y recalcular
         public void actualizar(int cantidad, double precioUnitario) {
             this.cantidad = cantidad;
