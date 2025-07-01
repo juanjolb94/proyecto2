@@ -97,11 +97,16 @@ public class cRegCompras implements myInterface {
     // Método para guardar la compra completa
     public void guardarCompra() {
         try {
+            System.out.println("DEBUG GUARDAR: Iniciando guardarCompra - Detalles: " + compraActual.getDetalles().size());
+
             // Validar que tenga detalles
             if (compraActual.getDetalles().isEmpty()) {
+                System.out.println("DEBUG GUARDAR: ERROR - compraActual.getDetalles() está vacío!");
                 vista.mostrarError("Debe agregar al menos un detalle a la compra.");
                 return;
             }
+
+            System.out.println("DEBUG GUARDAR: Validación de detalles pasó correctamente");
 
             // Validar proveedor
             if (compraActual.getIdProveedor() <= 0) {
@@ -274,10 +279,11 @@ public class cRegCompras implements myInterface {
 
     // Método para buscar una compra por ID
     public void buscarCompraPorId(int id) {
+        System.out.println("DEBUG: buscarCompraPorId(" + id + ") ejecutado");
         try {
             mCompras compra = modelo.buscarCompraPorId(id);
-
             if (compra != null) {
+                System.out.println("DEBUG: Reemplazando compraActual con compra encontrada");
                 compraActual = compra;
 
                 // Actualizar la interfaz
@@ -484,6 +490,7 @@ public class cRegCompras implements myInterface {
 
     @Override
     public void imNuevo() {
+        System.out.println("DEBUG: imNuevo() ejecutado - limpiando compraActual");
         compraActual = new mCompras();
         compraActual.setFechaCompra(new Date());
         compraActual.setEstado(true);

@@ -1298,11 +1298,27 @@ public class vPrincipal extends javax.swing.JFrame {
     }//GEN-LAST:event_mUsuariosActionPerformed
 
     private void mGuardarActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mGuardarActionPerformed
+        System.out.println("DEBUG: mGuardarActionPerformed ejecutado");
+
+        JInternalFrame v = jDesktopPane2.getSelectedFrame();
+        System.out.println("DEBUG: getSelectedFrame() = " + v);
+
+        if (v != null) {
+            System.out.println("DEBUG: Ventana activa: " + v.getClass().getSimpleName());
+            System.out.println("DEBUG: Es instancia de myInterface: " + (v instanceof myInterface));
+            System.out.println("DEBUG: Título ventana: " + v.getTitle());
+        }
+
         myInterface ve = getCurrentWindow();
+        System.out.println("DEBUG: getCurrentWindow() devolvió: " + ve);
+
         if (ve == null) {
+            System.out.println("DEBUG: ve es null, retornando");
             return;
         }
-        ve.imGrabar(); // Llama al método imGrabar de la ventana activa
+
+        System.out.println("DEBUG: Llamando ve.imGrabar()");
+        ve.imGrabar();
     }//GEN-LAST:event_mGuardarActionPerformed
 
     private void mRolesActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mRolesActionPerformed

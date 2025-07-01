@@ -4,6 +4,7 @@ import controlador.cGestProd.ItemCombo;
 import controlador.cRegCompras;
 import interfaces.myInterface;
 import java.awt.BorderLayout;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
@@ -465,70 +466,85 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
     }
 
     public void actualizarTablaDetalles() {
-        // Obtener los detalles desde el controlador y mostrarlos en la tabla
-        DefaultTableModel modelo = new DefaultTableModel(
-                new Object[]{"#", "Código Barras", "Descripción", "Cantidad", "Precio Unit.", "Base Imp.", "Impuesto", "Subtotal"}, 0);
+        System.out.println("DEBUG TABLA: Iniciando actualizarTablaDetalles()");
 
-        List<mCompras.DetalleCompra> detalles = controlador.getCompraActual().getDetalles();
-        for (int i = 0; i < detalles.size(); i++) {
-            mCompras.DetalleCompra detalle = detalles.get(i);
+        try {
+            // Obtener los detalles desde el controlador y mostrarlos en la tabla
+            DefaultTableModel modelo = new DefaultTableModel(
+                    new Object[]{"#", "Código Barras", "Descripción", "Cantidad", "Precio Unit.", "Base Imp.", "Impuesto", "Subtotal"}, 0);
 
-            // Obtener valores calculados del detalle
-            int cantidad = detalle.getCantidad();
-            int precioUnitarioRedondeado = detalle.getPrecioUnitarioRedondeado();
-            int baseImponible = detalle.getBaseImponible();
-            int impuesto = detalle.getImpuesto();
-            int subtotal = detalle.getSubtotalRedondeado();
+            List<mCompras.DetalleCompra> detalles = controlador.getCompraActual().getDetalles();
+            System.out.println("DEBUG TABLA: Detalles obtenidos del controlador: " + detalles.size());
 
-            // Agregamos los valores a la tabla, usando i+1 como número de ítem
-            modelo.addRow(new Object[]{
-                i + 1, // Número de ítem (enumeración)
-                detalle.getCodBarra(),
-                obtenerDescripcionProducto(detalle.getIdProducto(), detalle.getCodBarra()),
-                cantidad,
-                precioUnitarioRedondeado,
-                baseImponible,
-                impuesto,
-                subtotal
-            });
+            for (int i = 0; i < detalles.size(); i++) {
+                mCompras.DetalleCompra detalle = detalles.get(i);
+
+                // Obtener valores calculados del detalle
+                int cantidad = detalle.getCantidad();
+                int precioUnitarioRedondeado = detalle.getPrecioUnitarioRedondeado();
+                int baseImponible = detalle.getBaseImponible();
+                int impuesto = detalle.getImpuesto();
+                int subtotal = detalle.getSubtotalRedondeado();
+
+                // Agregamos los valores a la tabla, usando i+1 como número de ítem
+                modelo.addRow(new Object[]{
+                    i + 1, // Número de ítem (enumeración)
+                    detalle.getCodBarra(),
+                    obtenerDescripcionProducto(detalle.getIdProducto(), detalle.getCodBarra()),
+                    cantidad,
+                    precioUnitarioRedondeado,
+                    baseImponible,
+                    impuesto,
+                    subtotal
+                });
+            }
+
+            modeloTablaDetalles = modelo;
+            tblDetalles.setModel(modelo);
+
+            // Configurar alineación y ancho de columnas
+            javax.swing.table.DefaultTableCellRenderer rightRenderer = new javax.swing.table.DefaultTableCellRenderer();
+            rightRenderer.setHorizontalAlignment(javax.swing.JLabel.RIGHT);
+
+            // Alineación a la derecha para columnas numéricas
+            tblDetalles.getColumnModel().getColumn(1).setCellRenderer(rightRenderer); // Código Barras
+            tblDetalles.getColumnModel().getColumn(3).setCellRenderer(rightRenderer); // Cantidad
+            tblDetalles.getColumnModel().getColumn(4).setCellRenderer(rightRenderer); // Precio
+            tblDetalles.getColumnModel().getColumn(5).setCellRenderer(rightRenderer); // Base Imponible
+            tblDetalles.getColumnModel().getColumn(6).setCellRenderer(rightRenderer); // Impuesto
+            tblDetalles.getColumnModel().getColumn(7).setCellRenderer(rightRenderer); // Subtotal
+
+            // Ajustar ancho de columnas
+            tblDetalles.getColumnModel().getColumn(0).setPreferredWidth(30);  // # (Número de ítem)
+            tblDetalles.getColumnModel().getColumn(1).setPreferredWidth(100); // Código Barras
+            tblDetalles.getColumnModel().getColumn(2).setPreferredWidth(200); // Descripción
+            tblDetalles.getColumnModel().getColumn(3).setPreferredWidth(70);  // Cantidad
+            tblDetalles.getColumnModel().getColumn(4).setPreferredWidth(80);  // Precio Unit.
+            tblDetalles.getColumnModel().getColumn(5).setPreferredWidth(80);  // Base Imponible
+            tblDetalles.getColumnModel().getColumn(6).setPreferredWidth(80);  // Impuesto
+            tblDetalles.getColumnModel().getColumn(7).setPreferredWidth(100); // Subtotal
+
+            recalcularTotales();
+        } catch (Exception e) {
+            System.out.println("DEBUG TABLA: Error en actualizarTablaDetalles: " + e.getMessage());
+            e.printStackTrace();
         }
-
-        tblDetalles.setModel(modelo);
-
-        // Configurar alineación y ancho de columnas
-        javax.swing.table.DefaultTableCellRenderer rightRenderer = new javax.swing.table.DefaultTableCellRenderer();
-        rightRenderer.setHorizontalAlignment(javax.swing.JLabel.RIGHT);
-
-        // Alineación a la derecha para columnas numéricas
-        tblDetalles.getColumnModel().getColumn(1).setCellRenderer(rightRenderer); // Código Barras
-        tblDetalles.getColumnModel().getColumn(3).setCellRenderer(rightRenderer); // Cantidad
-        tblDetalles.getColumnModel().getColumn(4).setCellRenderer(rightRenderer); // Precio
-        tblDetalles.getColumnModel().getColumn(5).setCellRenderer(rightRenderer); // Base Imponible
-        tblDetalles.getColumnModel().getColumn(6).setCellRenderer(rightRenderer); // Impuesto
-        tblDetalles.getColumnModel().getColumn(7).setCellRenderer(rightRenderer); // Subtotal
-
-        // Ajustar ancho de columnas
-        tblDetalles.getColumnModel().getColumn(0).setPreferredWidth(30);  // # (Número de ítem)
-        tblDetalles.getColumnModel().getColumn(1).setPreferredWidth(100); // Código Barras
-        tblDetalles.getColumnModel().getColumn(2).setPreferredWidth(200); // Descripción
-        tblDetalles.getColumnModel().getColumn(3).setPreferredWidth(70);  // Cantidad
-        tblDetalles.getColumnModel().getColumn(4).setPreferredWidth(80);  // Precio Unit.
-        tblDetalles.getColumnModel().getColumn(5).setPreferredWidth(80);  // Base Imponible
-        tblDetalles.getColumnModel().getColumn(6).setPreferredWidth(80);  // Impuesto
-        tblDetalles.getColumnModel().getColumn(7).setPreferredWidth(100); // Subtotal
-
-        recalcularTotales();
     }
 
     // Método auxiliar para obtener la descripción de un producto
     private String obtenerDescripcionProducto(int idProducto, String codBarra) {
+        System.out.println("DEBUG DESC: Obteniendo descripción para ID: " + idProducto + ", CodBarra: " + codBarra);
         try {
             Object[] producto = controlador.buscarProductoPorCodBarra(codBarra);
             if (producto != null) {
-                return producto[1] + " - " + producto[3]; // Formato: nombre - descripción
+                String descripcion = producto[1] + " - " + producto[3];
+                System.out.println("DEBUG DESC: Descripción encontrada: " + descripcion);
+                return descripcion;
+            } else {
+                System.out.println("DEBUG DESC: Producto no encontrado");
             }
         } catch (Exception e) {
-            System.err.println("Error al obtener descripción: " + e.getMessage());
+            System.out.println("DEBUG DESC: Error al obtener descripción: " + e.getMessage());
         }
         return "Producto no encontrado";
     }
@@ -578,7 +594,6 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
     public void mostrarDialogoAgregarDetalle() {
         try {
             JFrame parentFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
-
             vSeleccionProductoCompras dialogo = new vSeleccionProductoCompras(parentFrame, controlador);
             dialogo.setVisible(true);
 
@@ -586,19 +601,19 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
                 int idProducto = dialogo.getIdProductoSeleccionado();
                 String codBarra = dialogo.getCodBarraSeleccionado();
                 int cantidad = dialogo.getCantidad();
-                double valorMonetario = dialogo.getPrecio(); // Puede ser precio o subtotal
+                double valorMonetario = dialogo.getPrecio();
 
                 // Decidir qué método usar según el modo de entrada utilizado
                 if (dialogo.isSubtotalDirectamenteIngresado()) {
-                    // El valor es un subtotal, usar el método apropiado
                     controlador.agregarDetalleConSubtotal(idProducto, codBarra, cantidad, valorMonetario);
                 } else {
-                    // El valor es un precio unitario, usar el método original
                     controlador.agregarDetalle(idProducto, codBarra, cantidad, valorMonetario);
                 }
 
                 actualizarTablaDetalles();
                 recalcularTotales();
+            } else {
+                System.out.println("DEBUG: Diálogo cancelado - no se agregó nada");
             }
 
             dialogo.dispose();
@@ -654,32 +669,41 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
     private boolean validarDatos() {
         // Validar campos obligatorios
         if (comboProveedor.getSelectedIndex() == -1) {
+            System.out.println("DEBUG VALIDAR: FALLO - No hay proveedor seleccionado");
             mostrarError("Debe seleccionar un proveedor");
             comboProveedor.requestFocus();
             return false;
         }
+        System.out.println("DEBUG VALIDAR: Proveedor OK");
 
         if (txtNumero.getText().trim().isEmpty()) {
+            System.out.println("DEBUG VALIDAR: FALLO - Número de comprobante vacío");
             mostrarError("Debe ingresar un número de comprobante");
             txtNumero.requestFocus();
             return false;
         }
+        System.out.println("DEBUG VALIDAR: Número de comprobante OK");
 
         // Validar fecha
         try {
             sdf.parse(txtFecha.getText());
+            System.out.println("DEBUG VALIDAR: Fecha OK");
         } catch (ParseException e) {
+            System.out.println("DEBUG VALIDAR: FALLO - Formato de fecha inválido: " + txtFecha.getText());
             mostrarError("Formato de fecha inválido. Use dd/mm/yyyy");
             txtFecha.requestFocus();
             return false;
         }
 
-        // Validar que haya detalles
+        // Validar que haya detalles EN LA TABLA
         if (modeloTablaDetalles.getRowCount() == 0) {
+            System.out.println("DEBUG VALIDAR: FALLO - No hay detalles en la tabla. Filas: " + modeloTablaDetalles.getRowCount());
             mostrarError("Debe agregar al menos un detalle a la compra");
             return false;
         }
+        System.out.println("DEBUG VALIDAR: Detalles en tabla OK. Filas: " + modeloTablaDetalles.getRowCount());
 
+        System.out.println("DEBUG VALIDAR: Todas las validaciones pasaron correctamente");
         return true;
     }
 
@@ -697,6 +721,7 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
             try {
                 fecha = sdf.parse(txtFecha.getText());
             } catch (Exception e) {
+                System.out.println("DEBUG IMGRABAR: Error al parsear fecha: " + e.getMessage());
                 mostrarError("Formato de fecha inválido. Use dd/mm/yyyy");
                 return;
             }
@@ -709,6 +734,8 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
             if (proveedor != null) {
                 // Hacemos cast explícito a int
                 controlador.setProveedor((int) proveedor.getValor());
+            } else {
+                System.out.println("DEBUG IMGRABAR: WARNING - No hay proveedor seleccionado");
             }
 
             // Establecer número de factura
@@ -727,6 +754,8 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
             controlador.guardarCompra();
 
         } catch (Exception e) {
+            System.out.println("DEBUG IMGRABAR: Excepción capturada en imGrabar(): " + e.getMessage());
+            e.printStackTrace();
             mostrarError("Error al guardar: " + e.getMessage());
         }
     }
@@ -891,11 +920,9 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
         txtFecha = new javax.swing.JTextField();
         jLabel3 = new javax.swing.JLabel();
         chkActivo = new javax.swing.JCheckBox();
-        jLabel4 = new javax.swing.JLabel();
         jSeparator1 = new javax.swing.JSeparator();
         jLabel5 = new javax.swing.JLabel();
         comboProveedor = new javax.swing.JComboBox<>();
-        btnBuscarProveedor = new javax.swing.JButton();
         jLabel6 = new javax.swing.JLabel();
         txtRUC = new javax.swing.JTextField();
         jLabel7 = new javax.swing.JLabel();
@@ -934,16 +961,9 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
 
         jLabel3.setText("Estado:");
 
-        jLabel4.setText("Activo? Si/No");
+        chkActivo.setText("Activo si/no");
 
         jLabel5.setText("Proveedor:");
-
-        btnBuscarProveedor.setText("Buscar");
-        btnBuscarProveedor.addActionListener(new java.awt.event.ActionListener() {
-            public void actionPerformed(java.awt.event.ActionEvent evt) {
-                btnBuscarProveedorActionPerformed(evt);
-            }
-        });
 
         jLabel6.setText("RUC:");
 
@@ -981,17 +1001,15 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
                             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                             .addComponent(jLabel2)
                             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                            .addComponent(txtFecha, javax.swing.GroupLayout.PREFERRED_SIZE, 80, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                            .addComponent(txtFecha, javax.swing.GroupLayout.PREFERRED_SIZE, 95, javax.swing.GroupLayout.PREFERRED_SIZE)
+                            .addGap(18, 18, 18)
                             .addComponent(jLabel3)
                             .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                             .addComponent(chkActivo)
-                            .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                            .addComponent(jLabel4)
-                            .addGap(21, 21, 21))
+                            .addGap(77, 77, 77))
                         .addComponent(jSeparator2, javax.swing.GroupLayout.PREFERRED_SIZE, 412, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addGroup(jPanel1Layout.createSequentialGroup()
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                             .addGroup(jPanel1Layout.createSequentialGroup()
                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                     .addComponent(jLabel8)
@@ -1021,15 +1039,13 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
                                     .addComponent(txtRazonSocial, javax.swing.GroupLayout.PREFERRED_SIZE, 278, javax.swing.GroupLayout.PREFERRED_SIZE)
                                     .addGroup(jPanel1Layout.createSequentialGroup()
                                         .addComponent(comboProveedor, javax.swing.GroupLayout.PREFERRED_SIZE, 240, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                        .addComponent(btnBuscarProveedor, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
-                                .addGap(18, 18, 18)
-                                .addComponent(jLabel6)))
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(jLabel6)
+                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(txtRUC, javax.swing.GroupLayout.PREFERRED_SIZE, 97, javax.swing.GroupLayout.PREFERRED_SIZE)))))
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                            .addComponent(txtRUC, javax.swing.GroupLayout.PREFERRED_SIZE, 97, javax.swing.GroupLayout.PREFERRED_SIZE)
-                            .addComponent(txtTimbrado, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE))))
-                .addContainerGap(101, Short.MAX_VALUE))
+                        .addComponent(txtTimbrado, javax.swing.GroupLayout.PREFERRED_SIZE, 110, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                .addContainerGap(86, Short.MAX_VALUE))
         );
         jPanel1Layout.setVerticalGroup(
             jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -1042,8 +1058,7 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
                         .addComponent(jLabel2)
                         .addComponent(txtFecha, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(jLabel3)
-                        .addComponent(jLabel1))
-                    .addComponent(jLabel4, javax.swing.GroupLayout.Alignment.TRAILING))
+                        .addComponent(jLabel1)))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -1051,8 +1066,7 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
                     .addComponent(comboProveedor, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                     .addComponent(jLabel6)
                     .addComponent(jLabel5)
-                    .addComponent(txtRUC, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                    .addComponent(btnBuscarProveedor))
+                    .addComponent(txtRUC, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                     .addComponent(txtRazonSocial, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -1207,129 +1221,6 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void btnBuscarProveedorActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnBuscarProveedorActionPerformed
-        try {
-            // En lugar de usar jDesktopPane2, crearemos un JDialog directamente
-            JFrame parentFrame = (JFrame) SwingUtilities.getWindowAncestor(this);
-
-            // Crear una instancia de vBusqueda como un JInternalFrame independiente
-            vBusqueda busquedaForm = new vBusqueda(
-                    parentFrame,
-                    true,
-                    new myInterface() {
-                @Override
-                public String getTablaActual() {
-                    return "proveedores"; // Tabla de proveedores en la base de datos
-                }
-
-                @Override
-                public String[] getCamposBusqueda() {
-                    return new String[]{"id_proveedor", "razon_social"}; // Campos para búsqueda
-                }
-
-                @Override
-                public void setRegistroSeleccionado(int id) {
-                    // Cuando se selecciona un proveedor, actualizar el combobox
-                    seleccionarProveedorPorId(id);
-                }
-
-                // Implementación de los métodos no utilizados
-                @Override
-                public void imGrabar() {
-                }
-
-                @Override
-                public void imFiltrar() {
-                }
-
-                @Override
-                public void imActualizar() {
-                }
-
-                @Override
-                public void imBorrar() {
-                }
-
-                @Override
-                public void imNuevo() {
-                }
-
-                @Override
-                public void imBuscar() {
-                }
-
-                @Override
-                public void imPrimero() {
-                }
-
-                @Override
-                public void imSiguiente() {
-                }
-
-                @Override
-                public void imAnterior() {
-                }
-
-                @Override
-                public void imUltimo() {
-                }
-
-                @Override
-                public void imImprimir() {
-                }
-
-                @Override
-                public void imInsDet() {
-                }
-
-                @Override
-                public void imDelDet() {
-                }
-
-                @Override
-                public void imCerrar() {
-                }
-
-                @Override
-                public boolean imAbierto() {
-                    return false;
-                }
-
-                @Override
-                public void imAbrir() {
-                }
-            }
-            );
-
-            // Configurar la ventana de búsqueda
-            busquedaForm.setTitle("Buscar Proveedor");
-
-            // Agregar busquedaForm al JDesktopPane interno que ya existe en esta instancia de vRegCompras
-            // Si no hay un JDesktopPane en vRegCompras, entonces podemos usar esta alternativa
-            // que agrega el JInternalFrame a un JDesktopPane temporal:
-            JDesktopPane desktopTemp = new JDesktopPane();
-            JDialog dialogoBusqueda = new JDialog(parentFrame, "Buscar Proveedor", true);
-            dialogoBusqueda.setLayout(new BorderLayout());
-            dialogoBusqueda.add(desktopTemp, BorderLayout.CENTER);
-
-            desktopTemp.add(busquedaForm);
-            busquedaForm.setVisible(true);
-
-            // Ajustar tamaños
-            busquedaForm.pack();
-            // Dar un poco más de espacio alrededor
-            dialogoBusqueda.setSize(busquedaForm.getWidth() + 20, busquedaForm.getHeight() + 40);
-            dialogoBusqueda.setLocationRelativeTo(this);
-
-            // Mostrar el diálogo modal
-            dialogoBusqueda.setVisible(true);
-
-        } catch (Exception e) {
-            mostrarError("Error al abrir ventana de búsqueda: " + e.getMessage());
-            e.printStackTrace();
-        }
-    }//GEN-LAST:event_btnBuscarProveedorActionPerformed
-
     // Método para seleccionar un proveedor por ID en el combobox
     private void seleccionarProveedorPorId(int id) {
         try {
@@ -1366,7 +1257,6 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton btnBuscarProveedor;
     private javax.swing.JCheckBox chkActivo;
     private javax.swing.JComboBox<String> comboCondicion;
     private javax.swing.JComboBox<cRegCompras.ItemCombo> comboProveedor;
@@ -1382,7 +1272,6 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
     private javax.swing.JLabel jLabel17;
     private javax.swing.JLabel jLabel2;
     private javax.swing.JLabel jLabel3;
-    private javax.swing.JLabel jLabel4;
     private javax.swing.JLabel jLabel5;
     private javax.swing.JLabel jLabel6;
     private javax.swing.JLabel jLabel7;
