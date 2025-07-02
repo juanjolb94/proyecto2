@@ -302,33 +302,34 @@ public class VentasDAO {
                 + ") pr ON pd.cod_barra = pr.codigo_barra "
                 + "WHERE (pc.nombre LIKE ? OR pd.descripcion LIKE ?) "
                 + "AND pc.estado = true AND pd.estado = true "
-                + "ORDER BY pc.nombre, pd.descripcion "
-                + "LIMIT 20"; // Limitar resultados para evitar sobrecarga
+                + "ORDER BY pc.nombre, pd.descripcion";
 
         List<Object[]> productos = new ArrayList<>();
-        String busqueda = "%" + nombre.trim() + "%";
 
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
-            ps.setString(1, busqueda);
-            ps.setString(2, busqueda);
+            String terminoBusqueda = "%" + nombre.toLowerCase() + "%";
+            ps.setString(1, terminoBusqueda);
+            ps.setString(2, terminoBusqueda);
 
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    productos.add(new Object[]{
-                        rs.getInt("id_producto"), // 0 - id producto
-                        rs.getString("nombre"), // 1 - nombre
-                        rs.getString("cod_barra"), // 2 - código de barras
-                        rs.getString("descripcion"), // 3 - descripción
-                        rs.getInt("precio_venta"), // 4 - precio de venta
-                        rs.getInt("stock"), // 5 - stock
-                        rs.getBoolean("estado") // 6 - estado
-                    });
+                    Object[] producto = {
+                        rs.getInt("id_producto"), // 0
+                        rs.getString("nombre"), // 1
+                        rs.getString("cod_barra"), // 2
+                        rs.getString("descripcion"), // 3
+                        rs.getInt("precio_venta"), // 4
+                        rs.getInt("stock"), // 5
+                        rs.getBoolean("estado") // 6
+                    };
+                    productos.add(producto);
                 }
             }
         }
         return productos;
-    }    // Método de diagnóstico para verificar estructura de tablas
+    }
 
+    // Método de diagnóstico para verificar estructura de tablas
     public void diagnosticarEstructuraProductos() throws SQLException {
         System.out.println("=== DIAGNÓSTICO DE ESTRUCTURA DE PRODUCTOS ===");
 

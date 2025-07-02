@@ -933,6 +933,11 @@ public class vPrincipal extends javax.swing.JFrame {
         mNuevo.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_N, java.awt.event.InputEvent.CTRL_DOWN_MASK));
         mNuevo.setMnemonic('o');
         mNuevo.setText("Nuevo");
+        mNuevo.addActionListener(new java.awt.event.ActionListener() {
+            public void actionPerformed(java.awt.event.ActionEvent evt) {
+                mNuevoActionPerformed(evt);
+            }
+        });
         mArchivo.add(mNuevo);
 
         mGuardar.setAccelerator(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_G, java.awt.event.InputEvent.CTRL_DOWN_MASK));
@@ -1900,6 +1905,13 @@ public class vPrincipal extends javax.swing.JFrame {
                     JOptionPane.INFORMATION_MESSAGE);
         }
     }//GEN-LAST:event_mImprimirActionPerformed
+
+    private void mNuevoActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mNuevoActionPerformed
+        myInterface ventanaActiva = getCurrentWindow();
+        if (ventanaActiva != null) {
+            ventanaActiva.imNuevo(); // Llama al método imNuevo de la ventana activa
+        }
+    }//GEN-LAST:event_mNuevoActionPerformed
 
     public JDesktopPane getDesktopPane() {
         return jDesktopPane2;

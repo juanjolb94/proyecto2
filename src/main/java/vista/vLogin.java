@@ -125,12 +125,31 @@ public class vLogin extends javax.swing.JDialog {
     private static int idUsuarioAutenticado;
 
     private void btnAccederActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAccederActionPerformed
-        String usuario = txtUsuario.getText();
+        String usuario = txtUsuario.getText().trim();
         String contraseña = new String(txtContraseña.getPassword());
 
         System.out.println("=== INTENTO DE LOGIN ===");
         System.out.println("Usuario ingresado: " + usuario);
         System.out.println("Contraseña ingresada: " + contraseña);
+
+        // Validación inicial de campos vacíos
+        if (usuario.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Por favor ingrese su nombre de usuario",
+                    "Campo requerido",
+                    JOptionPane.WARNING_MESSAGE);
+            txtUsuario.requestFocus();
+            return;
+        }
+
+        if (contraseña.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Por favor ingrese su contraseña",
+                    "Campo requerido",
+                    JOptionPane.WARNING_MESSAGE);
+            txtContraseña.requestFocus();
+            return;
+        }
 
         // Primero verificar el usuario hardcodeado admin (temporal)
         if (usuario.equals("admin") && contraseña.equals("1234")) {
@@ -149,52 +168,85 @@ public class vLogin extends javax.swing.JDialog {
             UsuariosDAO usuariosDAO = new UsuariosDAO();
             String[] datosUsuario = usuariosDAO.buscarPorNombreUsuario(usuario);
 
-            if (datosUsuario != null) {
-                System.out.println("Usuario encontrado en la base de datos:");
-                System.out.println("ID: " + datosUsuario[0]);
-                System.out.println("Nombre: " + datosUsuario[1]);
-                System.out.println("Contraseña hasheada en BD: " + datosUsuario[2]);
-                System.out.println("Persona ID: " + datosUsuario[3]);
-                System.out.println("Rol ID: " + datosUsuario[4]);
-                System.out.println("Activo: " + datosUsuario[5]);
-
-                if (Boolean.parseBoolean(datosUsuario[5])) { // Si está activo
-                    String contraseñaHasheada = datosUsuario[2]; // Contraseña hasheada de la BD
-
-                    System.out.println("Verificando contraseña...");
-                    System.out.println("Contraseña ingresada: " + contraseña);
-                    System.out.println("Contraseña hasheada en BD: " + contraseñaHasheada);
-
-                    boolean passwordMatch = PasswordUtils.checkPassword(contraseña, contraseñaHasheada);
-                    System.out.println("¿Contraseña coincide?: " + passwordMatch);
-
-                    if (passwordMatch) {
-                        System.out.println("✓ LOGIN EXITOSO");
-                        System.out.println("=======================");
-                        usuarioAutenticado = usuario;
-                        rolAutenticado = Integer.parseInt(datosUsuario[4]);
-                        idUsuarioAutenticado = Integer.parseInt(datosUsuario[0]);
-                        loginExitoso = true;
-                        this.dispose();
-                        return;
-                    } else {
-                        System.out.println("✗ Contraseña incorrecta");
-                    }
-                } else {
-                    System.out.println("✗ Usuario inactivo");
-                }
-            } else {
+            if (datosUsuario == null) {
+                // ❌ USUARIO NO ENCONTRADO
                 System.out.println("✗ Usuario no encontrado en la base de datos");
+                System.out.println("✗ LOGIN FALLIDO");
+                System.out.println("=======================");
+                JOptionPane.showMessageDialog(this,
+                        "El usuario '" + usuario + "' no existe en el sistema.\n\n"
+                        + "Verifique que haya escrito correctamente su nombre de usuario.",
+                        "Usuario no encontrado",
+                        JOptionPane.WARNING_MESSAGE);
+                txtUsuario.requestFocus();
+                txtUsuario.selectAll();
+                return;
             }
 
-            System.out.println("✗ LOGIN FALLIDO");
+            System.out.println("Usuario encontrado en la base de datos:");
+            System.out.println("ID: " + datosUsuario[0]);
+            System.out.println("Nombre: " + datosUsuario[1]);
+            System.out.println("Contraseña hasheada en BD: " + datosUsuario[2]);
+            System.out.println("Persona ID: " + datosUsuario[3]);
+            System.out.println("Rol ID: " + datosUsuario[4]);
+            System.out.println("Activo: " + datosUsuario[5]);
+
+            if (!Boolean.parseBoolean(datosUsuario[5])) {
+                // ❌ USUARIO DESHABILITADO
+                System.out.println("✗ Usuario inactivo/deshabilitado");
+                System.out.println("✗ LOGIN FALLIDO");
+                System.out.println("=======================");
+                JOptionPane.showMessageDialog(this,
+                        "Su cuenta de usuario está deshabilitada.\n\n"
+                        + "Para reactivar su cuenta, contacte al administrador del sistema.",
+                        "Cuenta deshabilitada",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            // Usuario activo - verificar contraseña
+            String contraseñaHasheada = datosUsuario[2]; // Contraseña hasheada de la BD
+
+            System.out.println("Verificando contraseña...");
+            System.out.println("Contraseña ingresada: " + contraseña);
+            System.out.println("Contraseña hasheada en BD: " + contraseñaHasheada);
+
+            boolean passwordMatch = PasswordUtils.checkPassword(contraseña, contraseñaHasheada);
+            System.out.println("¿Contraseña coincide?: " + passwordMatch);
+
+            if (!passwordMatch) {
+                // ❌ CONTRASEÑA INCORRECTA
+                System.out.println("✗ Contraseña incorrecta");
+                System.out.println("✗ LOGIN FALLIDO");
+                System.out.println("=======================");
+                JOptionPane.showMessageDialog(this,
+                        "La contraseña ingresada es incorrecta.\n\n"
+                        + "Verifique que haya escrito correctamente su contraseña.",
+                        "Contraseña incorrecta",
+                        JOptionPane.ERROR_MESSAGE);
+                txtContraseña.requestFocus();
+                txtContraseña.selectAll();
+                return;
+            }
+
+            // ✅ LOGIN EXITOSO
+            System.out.println("✓ LOGIN EXITOSO");
             System.out.println("=======================");
-            JOptionPane.showMessageDialog(this, "Usuario o contraseña incorrectos", "Error", JOptionPane.ERROR_MESSAGE);
+            usuarioAutenticado = usuario;
+            rolAutenticado = Integer.parseInt(datosUsuario[4]);
+            idUsuarioAutenticado = Integer.parseInt(datosUsuario[0]);
+            loginExitoso = true;
+            this.dispose();
 
         } catch (Exception e) {
             System.err.println("✗ Error durante el login: " + e.getMessage());
             System.out.println("=======================");
-            JOptionPane.showMessageDialog(this, "Error al verificar usuario: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Error al conectar con la base de datos:\n\n" + e.getMessage() + "\n\n"
+                    + "Por favor, contacte al administrador del sistema.",
+                    "Error de conexión",
+                    JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
         }
     }//GEN-LAST:event_btnAccederActionPerformed
 
