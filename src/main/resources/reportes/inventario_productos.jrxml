@@ -126,13 +126,13 @@
                 </textElement>
                 <text><![CDATA[Marca: Todas]]></text>
             </staticText>
-            <staticText>
+            <textField>
                 <reportElement style="Column header" x="360" y="10" width="170" height="15" forecolor="#333333" uuid="2dbd4708-4ef9-4a87-b612-d9f0a3a75ecf"/>
                 <textElement>
                     <font size="9"/>
                 </textElement>
-                <text><![CDATA[Mostrar inactivos: No]]></text>
-            </staticText>
+                <textFieldExpression><![CDATA["Mostrar inactivos: " + ($P{mostrar_inactivos} ? "Sí" : "No")]]></textFieldExpression>
+            </textField>
             <staticText>
                 <reportElement style="Column header" x="160" y="20" width="250" height="10" forecolor="#333333" uuid="2dbd4708-4ef9-4a87-b612-d9f0a3a75ecf"/>
                 <textElement>

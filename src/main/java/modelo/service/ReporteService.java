@@ -496,7 +496,7 @@ public class ReporteService {
         sql.append("    cc.condicion, ");
         sql.append("    cc.subtotal, ");
         sql.append("    cc.total_iva, ");
-        sql.append("    cc.total, ");
+        sql.append("    cc.total_compra as total, ");
         sql.append("    CASE WHEN cc.estado = 1 THEN 'Activo' ELSE 'Anulado' END as estado ");
         sql.append("FROM compras_cabecera cc ");
         sql.append("LEFT JOIN proveedores p ON cc.id_proveedor = p.id_proveedor ");
