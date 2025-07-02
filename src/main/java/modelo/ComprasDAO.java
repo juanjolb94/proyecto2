@@ -82,18 +82,81 @@ public class ComprasDAO {
         }
     }
 
+    // Método auxiliar para obtener datos completos del producto
+    private Object[] obtenerDatosProductoCompletos(int idProducto, String codBarra) throws SQLException {
+        String sql = "SELECT pd.descripcion, pd.unidad_medida_compra, pc.iva "
+                + "FROM productos_detalle pd "
+                + "INNER JOIN productos_cabecera pc ON pd.id_producto = pc.id_producto "
+                + "WHERE pd.id_producto = ? AND pd.cod_barra = ?";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setInt(1, idProducto);
+            ps.setString(2, codBarra);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return new Object[]{
+                        rs.getString("descripcion"), // [0]
+                        rs.getString("unidad_medida_compra"), // [1]
+                        1, // [2] - VALOR FIJO: unidades_por_empaque
+                        rs.getDouble("iva") // [3]
+                    };
+                }
+            }
+        }
+
+        // Valores por defecto si no encuentra el producto
+        return new Object[]{"Producto", "UND", 1, 10.0};
+    }
+
+    // Método para calcular precio final (precio unitario - descuento)
+    private double calcularPrecioFinal(double precioUnitario, double descuento) {
+        return precioUnitario - descuento;
+    }
+
     // Método para insertar un detalle de compra
     private void insertarDetalleCompra(int idCompra, mCompras.DetalleCompra detalle) throws SQLException {
-        String sql = "INSERT INTO compras_detalle (id_compra, id_producto, cod_barra, cantidad, precio_unitario, subtotal) "
-                + "VALUES (?, ?, ?, ?, ?, ?)";
+
+        // Obtener datos adicionales del producto
+        Object[] datosProducto = obtenerDatosProductoCompletos(detalle.getIdProducto(), detalle.getCodBarra());
+
+        // Establecer valores en el detalle si no están definidos
+        if (detalle.getDescripcion() == null) {
+            detalle.setDescripcion((String) datosProducto[0]);
+        }
+        if (detalle.getUnidadMedida() == null) {
+            detalle.setUnidadMedida((String) datosProducto[1]);
+        }
+        if (detalle.getUnidadesPorEmpaque() == 0) {
+            detalle.setUnidadesPorEmpaque((Integer) datosProducto[2]);
+        }
+        if (detalle.getPorcentajeIva() == 0) {
+            detalle.setPorcentajeIva((Double) datosProducto[3]);
+        }
+
+        // Calcular precio final (por ahora sin descuento)
+        double precioFinal = calcularPrecioFinal(detalle.getPrecioUnitario(), detalle.getDescuento());
+        detalle.setPrecioFinal(precioFinal);
+
+        // SQL con TODOS los campos
+        String sql = "INSERT INTO compras_detalle (id_compra, id_producto, cod_barra, descripcion, "
+                + "cantidad, unidad_medida, unidades_por_empaque, precio_unitario, descuento, "
+                + "precio_final, porcentaje_iva, subtotal) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
             ps.setInt(1, idCompra);
             ps.setInt(2, detalle.getIdProducto());
             ps.setString(3, detalle.getCodBarra());
-            ps.setInt(4, detalle.getCantidad());
-            ps.setDouble(5, detalle.getPrecioUnitario());
-            ps.setDouble(6, detalle.getSubtotal());
+            ps.setString(4, detalle.getDescripcion());
+            ps.setInt(5, detalle.getCantidad());
+            ps.setString(6, detalle.getUnidadMedida());
+            ps.setInt(7, detalle.getUnidadesPorEmpaque());
+            ps.setDouble(8, detalle.getPrecioUnitario());
+            ps.setDouble(9, detalle.getDescuento());
+            ps.setDouble(10, detalle.getPrecioFinal());
+            ps.setDouble(11, detalle.getPorcentajeIva());
+            ps.setDouble(12, detalle.getSubtotal());
 
             ps.executeUpdate();
         }
@@ -131,7 +194,9 @@ public class ComprasDAO {
 
     // Método para cargar los detalles de una compra
     private void cargarDetallesCompra(mCompras compra) throws SQLException {
-        String sql = "SELECT * FROM compras_detalle WHERE id_compra = ?";
+        String sql = "SELECT cd.*, pd.descripcion as desc_producto FROM compras_detalle cd "
+                + "LEFT JOIN productos_detalle pd ON cd.id_producto = pd.id_producto "
+                + "AND cd.cod_barra = pd.cod_barra WHERE cd.id_compra = ?";
 
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
             ps.setInt(1, compra.getIdCompra());
@@ -140,14 +205,25 @@ public class ComprasDAO {
                 List<mCompras.DetalleCompra> detalles = new ArrayList<>();
 
                 while (rs.next()) {
+                    // Crear detalle usando el constructor con precio unitario
                     mCompras.DetalleCompra detalle = new mCompras.DetalleCompra(
                             rs.getInt("id_compra"),
                             rs.getInt("id_producto"),
                             rs.getString("cod_barra"),
                             rs.getInt("cantidad"),
-                            rs.getDouble("precio_unitario")
+                            rs.getDouble("precio_unitario"),
+                            true // Indicar que es precio unitario
                     );
 
+                    // Establecer campos adicionales desde la BD
+                    detalle.setDescripcion(rs.getString("descripcion"));
+                    detalle.setUnidadMedida(rs.getString("unidad_medida"));
+                    detalle.setUnidadesPorEmpaque(rs.getInt("unidades_por_empaque"));
+                    detalle.setDescuento(rs.getDouble("descuento"));
+                    detalle.setPrecioFinal(rs.getDouble("precio_final"));
+                    detalle.setPorcentajeIva(rs.getDouble("porcentaje_iva"));
+
+                    // El subtotal ya se calcula automáticamente en el constructor
                     detalles.add(detalle);
                 }
 
@@ -383,4 +459,5 @@ public class ComprasDAO {
 
         return detalles;
     }
+
 }

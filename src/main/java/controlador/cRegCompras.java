@@ -170,23 +170,14 @@ public class cRegCompras implements myInterface {
                 }
             }
 
-            // Calcular el subtotal
-            double subtotalExacto = precioUnitario * cantidad;
-            int subtotal = (int) Math.round(subtotalExacto);
-
-            // Calcular impuesto (método paraguayo)
-            int impuesto = (int) Math.round(subtotal / 11.0);
-
-            // Calcular base imponible
-            int baseImponible = subtotal - impuesto;
-
-            // Crear y agregar el detalle
+            // Crear y agregar el detalle usando el constructor correcto
             mCompras.DetalleCompra detalle = new mCompras.DetalleCompra(
                     compraActual.getIdCompra(),
                     idProducto,
                     codBarra,
                     cantidad,
-                    precioUnitario
+                    precioUnitario,
+                    true // Indicar que es precio unitario, no subtotal
             );
 
             compraActual.agregarDetalle(detalle);

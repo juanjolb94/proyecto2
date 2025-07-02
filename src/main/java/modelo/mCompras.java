@@ -13,12 +13,12 @@ public class mCompras {
     private String tipoDocumento;
     private String timbrado;
     private String condicion;
-    private Date fechaVencimiento;        // CAMPO AGREGADO
+    private Date fechaVencimiento;
     private double subtotal;
-    private double totalIva5;             // CAMPO AGREGADO
-    private double totalIva10;            // CAMPO AGREGADO
+    private double totalIva5;
+    private double totalIva10;
     private double totalIva;
-    private String nroPlanilla;           // CAMPO AGREGADO
+    private String nroPlanilla;
     private double totalCompra;
     private String observaciones;
     private boolean estado;
@@ -221,10 +221,16 @@ public class mCompras {
         private int idProducto;
         private String codBarra;
         private int cantidad;
-        private double precioUnitario; // Mantenemos como double para cálculos precisos
-        private double subtotal;       // Mantenemos como double para cálculos precisos
-        private int baseImponible;     // Nueva propiedad
-        private int impuesto;          // Nueva propiedad
+        private double precioUnitario;
+        private double subtotal;
+        private int baseImponible;
+        private int impuesto;
+        private String descripcion;
+        private String unidadMedida;
+        private int unidadesPorEmpaque;
+        private double descuento;
+        private double precioFinal;
+        private double porcentajeIva;
 
         public DetalleCompra() {
         }
@@ -237,17 +243,30 @@ public class mCompras {
             this.codBarra = codBarra;
             this.cantidad = cantidad;
             this.subtotal = subtotal;
+
+            // Valores por defecto para campos nuevos
+            this.unidadesPorEmpaque = 1;
+            this.descuento = 0.0;
+            this.porcentajeIva = 10.0; // IVA por defecto
+
+            // Como se pasó el subtotal, calcular precio unitario
             this.calcularPrecioUnitario();
             this.calcularBaseImponibleEImpuesto();
         }
 
-        // Constructor alternativo cuando se conoce el precio unitario
+// Constructor alternativo cuando se conoce el precio unitario - CORRECTO
         public DetalleCompra(int idCompra, int idProducto, String codBarra,
                 int cantidad, double precioUnitario, boolean esPrecioUnitario) {
             this.idCompra = idCompra;
             this.idProducto = idProducto;
             this.codBarra = codBarra;
             this.cantidad = cantidad;
+
+            // Valores por defecto para campos nuevos
+            this.unidadesPorEmpaque = 1;
+            this.descuento = 0.0;
+            this.porcentajeIva = 10.0;
+
             if (esPrecioUnitario) {
                 this.precioUnitario = precioUnitario;
                 this.calcularSubtotal();
@@ -255,6 +274,7 @@ public class mCompras {
                 this.subtotal = precioUnitario; // En realidad es el subtotal
                 this.calcularPrecioUnitario();
             }
+
             this.calcularBaseImponibleEImpuesto();
         }
 
@@ -268,6 +288,54 @@ public class mCompras {
         }
 
         // ========== GETTERS Y SETTERS DE DETALLECOMPRA ==========
+        public String getDescripcion() {
+            return descripcion;
+        }
+
+        public void setDescripcion(String descripcion) {
+            this.descripcion = descripcion;
+        }
+
+        public String getUnidadMedida() {
+            return unidadMedida;
+        }
+
+        public void setUnidadMedida(String unidadMedida) {
+            this.unidadMedida = unidadMedida;
+        }
+
+        public int getUnidadesPorEmpaque() {
+            return unidadesPorEmpaque;
+        }
+
+        public void setUnidadesPorEmpaque(int unidadesPorEmpaque) {
+            this.unidadesPorEmpaque = unidadesPorEmpaque;
+        }
+
+        public double getDescuento() {
+            return descuento;
+        }
+
+        public void setDescuento(double descuento) {
+            this.descuento = descuento;
+        }
+
+        public double getPrecioFinal() {
+            return precioFinal;
+        }
+
+        public void setPrecioFinal(double precioFinal) {
+            this.precioFinal = precioFinal;
+        }
+
+        public double getPorcentajeIva() {
+            return porcentajeIva;
+        }
+
+        public void setPorcentajeIva(double porcentajeIva) {
+            this.porcentajeIva = porcentajeIva;
+        }
+
         public int getIdCompra() {
             return idCompra;
         }
