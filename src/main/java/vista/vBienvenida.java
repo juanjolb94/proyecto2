@@ -112,7 +112,7 @@ public class vBienvenida extends javax.swing.JDialog {
         panelPrincipal.setBackground(new java.awt.Color(255, 255, 255));
         panelPrincipal.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
 
-        panelHeader.setBackground(new java.awt.Color(46, 125, 50));
+        panelHeader.setBackground(new java.awt.Color(0, 102, 102));
         panelHeader.setBorder(javax.swing.BorderFactory.createEmptyBorder(1, 1, 1, 1));
 
         iconoUsuario.setFont(new java.awt.Font("Dialog", 1, 48)); // NOI18N
@@ -222,7 +222,7 @@ public class vBienvenida extends javax.swing.JDialog {
 
         panelBotones.setBackground(new java.awt.Color(255, 255, 255));
 
-        btnContinuar.setBackground(new java.awt.Color(46, 125, 50));
+        btnContinuar.setBackground(new java.awt.Color(0, 102, 102));
         btnContinuar.setFont(new java.awt.Font("Segoe UI", 1, 14)); // NOI18N
         btnContinuar.setForeground(new java.awt.Color(255, 255, 255));
         btnContinuar.setText("Continuar al Sistema");
