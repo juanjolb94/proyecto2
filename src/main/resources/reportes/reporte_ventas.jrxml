@@ -450,9 +450,9 @@
             </staticText>
 
             <textField pattern="#,##0">
-                <reportElement style="Detail" x="600" y="30" width="80" height="15" uuid="4a32d90c-5d8e-43e8-add6-35ced48ed6cd"/>
+                <reportElement style="Detail" x="600" y="30" width="80" height="15" uuid="4a32d90c-5d8e-43e8-add6-35ced48ed6ff"/>
                 <textElement textAlignment="Right">
-                    <font size="12" isBold="true"/>
+                    <font size="9" isBold="true"/>
                 </textElement>
                 <textFieldExpression><![CDATA[$V{total_general}]]></textFieldExpression>
             </textField>

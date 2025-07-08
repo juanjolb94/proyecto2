@@ -1,5 +1,6 @@
 package modelo;
 
+import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -125,8 +126,14 @@ public class VentasDAO {
         // Obtener descripción del producto
         String descripcionProducto = obtenerDescripcionProducto(detalle.getIdProducto(), detalle.getCodigoBarra());
 
+        // CALCULAR IVA
+        int impuestoMonto = (int) Math.round(detalle.getSubtotal() / 11.0);
+        int baseImponible = detalle.getSubtotal() - impuestoMonto;
+
         String sql = "INSERT INTO ventas_detalle (id_venta, id_producto, codigo_barra, "
-                + "cantidad, precio_unitario, subtotal, descripcion_producto) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                + "cantidad, precio_unitario, subtotal, descripcion_producto, "
+                + "impuesto_monto, base_imponible, impuesto_porcentaje) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement ps = conexion.prepareStatement(sql)) {
             ps.setInt(1, idVenta);
@@ -136,6 +143,9 @@ public class VentasDAO {
             ps.setInt(5, detalle.getPrecioUnitario());
             ps.setInt(6, detalle.getSubtotal());
             ps.setString(7, descripcionProducto);
+            ps.setInt(8, impuestoMonto);
+            ps.setInt(9, baseImponible);
+            ps.setBigDecimal(10, new BigDecimal("10.00"));
 
             ps.executeUpdate();
         }
