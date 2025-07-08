@@ -67,13 +67,21 @@ public class ReporteService {
             // Compilar el reporte si es necesario
             compilarReporteSiEsNecesario(reporteNombre);
 
+            // AGREGAR ESTOS LOGS DE DEBUG:
+            System.out.println("=== DEBUG: Nombre de reporte recibido: '" + reporteNombre + "'");
+            System.out.println("=== DEBUG: Longitud del nombre: " + reporteNombre.length());
+            System.out.println("=== DEBUG: Comparando con 'productos_mas_vendidos': " + reporteNombre.equals("productos_mas_vendidos"));
+
             // Obtener datos específicos según el reporte
             if (reporteNombre.equals("inventario_productos")) {
+                System.out.println("=== RUTA: Inventario de productos ===");
                 return generarReporteInventario(parametros);
             } else if (reporteNombre.equals("productos_mas_vendidos")) {
+                System.out.println("=== RUTA: Productos más vendidos ===");
                 // Reporte de productos más vendidos
                 return generarReporteProductosMasVendidos(parametros);
             } else {
+                System.out.println("=== RUTA: Reporte genérico para: '" + reporteNombre + "' ===");
                 // Reporte genérico usando la conexión a base de datos
                 JasperReport jasperReport = obtenerReporteCompilado(reporteNombre);
                 Connection connection = DatabaseConnection.getConnection();
@@ -178,6 +186,8 @@ public class ReporteService {
                     return generarReporteIngresosEgresos(parametros);
                 case "ticket_venta":
                     return generarReporteTicketVenta(parametros);
+                case "productos_mas_vendidos":
+                    return generarReporteProductosMasVendidos(parametros);
                 default:
                     // Reporte genérico usando la conexión a base de datos
                     JasperReport jasperReport = obtenerReporteCompilado(reporteNombre);
@@ -929,8 +939,12 @@ public class ReporteService {
      * Genera el reporte de productos más vendidos
      */
     public JasperPrint generarReporteProductosMasVendidos(Map<String, Object> parametros) throws JRException, SQLException {
+        System.out.println("=== EJECUTANDO generarReporteProductosMasVendidos ===");
+
         // Obtener datos de productos más vendidos
         List<Map<String, Object>> datosReporte = obtenerProductosMasVendidos(parametros);
+
+        System.out.println("=== Datos obtenidos: " + datosReporte.size() + " productos ===");
 
         // Obtener el reporte compilado
         JasperReport jasperReport = obtenerReporteCompilado("productos_mas_vendidos");
@@ -949,99 +963,162 @@ public class ReporteService {
     private List<Map<String, Object>> obtenerProductosMasVendidos(Map<String, Object> parametros) throws SQLException {
         List<Map<String, Object>> productos = new ArrayList<>();
 
+        System.out.println("=== INICIANDO obtenerProductosMasVendidos ===");
+
+        // PASO 1: Verificar la vista base
+        System.out.println("=== PASO 1: Verificando vista base ===");
+        try (Connection testConn = DatabaseConnection.getConnection(); PreparedStatement testPs = testConn.prepareStatement("SELECT COUNT(*) FROM v_productos_mas_vendidos"); ResultSet testRs = testPs.executeQuery()) {
+
+            if (testRs.next()) {
+                int count = testRs.getInt(1);
+                System.out.println("Registros en v_productos_mas_vendidos: " + count);
+                if (count == 0) {
+                    System.out.println("¡¡¡ PROBLEMA: No hay registros en la vista v_productos_mas_vendidos !!!");
+                    return productos;
+                }
+            }
+        }
+
+        // PASO 2: Intentar consulta con categorías y marcas
+        System.out.println("=== PASO 2: Intentando consulta con categorías y marcas ===");
         StringBuilder sql = new StringBuilder();
-        sql.append("SELECT ");
-        sql.append("    pv.id_producto, ");
+        sql.append("SELECT DISTINCT ");
         sql.append("    pv.codigo_barra, ");
         sql.append("    pv.descripcion_producto, ");
         sql.append("    pv.cantidad_total_vendida, ");
         sql.append("    pv.monto_total_vendido, ");
         sql.append("    pv.numero_ventas, ");
         sql.append("    pv.precio_promedio, ");
-        sql.append("    pc.nombre as nombre_producto, ");
-        sql.append("    cp.nombre as categoria, ");
-        sql.append("    mp.nombre as marca ");
+        sql.append("    COALESCE(pc.nombre, pv.descripcion_producto) as nombre_producto, ");
+        sql.append("    COALESCE(cp.nombre, 'Sin categoría') as categoria, ");
+        sql.append("    COALESCE(mp.nombre, 'Sin marca') as marca ");
         sql.append("FROM v_productos_mas_vendidos pv ");
-        sql.append("INNER JOIN productos_detalle pd ON pv.codigo_barra = pd.cod_barra ");
-        sql.append("INNER JOIN productos_cabecera pc ON pd.id_producto = pc.id_producto ");
+        sql.append("LEFT JOIN productos_detalle pd ON pv.codigo_barra = pd.cod_barra ");
+        sql.append("LEFT JOIN productos_cabecera pc ON pd.id_producto = pc.id_producto ");
         sql.append("LEFT JOIN categoria_producto cp ON pc.id_categoria = cp.id_categoria ");
         sql.append("LEFT JOIN marca_producto mp ON pc.id_marca = mp.id_marca ");
-        sql.append("WHERE 1=1 ");
 
-        List<Object> parametrosSql = new ArrayList<>();
-
-        // Aplicar filtros de fecha a través de subconsulta
-        if (parametros.containsKey("fecha_desde") && parametros.get("fecha_desde") != null) {
-            sql.append("AND pv.codigo_barra IN (");
-            sql.append("    SELECT DISTINCT vd.codigo_barra ");
-            sql.append("    FROM ventas_detalle vd ");
-            sql.append("    INNER JOIN ventas_cabecera vc ON vd.id_venta = vc.id ");
-            sql.append("    WHERE vc.fecha >= ? ");
-
-            if (parametros.containsKey("fecha_hasta") && parametros.get("fecha_hasta") != null) {
-                sql.append("    AND vc.fecha <= ? ");
-            }
-
-            if (parametros.containsKey("incluir_anulados") && parametros.get("incluir_anulados") != null) {
-                Boolean incluirAnulados = (Boolean) parametros.get("incluir_anulados");
-                if (!incluirAnulados) {
-                    sql.append("    AND vc.anulado = 0 ");
-                }
-            }
-
-            sql.append(") ");
-
-            parametrosSql.add(parametros.get("fecha_desde"));
-            if (parametros.containsKey("fecha_hasta") && parametros.get("fecha_hasta") != null) {
-                parametrosSql.add(parametros.get("fecha_hasta"));
-            }
-        }
-
-        // Ordenamiento según la selección
-        String tipoOrden = (String) parametros.get("tipo_ordenamiento");
-        if ("Por monto vendido".equals(tipoOrden)) {
+        // Aplicar filtro de ordenamiento
+        String ordenamiento = (String) parametros.get("tipo_ordenamiento");
+        if ("monto_total".equals(ordenamiento)) {
             sql.append("ORDER BY pv.monto_total_vendido DESC ");
-        } else if ("Por número de ventas".equals(tipoOrden)) {
+        } else if ("numero_ventas".equals(ordenamiento)) {
             sql.append("ORDER BY pv.numero_ventas DESC ");
         } else {
-            // Por defecto: Por cantidad vendida
             sql.append("ORDER BY pv.cantidad_total_vendida DESC ");
         }
 
-        // Limitar resultados
-        if (parametros.containsKey("limite_productos")) {
-            Integer limite = (Integer) parametros.get("limite_productos");
+        // Aplicar límite
+        if (parametros.containsKey("limite_productos") && parametros.get("limite_productos") != null) {
             sql.append("LIMIT ? ");
-            parametrosSql.add(limite);
         }
 
+        System.out.println("SQL con categorías y marcas: " + sql.toString());
+
+        boolean consultaExitosa = false;
+
         try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement ps = connection.prepareStatement(sql.toString())) {
-            // Establecer parámetros
-            for (int i = 0; i < parametrosSql.size(); i++) {
-                ps.setObject(i + 1, parametrosSql.get(i));
+
+            // Establecer parámetro de límite si existe
+            if (parametros.containsKey("limite_productos") && parametros.get("limite_productos") != null) {
+                ps.setObject(1, parametros.get("limite_productos"));
             }
 
             try (ResultSet rs = ps.executeQuery()) {
-                int ranking = 1;
+                System.out.println("Ejecutando consulta con categorías y marcas...");
+                int contador = 0;
                 while (rs.next()) {
-                    Map<String, Object> fila = new HashMap<>();
-                    fila.put("ranking", ranking++);
-                    fila.put("id_producto", rs.getInt("id_producto"));
-                    fila.put("codigo_barra", rs.getString("codigo_barra"));
-                    fila.put("nombre_producto", rs.getString("nombre_producto"));
-                    fila.put("descripcion_producto", rs.getString("descripcion_producto"));
-                    fila.put("categoria", rs.getString("categoria"));
-                    fila.put("marca", rs.getString("marca"));
-                    fila.put("cantidad_total_vendida", rs.getInt("cantidad_total_vendida"));
-                    fila.put("monto_total_vendido", rs.getBigDecimal("monto_total_vendido"));
-                    fila.put("numero_ventas", rs.getInt("numero_ventas"));
-                    fila.put("precio_promedio", rs.getBigDecimal("precio_promedio"));
+                    contador++;
+                    String categoria = rs.getString("categoria");
+                    String marca = rs.getString("marca");
+                    String nombreProducto = rs.getString("nombre_producto");
+                    String descripcionProducto = rs.getString("descripcion_producto");
 
-                    productos.add(fila);
+                    System.out.println("Producto " + contador + ": "
+                            + rs.getString("codigo_barra") + " - "
+                            + descripcionProducto + " - "
+                            + rs.getInt("cantidad_total_vendida")
+                            + " - Categoría: " + categoria
+                            + " - Marca: " + marca);
+
+                    Map<String, Object> producto = new HashMap<>();
+                    producto.put("ranking", contador);
+                    producto.put("codigo_barra", rs.getString("codigo_barra"));
+                    producto.put("nombre_producto", nombreProducto);
+                    producto.put("descripcion_producto", descripcionProducto);
+                    producto.put("categoria", categoria);
+                    producto.put("marca", marca);
+                    producto.put("cantidad_total_vendida", rs.getInt("cantidad_total_vendida"));
+                    producto.put("monto_total_vendido", rs.getBigDecimal("monto_total_vendido"));
+                    producto.put("numero_ventas", rs.getInt("numero_ventas"));
+                    producto.put("precio_promedio", rs.getBigDecimal("precio_promedio"));
+
+                    productos.add(producto);
                 }
+                System.out.println("Productos encontrados (con categorías): " + contador);
+                consultaExitosa = true;
+            }
+        } catch (SQLException e) {
+            System.out.println("ERROR en consulta con categorías: " + e.getMessage());
+            e.printStackTrace();
+            consultaExitosa = false;
+        }
+
+        // PASO 3: Si falló la consulta con categorías, usar la consulta simplificada como respaldo
+        if (!consultaExitosa || productos.isEmpty()) {
+            System.out.println("=== PASO 3: RESPALDO - Usando consulta simplificada ===");
+            productos.clear(); // Limpiar cualquier resultado parcial
+
+            StringBuilder sqlSimple = new StringBuilder();
+            sqlSimple.append("SELECT ");
+            sqlSimple.append("    pv.codigo_barra, ");
+            sqlSimple.append("    pv.descripcion_producto, ");
+            sqlSimple.append("    pv.cantidad_total_vendida, ");
+            sqlSimple.append("    pv.monto_total_vendido, ");
+            sqlSimple.append("    pv.numero_ventas, ");
+            sqlSimple.append("    pv.precio_promedio ");
+            sqlSimple.append("FROM v_productos_mas_vendidos pv ");
+            sqlSimple.append("ORDER BY pv.cantidad_total_vendida DESC ");
+
+            if (parametros.containsKey("limite_productos") && parametros.get("limite_productos") != null) {
+                sqlSimple.append("LIMIT ? ");
+            }
+
+            try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement ps = connection.prepareStatement(sqlSimple.toString())) {
+
+                if (parametros.containsKey("limite_productos") && parametros.get("limite_productos") != null) {
+                    ps.setObject(1, parametros.get("limite_productos"));
+                }
+
+                try (ResultSet rs = ps.executeQuery()) {
+                    System.out.println("Ejecutando consulta de respaldo...");
+                    int contador = 0;
+                    while (rs.next()) {
+                        contador++;
+
+                        Map<String, Object> producto = new HashMap<>();
+                        producto.put("ranking", contador);
+                        producto.put("codigo_barra", rs.getString("codigo_barra"));
+                        producto.put("nombre_producto", rs.getString("descripcion_producto"));
+                        producto.put("descripcion_producto", rs.getString("descripcion_producto"));
+                        producto.put("categoria", "Sin categoría");
+                        producto.put("marca", "Sin marca");
+                        producto.put("cantidad_total_vendida", rs.getInt("cantidad_total_vendida"));
+                        producto.put("monto_total_vendido", rs.getBigDecimal("monto_total_vendido"));
+                        producto.put("numero_ventas", rs.getInt("numero_ventas"));
+                        producto.put("precio_promedio", rs.getBigDecimal("precio_promedio"));
+
+                        productos.add(producto);
+                    }
+                    System.out.println("Productos encontrados (respaldo): " + contador);
+                }
+            } catch (SQLException e2) {
+                System.out.println("ERROR también en consulta de respaldo: " + e2.getMessage());
+                e2.printStackTrace();
             }
         }
 
+        System.out.println("=== FIN obtenerProductosMasVendidos - Productos: " + productos.size() + " ===");
         return productos;
     }
 
