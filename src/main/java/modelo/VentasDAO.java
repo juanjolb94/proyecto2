@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.sql.CallableStatement;
 
 public class VentasDAO {
 
@@ -13,9 +14,7 @@ public class VentasDAO {
         this.conexion = DatabaseConnection.getConnection();
     }
 
-    /**
-     * Inserta venta con datos del talonario
-     */
+    // Inserta venta con datos del talonario
     public int insertarVentaConTalonario(mVentas venta) throws SQLException {
         int idVenta = 0;
         conexion.setAutoCommit(false);
@@ -416,66 +415,32 @@ public class VentasDAO {
 
     // Método para anular una venta
     public boolean anularVenta(int idVenta) throws SQLException {
-        conexion.setAutoCommit(false);
+        String sql = "{CALL sp_anular_venta(?, ?, ?)}";
 
-        try {
-            // Primero verificar que la venta existe y no está anulada
-            String sqlVerificar = "SELECT anulado FROM ventas WHERE id = ?";
-            try (PreparedStatement ps = conexion.prepareStatement(sqlVerificar)) {
-                ps.setInt(1, idVenta);
-                try (ResultSet rs = ps.executeQuery()) {
+        try (CallableStatement cs = conexion.prepareCall(sql)) {
+            cs.setInt(1, idVenta);
+            cs.setInt(2, 1); // ID del usuario - obtener del sistema de login
+            cs.setString(3, "Anulación manual desde sistema");
+
+            boolean hasResultSet = cs.execute();
+
+            if (hasResultSet) {
+                try (ResultSet rs = cs.getResultSet()) {
                     if (rs.next()) {
-                        if (rs.getBoolean("anulado")) {
-                            throw new SQLException("La venta ya está anulada");
-                        }
-                    } else {
-                        throw new SQLException("La venta no existe");
+                        System.out.println("Resultado: " + rs.getString("resultado"));
+                        return true;
                     }
                 }
             }
 
-            // Restaurar stock de todos los productos de la venta
-            String sqlDetalles = "SELECT id_producto, codigo_barra, cantidad FROM ventas_detalle WHERE id_venta = ?";
-            try (PreparedStatement ps = conexion.prepareStatement(sqlDetalles)) {
-                ps.setInt(1, idVenta);
-                try (ResultSet rs = ps.executeQuery()) {
-                    while (rs.next()) {
-                        int idProducto = rs.getInt("id_producto");
-                        String codigoBarra = rs.getString("codigo_barra");
-                        int cantidad = rs.getInt("cantidad");
-
-                        // Restaurar stock (adaptado a tu estructura)
-                        String sqlStock = "UPDATE productos_detalle SET stock = stock + ? WHERE id_producto = ? AND cod_barra = ?";
-                        try (PreparedStatement psStock = conexion.prepareStatement(sqlStock)) {
-                            psStock.setInt(1, cantidad);
-                            psStock.setInt(2, idProducto);
-                            psStock.setString(3, codigoBarra);
-                            psStock.executeUpdate();
-                        }
-                    }
-                }
-            }
-
-            // Marcar la venta como anulada
-            String sqlAnular = "UPDATE ventas SET anulado = true WHERE id = ?";
-            try (PreparedStatement ps = conexion.prepareStatement(sqlAnular)) {
-                ps.setInt(1, idVenta);
-                int filasAfectadas = ps.executeUpdate();
-
-                if (filasAfectadas > 0) {
-                    conexion.commit();
-                    return true;
-                } else {
-                    conexion.rollback();
-                    return false;
-                }
-            }
+            return false;
 
         } catch (SQLException e) {
-            conexion.rollback();
+            if (e.getSQLState().equals("45000")) {
+                // Error controlado del stored procedure
+                throw new SQLException("Error: " + e.getMessage());
+            }
             throw e;
-        } finally {
-            conexion.setAutoCommit(true);
         }
     }
 

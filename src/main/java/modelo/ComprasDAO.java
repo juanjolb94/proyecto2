@@ -261,12 +261,32 @@ public class ComprasDAO {
 
     // Método para anular una compra (cambiar estado)
     public boolean anularCompra(int idCompra) throws SQLException {
-        String sql = "UPDATE compras_cabecera SET estado = false WHERE id_compra = ?";
+        String sql = "{CALL sp_anular_compra(?, ?, ?)}";
 
-        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
-            ps.setInt(1, idCompra);
+        try (CallableStatement cs = conexion.prepareCall(sql)) {
+            cs.setInt(1, idCompra);
+            cs.setInt(2, 1); // ID del usuario - obtener del sistema de login
+            cs.setString(3, "Anulación manual desde sistema");
 
-            return ps.executeUpdate() > 0;
+            boolean hasResultSet = cs.execute();
+
+            if (hasResultSet) {
+                try (ResultSet rs = cs.getResultSet()) {
+                    if (rs.next()) {
+                        System.out.println("Resultado: " + rs.getString("resultado"));
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+
+        } catch (SQLException e) {
+            if (e.getSQLState().equals("45000")) {
+                // Error controlado del stored procedure
+                throw new SQLException("Error: " + e.getMessage());
+            }
+            throw e;
         }
     }
 
