@@ -419,7 +419,14 @@ public class VentasDAO {
 
         try (CallableStatement cs = conexion.prepareCall(sql)) {
             cs.setInt(1, idVenta);
-            cs.setInt(2, 1); // ID del usuario - obtener del sistema de login
+
+            // Usar usuario dinámico del sistema de login
+            int usuarioId = vista.vLogin.getIdUsuarioAutenticado();
+            if (usuarioId <= 0) {
+                usuarioId = 1; // Fallback por seguridad
+            }
+            cs.setInt(2, usuarioId);
+
             cs.setString(3, "Anulación manual desde sistema");
 
             boolean hasResultSet = cs.execute();
@@ -428,6 +435,7 @@ public class VentasDAO {
                 try (ResultSet rs = cs.getResultSet()) {
                     if (rs.next()) {
                         System.out.println("Resultado: " + rs.getString("resultado"));
+                        System.out.println("Anulada por usuario ID: " + usuarioId);
                         return true;
                     }
                 }
