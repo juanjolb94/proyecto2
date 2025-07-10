@@ -423,6 +423,24 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
     // Configurar eventos de los componentes
     private void configurarEventos() {
+        // Evento para ID de venta (Enter para buscar o limpiar si es 0)
+        txtIdVenta.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    procesarIdVenta();
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+            }
+        });
+
         // Evento para código de barras (Enter para agregar)
         txtCodigoBarra.addKeyListener(new KeyListener() {
             @Override
@@ -469,6 +487,39 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         // Configurar spinner de cantidad - no permitir negativos, iniciar en 1
         SpinnerNumberModel modeloCantidad = new SpinnerNumberModel(1, 1, 999, 1);
         spinnerCantidad.setModel(modeloCantidad);
+    }
+
+    // Método para procesar el ID de venta ingresado
+    private void procesarIdVenta() {
+        try {
+            String idTexto = txtIdVenta.getText().trim();
+
+            if (idTexto.isEmpty()) {
+                mostrarError("Ingrese un ID de venta.");
+                txtIdVenta.requestFocus();
+                return;
+            }
+
+            int id = Integer.parseInt(idTexto);
+
+            if (id == 0) {
+                // Limpiar formulario
+                limpiarFormulario();
+                mostrarMensaje("Formulario limpiado para nueva venta.");
+            } else if (id > 0) {
+                // Buscar venta
+                controlador.buscarVentaPorId(id);
+            } else {
+                mostrarError("El ID debe ser un número positivo o 0 para limpiar.");
+                txtIdVenta.selectAll();
+                txtIdVenta.requestFocus();
+            }
+
+        } catch (NumberFormatException e) {
+            mostrarError("El ID debe ser un número válido.");
+            txtIdVenta.selectAll();
+            txtIdVenta.requestFocus();
+        }
     }
 
     // Método para abrir búsqueda por nombre
@@ -1113,9 +1164,13 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
     }
 
     // IMPLEMENTACIÓN DE myInterface
-    // ============================
     @Override
     public void imGrabar() {
+        // Validar caja abierta antes de guardar
+        if (!controlador.isCajaAbierta()) {
+            mostrarError("No se puede guardar la venta. No hay ninguna caja abierta.");
+            return;
+        }
         guardarVenta();
     }
 

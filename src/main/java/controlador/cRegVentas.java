@@ -28,6 +28,7 @@ public class cRegVentas implements myInterface {
     private sTalonarios.DatosTalonario datosTalonarioActual;
     private DefaultTableModel modeloTablaDetalles;
     private boolean ventaCargadaDesdeBD = false;
+    private boolean cajaAbierta = true;
 
     public cRegVentas(vRegVentas vista) throws SQLException {
         this.vista = vista;
@@ -36,14 +37,45 @@ public class cRegVentas implements myInterface {
         this.formatoNumero = new DecimalFormat("#,##0");
         this.servicioTalonarios = new sTalonarios();
 
-        // Configurar venta actual con valores por defecto
-        inicializarVentaNueva();
+        // Verificar si hay una caja abierta ANTES de configurar la venta
+        verificarCajaAbierta();
+
         cargarDatosTalonarioActivo();
     }
 
-    /**
-     * Carga los datos del talonario activo para mostrar en pantalla
-     */
+    // Método de verificación de caja
+    private void verificarCajaAbierta() {
+        try {
+            // Intentar obtener ID de caja activa directamente
+            int idCaja = modelo.obtenerIdCajaActiva();
+            cajaAbierta = true;
+
+            // Si llegamos aquí, hay caja abierta, inicializar normalmente
+            this.ventaActual = new mVentas();
+            this.ventaActual.setFecha(new Date());
+            this.ventaActual.setAnulado(false);
+            this.ventaActual.setIdCaja(idCaja);
+            this.ventaActual.setIdUsuario(vLogin.getIdUsuarioAutenticado());
+
+        } catch (SQLException e) {
+            cajaAbierta = false;
+            vista.mostrarError("Error al inicializar venta: " + e.getMessage());
+
+            // Crear venta básica sin ID de caja para permitir funcionalidad
+            this.ventaActual = new mVentas();
+            this.ventaActual.setFecha(new Date());
+            this.ventaActual.setAnulado(false);
+            this.ventaActual.setIdUsuario(vLogin.getIdUsuarioAutenticado());
+            // No establecer ID de caja
+        }
+    }
+
+    // Agregar método público para verificar estado de caja
+    public boolean isCajaAbierta() {
+        return cajaAbierta;
+    }
+
+    // Carga los datos del talonario activo para mostrar en pantalla
     public void cargarDatosTalonarioActivo() {
         try {
             datosTalonarioActual = servicioTalonarios.obtenerDatosTalonarioActivo();
@@ -92,25 +124,6 @@ public class cRegVentas implements myInterface {
                 return this.valor.equals(otro.valor);
             }
             return false;
-        }
-    }
-
-    // Método para inicializar una nueva venta
-    private void inicializarVentaNueva() {
-        try {
-            this.ventaActual = new mVentas();
-            this.ventaActual.setFecha(new Date());
-            this.ventaActual.setAnulado(false);
-
-            // Obtener ID de caja activa
-            int idCaja = modelo.obtenerIdCajaActiva();
-            this.ventaActual.setIdCaja(idCaja);
-
-            // Establecer el usuario actual desde la sesión de login
-            this.ventaActual.setIdUsuario(vLogin.getIdUsuarioAutenticado());
-
-        } catch (SQLException e) {
-            vista.mostrarError("Error al inicializar venta: " + e.getMessage());
         }
     }
 
@@ -353,7 +366,22 @@ public class cRegVentas implements myInterface {
     // Método para guardar la venta
     public void guardarVenta() {
         try {
-            // Validaciones existentes...
+            // Validación de caja abierta
+            if (!cajaAbierta) {
+                vista.mostrarError("No se puede guardar la venta. No hay ninguna caja abierta.");
+                return;
+            }
+
+            // Verificar caja en tiempo real
+            try {
+                int idCaja = modelo.obtenerIdCajaActiva();
+                ventaActual.setIdCaja(idCaja);
+            } catch (SQLException e) {
+                vista.mostrarError("No se puede guardar la venta: " + e.getMessage());
+                return;
+            }
+
+            // Validaciones de negocio existentes
             if (ventaActual.getDetalles().isEmpty()) {
                 vista.mostrarError("No hay productos en la venta.");
                 return;
@@ -366,11 +394,27 @@ public class cRegVentas implements myInterface {
 
             if (ventaActual.getIdUsuario() == 0) {
                 ventaActual.setIdUsuario(vLogin.getIdUsuarioAutenticado());
-
                 if (ventaActual.getIdUsuario() == 0) {
                     vista.mostrarError("Error del sistema: Usuario no identificado. Reinicie sesión.");
                     return;
                 }
+            }
+
+            // BLOQUEAR si el timbrado está vencido
+            if (datosTalonarioActual != null
+                    && servicioTalonarios.isTimbradoVencido(datosTalonarioActual.getFechaVencimiento())) {
+                vista.mostrarError("❌ NO SE PUEDE GUARDAR LA VENTA.\n\n"
+                        + "El timbrado está VENCIDO.\n\n"
+                        + "Contacte con la administración para actualizar el talonario\n"
+                        + "antes de realizar ventas.");
+                return; //  BLOQUEO TOTAL - No guardar
+            }
+
+            // ✅ Validar que existe talonario activo
+            if (datosTalonarioActual == null) {
+                vista.mostrarError("No hay un talonario activo configurado.\n\n"
+                        + "Configure un talonario válido antes de realizar ventas.");
+                return;
             }
 
             // Consumir número de factura del talonario
@@ -384,12 +428,6 @@ public class cRegVentas implements myInterface {
             int idVenta = modelo.insertarVentaConTalonario(ventaActual);
 
             if (idVenta > 0) {
-                // ✅ VERIFICAR que el ID se estableció correctamente
-                System.out.println("=== DESPUÉS DE GUARDAR ===");
-                System.out.println("ID retornado: " + idVenta);
-                System.out.println("ID en ventaActual: " + ventaActual.getIdVenta());
-                System.out.println("==========================");
-
                 vista.mostrarMensaje("Venta guardada correctamente.\nFactura: "
                         + datosVenta.getNumeroFactura()
                         + "\nTimbrado: " + datosVenta.getNumeroTimbrado());
@@ -408,7 +446,7 @@ public class cRegVentas implements myInterface {
                 // Notificar cambio a ventana de talonarios
                 notificarVentanaTalonarios();
 
-                // ✅ PREGUNTAR IMPRESIÓN ANTES DE LIMPIAR
+                // PREGUNTAR IMPRESIÓN ANTES DE LIMPIAR
                 vista.preguntarImprimirFactura(ventaActual.getIdVenta());
 
                 // Limpiar formulario para nueva venta (DESPUÉS de la impresión)
@@ -560,7 +598,7 @@ public class cRegVentas implements myInterface {
 
     // Método para limpiar el formulario
     public void limpiarFormulario() {
-        inicializarVentaNueva();
+        verificarCajaAbierta();
         this.ventaCargadaDesdeBD = false;
         vista.limpiarFormulario();
         vista.actualizarTablaDetalles();
@@ -652,6 +690,10 @@ public class cRegVentas implements myInterface {
     // Implementación de métodos de la interfaz myInterface
     @Override
     public void imGrabar() {
+        if (!isCajaAbierta()) {
+            vista.mostrarError("No se puede guardar la venta. No hay ninguna caja abierta.");
+            return;
+        }
         guardarVenta();
     }
 

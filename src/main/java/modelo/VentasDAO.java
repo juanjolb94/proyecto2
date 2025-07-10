@@ -308,7 +308,7 @@ public class VentasDAO {
                 + "    SELECT prd.codigo_barra, prd.precio "
                 + "    FROM precio_cabecera prc "
                 + "    INNER JOIN precio_detalle prd ON prc.id = prd.id_precio_cabecera "
-                + "    WHERE prc.activo = true AND prd.activo = true"
+                + "    WHERE prc.es_defecto_venta = true AND prc.activo = true AND prd.activo = true"
                 + ") pr ON pd.cod_barra = pr.codigo_barra "
                 + "WHERE (pc.nombre LIKE ? OR pd.descripcion LIKE ?) "
                 + "AND pc.estado = true AND pd.estado = true "
