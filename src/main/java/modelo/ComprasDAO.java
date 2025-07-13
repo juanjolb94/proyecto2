@@ -181,6 +181,17 @@ public class ComprasDAO {
                             rs.getBoolean("estado")
                     );
 
+                    // AGREGAR ESTOS SETTERS PARA LOS CAMPOS
+                    compra.setTimbrado(rs.getString("timbrado"));
+                    compra.setTipoDocumento(rs.getString("tipo_documento"));
+                    compra.setCondicion(rs.getString("condicion"));
+                    compra.setFechaVencimiento(rs.getDate("fecha_vencimiento"));
+                    compra.setSubtotal(rs.getDouble("subtotal"));
+                    compra.setTotalIva5(rs.getDouble("total_iva5"));
+                    compra.setTotalIva10(rs.getDouble("total_iva10"));
+                    compra.setTotalIva(rs.getDouble("total_iva"));
+                    compra.setNroPlanilla(rs.getString("nro_planilla"));
+
                     // Cargar los detalles de la compra
                     cargarDetallesCompra(compra);
 

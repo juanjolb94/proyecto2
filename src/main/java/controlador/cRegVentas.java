@@ -201,10 +201,12 @@ public class cRegVentas implements myInterface {
                 return;
             }
 
-            int idProducto = (int) producto[0];
             String codBarra = (String) producto[2];
+            int idProducto = (int) producto[0];
             int precioVenta = (int) producto[4];
 
+            // NOTA: La validación de stock ya se realizó en vSeleccionProductoVentas
+            // antes de llamar a este método, por lo que aquí solo agregamos
             // Verificar si el producto ya está en la venta
             boolean productoExistente = false;
             for (mVentas.DetalleVenta detalle : ventaActual.getDetalles()) {
@@ -313,6 +315,59 @@ public class cRegVentas implements myInterface {
         } catch (SQLException e) {
             System.err.println("Error al obtener stock: " + e.getMessage());
             return 0; // Si hay error, asumir que no hay stock
+        }
+    }
+
+    /**
+     * Método público para validar stock desde ventanas de selección
+     *
+     * @param idProducto ID del producto
+     * @param codBarra Código de barras del producto
+     * @param cantidadSolicitada Cantidad que se quiere agregar
+     * @return Objeto con resultado de validación: {esValido(boolean),
+     * mensaje(String), stockDisponible(int)}
+     */
+    public Object[] validarStockDisponible(int idProducto, String codBarra, int cantidadSolicitada) {
+        try {
+            int stockDisponible = obtenerStockDisponible(idProducto, codBarra);
+
+            // Verificar si el producto ya está en la venta actual
+            int cantidadEnVenta = 0;
+            for (mVentas.DetalleVenta detalle : ventaActual.getDetalles()) {
+                if (detalle.getIdProducto() == idProducto && detalle.getCodigoBarra().equals(codBarra)) {
+                    cantidadEnVenta = detalle.getCantidad();
+                    break;
+                }
+            }
+
+            int cantidadTotal = cantidadEnVenta + cantidadSolicitada;
+
+            if (stockDisponible < cantidadTotal) {
+                String mensaje;
+                if (cantidadEnVenta > 0) {
+                    mensaje = String.format(
+                            "Stock insuficiente para cantidad total.\n"
+                            + "Disponible: %d\n"
+                            + "Ya en venta: %d\n"
+                            + "Solicitado: %d\n"
+                            + "Total requerido: %d",
+                            stockDisponible, cantidadEnVenta, cantidadSolicitada, cantidadTotal
+                    );
+                } else {
+                    mensaje = String.format(
+                            "Stock insuficiente.\n"
+                            + "Disponible: %d\n"
+                            + "Solicitado: %d",
+                            stockDisponible, cantidadSolicitada
+                    );
+                }
+                return new Object[]{false, mensaje, stockDisponible};
+            }
+
+            return new Object[]{true, "Stock disponible", stockDisponible};
+
+        } catch (Exception e) {
+            return new Object[]{false, "Error al verificar stock: " + e.getMessage(), 0};
         }
     }
 

@@ -88,20 +88,18 @@ public class vSeleccionProductoVentas extends javax.swing.JDialog {
             }
         });
 
-        //Seleccionar todo el texto al hacer focus en txtBusqueda**
+        // Seleccionar todo el texto al hacer focus en txtBusqueda
         txtBusqueda.addFocusListener(new java.awt.event.FocusAdapter() {
             @Override
             public void focusGained(java.awt.event.FocusEvent evt) {
-                // Usar SwingUtilities.invokeLater para asegurar que la selección se ejecute correctamente
                 SwingUtilities.invokeLater(() -> txtBusqueda.selectAll());
             }
         });
 
-        //Seleccionar todo al hacer click en txtBusqueda**
+        // Seleccionar todo al hacer click en txtBusqueda
         txtBusqueda.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent evt) {
-                // Usar SwingUtilities.invokeLater para que se ejecute después del click
                 SwingUtilities.invokeLater(() -> txtBusqueda.selectAll());
             }
         });
@@ -124,10 +122,67 @@ public class vSeleccionProductoVentas extends javax.swing.JDialog {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
-                    agregarProducto();
+                    int filaSeleccionada = tblProductos.getSelectedRow();
+                    if (filaSeleccionada >= 0) {
+                        agregarProducto();
+                    }
                 }
             }
         });
+
+        // Enter en la tabla para agregar producto seleccionado
+        tblProductos.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    e.consume(); // Evitar propagación del evento
+                    int filaSeleccionada = tblProductos.getSelectedRow();
+                    if (filaSeleccionada >= 0) {
+                        agregarProducto();
+                    }
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+            }
+        });
+
+        // Enter en spinner cantidad para agregar con cantidad modificada
+        spinnerCantidad.addKeyListener(new KeyListener() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
+                    e.consume(); // Evitar propagación del evento
+                    int filaSeleccionada = tblProductos.getSelectedRow();
+                    if (filaSeleccionada >= 0) {
+                        agregarProducto();
+                    }
+                }
+            }
+
+            @Override
+            public void keyReleased(KeyEvent e) {
+            }
+        });
+
+        // Escape para cerrar ventana
+        this.getRootPane().registerKeyboardAction(
+                e -> dispose(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW
+        );
+
+        // Configurar ventana para capturar eventos de teclado
+        this.setFocusable(true);
     }
 
     private void buscarProductos() {
@@ -191,12 +246,32 @@ public class vSeleccionProductoVentas extends javax.swing.JDialog {
         Object[] producto = controlador.buscarProductoPorCodBarra(codigoBarra);
 
         if (producto != null) {
-            // Agregar producto a la venta
+            // NUEVA VALIDACIÓN: Verificar stock ANTES de agregar
+            int idProducto = (int) producto[0];
+            Object[] validacionStock = controlador.validarStockDisponible(idProducto, codigoBarra, cantidad);
+
+            boolean stockValido = (boolean) validacionStock[0];
+            String mensajeStock = (String) validacionStock[1];
+
+            if (!stockValido) {
+                // ❌ Stock insuficiente - mostrar error y mantener ventana abierta
+                JOptionPane.showMessageDialog(this,
+                        mensajeStock,
+                        "Stock Insuficiente",
+                        JOptionPane.ERROR_MESSAGE);
+
+                // Enfocar en cantidad para que el usuario pueda modificarla
+                spinnerCantidad.requestFocus();
+                return; // NO cerrar la ventana
+            }
+
+            // ✅ Stock válido - agregar producto y cerrar ventana
             controlador.agregarProductoSeleccionado(producto, cantidad);
 
-            // Cerrar ventana
+            // Cerrar ventana solo si todo fue exitoso
             productoElegido = true;
             dispose();
+
         } else {
             JOptionPane.showMessageDialog(this,
                     "Error al obtener datos del producto.",
@@ -250,7 +325,7 @@ public class vSeleccionProductoVentas extends javax.swing.JDialog {
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                 .addComponent(jLabel2)
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(spinnerCantidad, javax.swing.GroupLayout.PREFERRED_SIZE, 50, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addComponent(spinnerCantidad, javax.swing.GroupLayout.PREFERRED_SIZE, 55, javax.swing.GroupLayout.PREFERRED_SIZE)
                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
         );
         panelBusquedaLayout.setVerticalGroup(
@@ -287,8 +362,8 @@ public class vSeleccionProductoVentas extends javax.swing.JDialog {
             panelTablaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
             .addGroup(panelTablaLayout.createSequentialGroup()
                 .addContainerGap()
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 490, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 500, javax.swing.GroupLayout.PREFERRED_SIZE)
+                .addContainerGap(16, Short.MAX_VALUE))
         );
         panelTablaLayout.setVerticalGroup(
             panelTablaLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)

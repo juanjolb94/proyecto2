@@ -20,7 +20,6 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
     private DefaultTableModel modeloTablaDetalles;
     private SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
     private DecimalFormat dfNumeros;
-    private JTextField txtObservaciones;
 
     public vRegCompras() {
         initComponents();
@@ -38,9 +37,6 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
         configurarSeleccionAutomatica();
         configurarTablaDetalles();
         configurarFormateadores();
-
-        // Crear y agregar campo de observaciones
-        txtObservaciones = new JTextField();
 
         try {
             // Inicializar controlador
@@ -439,19 +435,40 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
             }
         }
 
-        // Número factura, timbrado, etc.
+        // Cargar número de factura completo
         if (compra.getNumeroFactura() != null) {
-            String[] partes = compra.getNumeroFactura().split("-");
-            if (partes.length >= 2) {
-                txtNumero.setText(partes[1]);
-                txtTimbrado.setText(partes[0]);
-            } else {
-                txtNumero.setText(compra.getNumeroFactura());
+            txtNumero.setText(compra.getNumeroFactura());
+        }
+
+        // Cargar timbrado del campo correspondiente de la base de datos
+        if (compra.getTimbrado() != null) {
+            txtTimbrado.setText(compra.getTimbrado());
+        }
+
+        // Cargar tipo de documento
+        if (compra.getTipoDocumento() != null) {
+            for (int i = 0; i < comboTipo.getItemCount(); i++) {
+                if (comboTipo.getItemAt(i).toString().equals(compra.getTipoDocumento())) {
+                    comboTipo.setSelectedIndex(i);
+                    break;
+                }
             }
         }
 
-        // Información adicional
-        txtObservaciones.setText(compra.getObservaciones());
+        // Cargar condición
+        if (compra.getCondicion() != null) {
+            for (int i = 0; i < comboCondicion.getItemCount(); i++) {
+                if (comboCondicion.getItemAt(i).toString().equals(compra.getCondicion())) {
+                    comboCondicion.setSelectedIndex(i);
+                    break;
+                }
+            }
+        }
+
+        // Cargar fecha de vencimiento
+        if (compra.getFechaVencimiento() != null) {
+            txtVencimiento.setText(sdf.format(compra.getFechaVencimiento()));
+        }
 
         // Actualizar tabla de detalles
         actualizarTablaDetalles();
@@ -644,9 +661,6 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
         comboCondicion.setSelectedIndex(0);
         txtVencimiento.setText(sdf.format(new Date()));
 
-        // Limpiar observaciones
-        txtObservaciones.setText("");
-
         // Limpiar tabla de detalles
         modeloTablaDetalles.setRowCount(0);
 
@@ -775,6 +789,7 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
                 controlador.setTotalIva5(iva5);
                 controlador.setTotalIva10(iva10);
                 controlador.setTotalIva(totalIva);
+                controlador.getCompraActual().setTotalCompra(total);
 
                 // El total de compra ya se establece automáticamente al calcular
             } catch (NumberFormatException e) {
@@ -783,13 +798,9 @@ public class vRegCompras extends javax.swing.JInternalFrame implements myInterfa
                 return;
             }
 
-            // Establecer número de factura
-            String numero = txtNumero.getText().trim();
-            String numeroFactura = timbrado + "-" + numero;
+            // Establecer número de factura - usar tal como se ingresa tanto para nuevas como existentes
+            String numeroFactura = txtNumero.getText().trim();
             controlador.setNumeroFactura(numeroFactura);
-
-            // Establecer observaciones
-            controlador.setObservaciones(txtObservaciones.getText());
 
             // Establecer número de planilla (opcional - puede estar vacío)
             controlador.setNroPlanilla(""); // Por ahora vacío
