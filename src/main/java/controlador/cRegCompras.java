@@ -120,6 +120,11 @@ public class cRegCompras implements myInterface {
                 return;
             }
 
+            // Verificar factura única
+            if (!validarFacturaUnica(compraActual.getNumeroFactura())) {
+                return;
+            }
+
             // Guardar la compra
             int idCompra = modelo.insertarCompra(compraActual);
 
@@ -432,6 +437,22 @@ public class cRegCompras implements myInterface {
 
         } catch (Exception e) {
             vista.mostrarError("Error al agregar detalle: " + e.getMessage());
+        }
+    }
+
+    private boolean validarFacturaUnica(String numeroFactura) {
+        try {
+            if (modelo.existeFactura(numeroFactura)) {
+                vista.mostrarError("❌ FACTURA DUPLICADA\n\n"
+                        + "Ya existe una compra registrada con el número de factura:\n"
+                        + "'" + numeroFactura + "'\n\n"
+                        + "Por favor, verifique el número de factura.");
+                return false;
+            }
+            return true;
+        } catch (SQLException e) {
+            vista.mostrarError("Error al validar factura: " + e.getMessage());
+            return false;
         }
     }
 

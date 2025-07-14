@@ -20,6 +20,12 @@ public class ComprasDAO {
 
     // Método para insertar una nueva compra con sus detalles
     public int insertarCompra(mCompras compra) throws SQLException {
+        // Verificar factura duplicada
+        if (existeFactura(compra.getNumeroFactura())) {
+            throw new SQLException("❌ FACTURA DUPLICADA: Ya existe una compra con el número de factura '"
+                    + compra.getNumeroFactura() + "'.\n\nVerifique el número de factura e intente nuevamente.");
+        }
+        
         int idCompra = 0;
         // Iniciar transacción
         conexion.setAutoCommit(false);
@@ -497,6 +503,28 @@ public class ComprasDAO {
         }
 
         return detalles;
+    }
+
+    // Método para verificar si existe una factura duplicada
+    public boolean existeFacturaDuplicada(String numeroFactura, int excludeIdCompra) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM compras_cabecera WHERE numero_factura = ? AND id_compra != ? AND estado = 1";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setString(1, numeroFactura);
+            ps.setInt(2, excludeIdCompra);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Método para verificar si existe una factura (para inserción nueva)
+    public boolean existeFactura(String numeroFactura) throws SQLException {
+        return existeFacturaDuplicada(numeroFactura, 0);
     }
 
 }

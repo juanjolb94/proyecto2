@@ -151,18 +151,6 @@ public class vLogin extends javax.swing.JDialog {
             return;
         }
 
-        // Primero verificar el usuario hardcodeado admin (temporal)
-        if (usuario.equals("admin") && contraseña.equals("1234")) {
-            System.out.println("Login exitoso con usuario ADMIN hardcodeado");
-            System.out.println("=======================");
-            usuarioAutenticado = usuario;
-            rolAutenticado = 1;
-            idUsuarioAutenticado = 1;
-            loginExitoso = true;
-            this.dispose();
-            return;
-        }
-
         // Verificar usuarios de la base de datos
         try {
             UsuariosDAO usuariosDAO = new UsuariosDAO();
