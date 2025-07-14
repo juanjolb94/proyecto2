@@ -5,6 +5,7 @@ import javax.swing.*;
 import java.awt.event.*;
 import modelo.PasswordUtils;
 import modelo.UsuariosDAO;
+import util.LogManager;
 
 public class vLogin extends javax.swing.JDialog {
 
@@ -225,6 +226,9 @@ public class vLogin extends javax.swing.JDialog {
             idUsuarioAutenticado = Integer.parseInt(datosUsuario[0]);
             loginExitoso = true;
             this.dispose();
+
+            LogManager.getInstance().logLogin("LOGIN_EXITOSO",
+                    "Usuario " + usuarioAutenticado + " inició sesión correctamente");
 
         } catch (Exception e) {
             System.err.println("✗ Error durante el login: " + e.getMessage());

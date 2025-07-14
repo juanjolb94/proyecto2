@@ -17,6 +17,7 @@ import javax.swing.JOptionPane;
 import javax.swing.event.InternalFrameAdapter;
 import javax.swing.event.InternalFrameEvent;
 import modelo.PermisosDAO;
+import util.LogManager;
 
 public class vPrincipal extends javax.swing.JFrame {
 
@@ -1277,9 +1278,15 @@ public class vPrincipal extends javax.swing.JFrame {
 
     // Método para manejar el evento de salir
     private void mSalirActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_mSalirActionPerformed
-        int eleccion = JOptionPane.showConfirmDialog(null, "Desea salir del Sistema?");
-        if (eleccion == 0) {
-            JOptionPane.showMessageDialog(null, "El Sistema1 ha finalizado...");
+        int eleccion = JOptionPane.showConfirmDialog(null, "¿Desea salir del Sistema?",
+                "Confirmación", JOptionPane.YES_NO_OPTION);
+
+        if (eleccion == JOptionPane.YES_OPTION) {
+            // ✅ AGREGAR LOG ANTES DE SALIR
+            LogManager.getInstance().logLogin("LOGOUT",
+                    "Usuario " + vLogin.getUsuarioAutenticado() + " cerró la aplicación desde menú");
+            LogManager.getInstance().cerrarSesion();
+
             System.exit(0);
         }
     }//GEN-LAST:event_mSalirActionPerformed

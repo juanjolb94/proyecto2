@@ -5,6 +5,7 @@ import java.sql.SQLException;
 import java.awt.Insets;
 import javax.swing.UIManager;
 import util.ReportCompiler;
+import util.LogManager;
 import vista.vBienvenida;
 import vista.vLogin;
 import vista.vPrincipal;
@@ -12,6 +13,17 @@ import vista.vPrincipal;
 public class Main {
 
     public static void main(String[] args) {
+        // AGREGAR SHUTDOWN HOOK PARA CAPTURAR CIERRE INESPERADO
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                LogManager.getInstance().logLogin("LOGOUT",
+                        "Aplicación cerrada - Usuario: " + vLogin.getUsuarioAutenticado());
+                LogManager.getInstance().cerrarSesion();
+            } catch (Exception e) {
+                System.err.println("Error al registrar cierre: " + e.getMessage());
+            }
+        }));
+
         try {
             // Inicializar el registro de iconos de Material Design
             org.kordamp.ikonli.materialdesign2.MaterialDesignC.CACHED.getCode();
@@ -53,6 +65,10 @@ public class Main {
 
         // Verificar si el login fue exitoso
         if (login.isLoginExitoso()) {
+            // ✅ LOG LOGIN EXITOSO
+            LogManager.getInstance().logLogin("LOGIN_EXITOSO",
+                    "Usuario " + vLogin.getUsuarioAutenticado() + " inició sesión correctamente");
+
             // ✅ MOSTRAR VENTANA DE BIENVENIDA
             vBienvenida bienvenida = new vBienvenida(
                     null,
@@ -64,15 +80,27 @@ public class Main {
             // Verificar si el usuario continuó
             if (bienvenida.isContinuar()) {
                 // Si continuó, abrir la ventana principal
+                LogManager.getInstance().log(
+                        LogManager.Modulo.SISTEMA,
+                        "APLICACION_INICIADA",
+                        LogManager.Nivel.INFO,
+                        "Ventana principal abierta correctamente"
+                );
+
                 java.awt.EventQueue.invokeLater(() -> {
                     new vPrincipal().setVisible(true);
                 });
             } else {
-                // Si cerró sin continuar, salir
+                // ✅ LOG CIERRE SIN CONTINUAR
+                LogManager.getInstance().logLogin("LOGOUT",
+                        "Usuario " + vLogin.getUsuarioAutenticado() + " cerró sin continuar a la aplicación");
+                LogManager.getInstance().cerrarSesion();
                 System.exit(0);
             }
         } else {
-            // Si el login no fue exitoso, cerrar la aplicación
+            // ✅ LOG LOGIN FALLIDO
+            LogManager.getInstance().logLogin("LOGIN_FALLIDO",
+                    "Intento de login fallido - Aplicación cerrada");
             System.exit(0);
         }
     }
