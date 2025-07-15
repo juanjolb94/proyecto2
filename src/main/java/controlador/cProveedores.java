@@ -7,7 +7,8 @@ import java.sql.SQLException;
 import java.util.List;
 import javax.swing.JOptionPane;
 
-public class cProveedores implements myInterface{
+public class cProveedores implements myInterface {
+
     private vProveedores vista;
     private ProveedoresDAO modelo;
 
@@ -71,15 +72,16 @@ public class cProveedores implements myInterface{
         try {
             return modelo.eliminarProveedor(id);
         } catch (SQLException e) {
-            mostrarError("Error al eliminar el proveedor: " + e.getMessage());
+            // Mostrar mensaje de error específico de la validación
+            mostrarError(e.getMessage());
             return false;
         }
     }
 
     // Método para insertar un nuevo proveedor
-    public boolean insertarProveedor(String razonSocial, String ruc, String telefono, 
-                                   String direccion, String email, boolean estado,
-                                   int idPersona) {
+    public boolean insertarProveedor(String razonSocial, String ruc, String telefono,
+            String direccion, String email, boolean estado,
+            int idPersona) {
         try {
             return modelo.insertarProveedor(razonSocial, ruc, telefono, direccion, email, estado, idPersona);
         } catch (SQLException e) {
@@ -89,9 +91,9 @@ public class cProveedores implements myInterface{
     }
 
     // Método para actualizar un proveedor existente
-    public boolean actualizarProveedor(int id, String razonSocial, String ruc, String telefono, 
-                                     String direccion, String email, boolean estado,
-                                     int idPersona) {
+    public boolean actualizarProveedor(int id, String razonSocial, String ruc, String telefono,
+            String direccion, String email, boolean estado,
+            int idPersona) {
         try {
             return modelo.actualizarProveedor(id, razonSocial, ruc, telefono, direccion, email, estado, idPersona);
         } catch (SQLException e) {

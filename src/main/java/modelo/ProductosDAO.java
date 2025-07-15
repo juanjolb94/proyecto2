@@ -148,8 +148,129 @@ public class ProductosDAO {
         }
     }
 
+    // Método para verificar si un producto tiene movimientos asociados
+    public boolean tieneMovimientosAsociados(int idProducto) throws SQLException {
+        return tieneVentas(idProducto) || tieneCompras(idProducto) || tieneStock(idProducto);
+    }
+
+    // Método para verificar si un producto tiene ventas
+    public boolean tieneVentas(int idProducto) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM ventas_detalle vd "
+                + "INNER JOIN ventas v ON vd.id_venta = v.id "
+                + "WHERE vd.id_producto = ? AND v.anulado = false";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setInt(1, idProducto);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Método para verificar si un producto tiene compras
+    public boolean tieneCompras(int idProducto) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM compras_detalle cd "
+                + "INNER JOIN compras_cabecera cc ON cd.id_compra = cc.id_compra "
+                + "WHERE cd.id_producto = ? AND cc.estado = true";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setInt(1, idProducto);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Método para verificar si un producto tiene stock
+    public boolean tieneStock(int idProducto) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM stock WHERE id_producto = ? AND cantidad_disponible > 0";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            ps.setInt(1, idProducto);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Método para obtener resumen de dependencias del producto
+    public String obtenerResumenDependencias(int idProducto) throws SQLException {
+        StringBuilder resumen = new StringBuilder();
+
+        // Contar ventas
+        String sqlVentas = "SELECT COUNT(*) FROM ventas_detalle vd "
+                + "INNER JOIN ventas v ON vd.id_venta = v.id "
+                + "WHERE vd.id_producto = ? AND v.anulado = false";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sqlVentas)) {
+            ps.setInt(1, idProducto);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int ventas = rs.getInt(1);
+                    if (ventas > 0) {
+                        resumen.append("Ventas: ").append(ventas).append(" | ");
+                    }
+                }
+            }
+        }
+
+        // Contar compras
+        String sqlCompras = "SELECT COUNT(*) FROM compras_detalle cd "
+                + "INNER JOIN compras_cabecera cc ON cd.id_compra = cc.id_compra "
+                + "WHERE cd.id_producto = ? AND cc.estado = true";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sqlCompras)) {
+            ps.setInt(1, idProducto);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int compras = rs.getInt(1);
+                    if (compras > 0) {
+                        resumen.append("Compras: ").append(compras).append(" | ");
+                    }
+                }
+            }
+        }
+
+        // Verificar stock
+        String sqlStock = "SELECT SUM(cantidad_disponible) FROM stock WHERE id_producto = ?";
+
+        try (PreparedStatement ps = conexion.prepareStatement(sqlStock)) {
+            ps.setInt(1, idProducto);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int stock = rs.getInt(1);
+                    if (stock > 0) {
+                        resumen.append("Stock: ").append(stock).append(" unidades");
+                    }
+                }
+            }
+        }
+
+        return resumen.toString();
+    }
+
     // Método para eliminar un producto
     public boolean eliminarProducto(int id) throws SQLException {
+        // Validar si tiene movimientos asociados
+        if (tieneMovimientosAsociados(id)) {
+            String resumen = obtenerResumenDependencias(id);
+
+            throw new SQLException("No se puede eliminar el producto: tiene movimientos asociados. "
+                    + resumen + ". Considere desactivar el producto en lugar de eliminarlo.");
+        }
+
         // Primero eliminar detalles asociados
         String sqlDetalles = "DELETE FROM productos_detalle WHERE id_producto = ?";
         try (PreparedStatement ps = conexion.prepareStatement(sqlDetalles)) {

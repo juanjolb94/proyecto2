@@ -72,7 +72,8 @@ public class cClientes implements myInterface {
         try {
             return modelo.eliminarCliente(id);
         } catch (SQLException e) {
-            mostrarError("Error al eliminar el cliente: " + e.getMessage());
+            // Mostrar mensaje de error específico de la validación
+            mostrarError(e.getMessage());
             return false;
         }
     }

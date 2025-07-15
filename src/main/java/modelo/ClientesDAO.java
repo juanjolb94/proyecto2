@@ -106,14 +106,77 @@ public class ClientesDAO {
         }
     }
 
+    // Método para verificar si un cliente tiene ventas asociadas
+    public boolean tieneVentasAsociadas(int idCliente) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM ventas WHERE id_cliente = ? AND anulado = false";
+
+        try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, idCliente);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Método para obtener el conteo de ventas de un cliente
+    public int contarVentasCliente(int idCliente) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM ventas WHERE id_cliente = ? AND anulado = false";
+
+        try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, idCliente);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+
+    // Método para verificar si es cliente ocasional (no se puede eliminar)
+    public boolean esClienteOcasional(int idCliente) throws SQLException {
+        String sql = "SELECT ci_ruc FROM clientes WHERE id_cliente = ?";
+
+        try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, idCliente);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    String ciRuc = resultSet.getString("ci_ruc");
+                    return "9999999-9".equals(ciRuc); // Cliente ocasional
+                }
+            }
+        }
+        return false;
+    }
+
     // Método para eliminar un cliente
     public boolean eliminarCliente(int id) throws SQLException {
+        // Validar si es cliente ocasional
+        if (esClienteOcasional(id)) {
+            throw new SQLException("No se puede eliminar el cliente ocasional del sistema.");
+        }
+
+        // Validar si tiene ventas asociadas
+        if (tieneVentasAsociadas(id)) {
+            int cantidadVentas = contarVentasCliente(id);
+            throw new SQLException("No se puede eliminar el cliente: tiene " + cantidadVentas + " venta(s) registrada(s). "
+                    + "Considere desactivar el cliente en lugar de eliminarlo.");
+        }
+
         String sql = "DELETE FROM clientes WHERE id_cliente = ?";
 
         try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setInt(1, id);
-
             int rowsAffected = statement.executeUpdate();
             return rowsAffected > 0;
         }

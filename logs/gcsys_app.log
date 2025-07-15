@@ -1,0 +1,5 @@
+[2025-07-14T00:42:29.257139200] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario lopo inició sesión correctamente
+[2025-07-14T00:42:29.307582300] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario lopo inició sesión correctamente
+[2025-07-14T00:42:31.741007300] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
+[2025-07-14T00:42:42.687625] [AUDIT] [LOGIN] LOGOUT: Usuario lopo cerró la aplicación desde menú
+[2025-07-14T00:42:42.716143600] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: lopo
