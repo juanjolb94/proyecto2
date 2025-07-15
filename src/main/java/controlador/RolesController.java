@@ -6,6 +6,7 @@ import java.sql.SQLException;
 import javax.swing.JOptionPane;
 
 public class RolesController {
+
     private vRoles vista; // Referencia a la vista
     private RolesDAO modelo; // Referencia al modelo
 
@@ -23,7 +24,7 @@ public class RolesController {
             return null;
         }
     }
-    
+
     // Método para obtener el primer registro
     public String[] obtenerPrimerRol() {
         try {
@@ -68,15 +69,17 @@ public class RolesController {
     private void mostrarError(String mensaje) {
         javax.swing.JOptionPane.showMessageDialog(null, mensaje, "Error", javax.swing.JOptionPane.ERROR_MESSAGE);
     }
-    
+
     public void eliminarRol(int id) {
         try {
-            modelo.eliminarRol(id); // Llama al método del modelo para eliminar el registro
+            modelo.eliminarRol(id); // Llama al método del modelo con validaciones
+            JOptionPane.showMessageDialog(null, "Rol eliminado correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
         } catch (SQLException e) {
-            mostrarError("Error al eliminar el registro: " + e.getMessage());
+            // Mostrar mensaje de error específico de la validación
+            mostrarError(e.getMessage());
         }
     }
-    
+
     public void guardarRol(int id, String nombre, boolean activo) {
         try {
             if (id == 0) {

@@ -361,14 +361,18 @@ public class vUsuarios extends javax.swing.JInternalFrame implements myInterface
 
             int confirmacion = JOptionPane.showConfirmDialog(this,
                     "¿Está seguro de eliminar el usuario '" + nombreUsuario + "'?\n"
-                    + "Esta acción no se puede deshacer.",
-                    "Confirmar Eliminación",
+                    + "Esta acción no se puede deshacer.\n"
+                    + "Se verificarán las dependencias antes de proceder.",
+                    "Confirmar eliminación",
                     JOptionPane.YES_NO_OPTION,
                     JOptionPane.WARNING_MESSAGE);
 
             if (confirmacion == JOptionPane.YES_OPTION) {
-                if (usuariosDAO.eliminar(usuarioId)) {
+                boolean eliminado = usuariosDAO.eliminar(usuarioId);
+                if (eliminado) {
                     JOptionPane.showMessageDialog(this, "Usuario eliminado exitosamente", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+
+                    // Actualizar lista y mostrar siguiente usuario
                     cargarTodosLosUsuarios();
                     if (!listaUsuarios.isEmpty()) {
                         if (currentIndex >= listaUsuarios.size()) {
@@ -379,12 +383,15 @@ public class vUsuarios extends javax.swing.JInternalFrame implements myInterface
                         limpiarCampos();
                     }
                     actualizarIndicadorPosicion();
-                } else {
-                    mostrarError("Error al eliminar el usuario");
                 }
             }
+        } catch (NumberFormatException e) {
+            mostrarError("ID de usuario inválido");
+        } catch (SQLException e) {
+            // Mostrar mensaje de error específico de la validación
+            mostrarError(e.getMessage());
         } catch (Exception e) {
-            mostrarError("Error: " + e.getMessage());
+            mostrarError("Error inesperado: " + e.getMessage());
         }
     }
 

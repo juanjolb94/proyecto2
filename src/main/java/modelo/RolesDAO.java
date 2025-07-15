@@ -86,9 +86,145 @@ public class RolesDAO {
         return null; // Retorna null si no hay registros
     }
 
+    // Método para verificar si un rol tiene usuarios asignados
+    public boolean tieneUsuariosAsignados(int idRol) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM usuarios WHERE RolID = ? AND Activo = true";
+
+        try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, idRol);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+
+    // Método para contar usuarios asignados a un rol
+    public int contarUsuariosAsignados(int idRol) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM usuarios WHERE RolID = ? AND Activo = true";
+
+        try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, idRol);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt(1);
+                }
+            }
+        }
+        return 0;
+    }
+
+    // Método para obtener información detallada de usuarios asignados
+    public String obtenerDetalleUsuariosAsignados(int idRol) throws SQLException {
+        StringBuilder detalle = new StringBuilder();
+
+        String sql = "SELECT u.NombreUsuario, p.nombre, p.apellido "
+                + "FROM usuarios u "
+                + "LEFT JOIN personas p ON u.PersonaID = p.id_persona "
+                + "WHERE u.RolID = ? AND u.Activo = true "
+                + "ORDER BY u.NombreUsuario";
+
+        try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, idRol);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                int contador = 0;
+                while (resultSet.next() && contador < 5) { // Mostrar máximo 5 usuarios
+                    if (contador > 0) {
+                        detalle.append(", ");
+                    }
+
+                    String nombreUsuario = resultSet.getString("NombreUsuario");
+                    String nombre = resultSet.getString("nombre");
+                    String apellido = resultSet.getString("apellido");
+
+                    detalle.append(nombreUsuario);
+                    if (nombre != null && apellido != null) {
+                        detalle.append(" (").append(nombre).append(" ").append(apellido).append(")");
+                    }
+
+                    contador++;
+                }
+
+                // Si hay más usuarios, indicarlo
+                if (resultSet.next()) {
+                    detalle.append("...");
+                }
+            }
+        }
+
+        return detalle.toString();
+    }
+
+    // Método para verificar si es un rol crítico del sistema
+    public boolean esRolCritico(int idRol) throws SQLException {
+        String sql = "SELECT nombre FROM roles WHERE id_rol = ?";
+
+        try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, idRol);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    String nombreRol = resultSet.getString("nombre");
+                    return "Administrador".equalsIgnoreCase(nombreRol)
+                            || "Cajero".equalsIgnoreCase(nombreRol);
+                }
+            }
+        }
+        return false;
+    }
+
+    // Método para verificar permisos asociados al rol
+    public boolean tienePermisosAsignados(int idRol) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM permisos WHERE id_rol = ?";
+
+        try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, idRol);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt(1) > 0;
+                }
+            }
+        }
+        return false;
+    }
+
     public void eliminarRol(int id) throws SQLException {
+        // Validar si es un rol crítico del sistema
+        if (esRolCritico(id)) {
+            throw new SQLException("No se puede eliminar un rol crítico del sistema (Administrador/Cajero). "
+                    + "Estos roles son necesarios para el funcionamiento del sistema.");
+        }
+
+        // Validar si tiene usuarios asignados
+        if (tieneUsuariosAsignados(id)) {
+            int cantidadUsuarios = contarUsuariosAsignados(id);
+            String detalleUsuarios = obtenerDetalleUsuariosAsignados(id);
+
+            throw new SQLException("No se puede eliminar el rol: tiene " + cantidadUsuarios + " usuario(s) asignado(s). "
+                    + "Usuarios: " + detalleUsuarios + ". "
+                    + "Reasigne los usuarios a otro rol antes de eliminar este rol.");
+        }
+
+        // Validar si tiene permisos asignados
+        if (tienePermisosAsignados(id)) {
+            throw new SQLException("No se puede eliminar el rol: tiene permisos configurados. "
+                    + "Los permisos se eliminarán automáticamente al eliminar el rol.");
+        }
+
         String sql = "DELETE FROM roles WHERE id_rol = ?";
         try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement statement = connection.prepareStatement(sql)) {
+
             statement.setInt(1, id);
             statement.executeUpdate();
         }
