@@ -315,6 +315,7 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
         mapeoComponentes.put("Reporte de Inventario", "mRepInvent");
 
         // Menús de Tesorería
+        mapeoComponentes.put("Tesoreria", "mTesoreria");
         mapeoComponentes.put("Apertura / Cierre de caja", "mAperturaCierreCaja");
         mapeoComponentes.put("Registrar Movimiento de Caja", "mIngCaja");
         mapeoComponentes.put("Reporte de Ingresos - Egresos", "mRepCaja");
@@ -763,9 +764,9 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
         mapeoComponentes.put("Reporte Inventario", "mRepInvent");
 
         // Menús de Tesorería
-        mapeoComponentes.put("Apertura/Cierre Caja", "mAperturaCierreCaja");
-        mapeoComponentes.put("Ingresar Caja", "mIngCaja");
-        mapeoComponentes.put("Reporte Caja", "mRepCaja");
+        mapeoComponentes.put("Apertura / Cierre de caja", "mAperturaCierreCaja");
+        mapeoComponentes.put("Registrar Movimiento de Caja", "mIngCaja");
+        mapeoComponentes.put("Reporte de Ingresos - Egresos", "mRepCaja");
 
         // Menús de Seguridad
         mapeoComponentes.put("Personas", "mPersonas");

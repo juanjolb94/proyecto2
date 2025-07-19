@@ -44,6 +44,18 @@ public class PermisosController {
         }
     }
 
+    public List<mPermiso> obtenerMenusDelSistemaCompleto() {
+        try {
+            // Usar SIEMPRE la BD como fuente de verdad
+            return dao.obtenerMenusDelSistema();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(vista,
+                    "Error al obtener menús completos: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            return new ArrayList<>();
+        }
+    }
+
     public List<mPermiso> obtenerPermisosPorRol(int idRol) {
         System.out.println("\n=== CARGANDO PERMISOS PARA ROL " + idRol + " ===");
         try {
@@ -135,18 +147,6 @@ public class PermisosController {
             return dao.tienePermiso(idRol, nombreComponente, tipoPermiso);
         } catch (SQLException e) {
             return false;
-        }
-    }
-
-    public List<mPermiso> obtenerMenusDelSistemaCompleto() {
-        try {
-            // Usar SIEMPRE la BD como fuente de verdad
-            return dao.obtenerMenusDelSistema();
-        } catch (SQLException e) {
-            JOptionPane.showMessageDialog(vista,
-                    "Error al obtener menús completos: " + e.getMessage(),
-                    "Error", JOptionPane.ERROR_MESSAGE);
-            return new ArrayList<>();
         }
     }
 }
