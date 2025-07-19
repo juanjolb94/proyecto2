@@ -3,3 +3,7 @@
 [2025-07-14T00:42:31.741007300] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
 [2025-07-14T00:42:42.687625] [AUDIT] [LOGIN] LOGOUT: Usuario lopo cerró la aplicación desde menú
 [2025-07-14T00:42:42.716143600] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: lopo
+[2025-07-19T12:36:10.513317600] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario lopo inició sesión correctamente
+[2025-07-19T12:36:10.552863800] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario lopo inició sesión correctamente
+[2025-07-19T12:36:11.502006400] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
+[2025-07-19T12:36:20.129026600] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: lopo
