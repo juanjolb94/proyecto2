@@ -58,15 +58,22 @@ public class ReporteService {
             // Preparar los parámetros para evitar errores de tipos
             prepararParametros(parametros);
 
-            // Verificar existencia del directorio de reportes
-            File outputDir = new File(REPORTES_DIR);
-            if (!outputDir.exists()) {
-                outputDir.mkdirs();
-                System.out.println("Creado directorio de reportes: " + outputDir.getAbsolutePath());
-            }
+            // Solo crear directorio y compilar reportes en desarrollo (no en JAR)
+            String jarPath = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
+            boolean ejecutandoDesdeJar = jarPath.endsWith(".jar");
 
-            // Compilar el reporte si es necesario
-            compilarReporteSiEsNecesario(reporteNombre);
+            if (!ejecutandoDesdeJar) {
+                // Solo en desarrollo: verificar directorio y compilar si es necesario
+                File outputDir = new File(REPORTES_DIR);
+                if (!outputDir.exists()) {
+                    outputDir.mkdirs();
+                    System.out.println("Creado directorio de reportes: " + outputDir.getAbsolutePath());
+                }
+                compilarReporteSiEsNecesario(reporteNombre);
+                System.out.println("Ejecutando desde desarrollo - compilando reportes si es necesario");
+            } else {
+                System.out.println("Ejecutando desde JAR - usando reportes pre-compilados desde classpath");
+            }
 
             // AGREGAR ESTOS LOGS DE DEBUG:
             System.out.println("=== DEBUG: Nombre de reporte recibido: '" + reporteNombre + "'");
@@ -165,15 +172,22 @@ public class ReporteService {
             // Preparar los parámetros para evitar errores de tipos
             prepararParametros(parametros);
 
-            // Verificar existencia del directorio de reportes
-            File outputDir = new File(REPORTES_DIR);
-            if (!outputDir.exists()) {
-                outputDir.mkdirs();
-                System.out.println("Creado directorio de reportes: " + outputDir.getAbsolutePath());
-            }
+            // Solo crear directorio y compilar reportes en desarrollo (no en JAR)
+            String jarPath = getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
+            boolean ejecutandoDesdeJar = jarPath.endsWith(".jar");
 
-            // Compilar el reporte si es necesario
-            compilarReporteSiEsNecesario(reporteNombre);
+            if (!ejecutandoDesdeJar) {
+                // Solo en desarrollo: verificar directorio y compilar si es necesario
+                File outputDir = new File(REPORTES_DIR);
+                if (!outputDir.exists()) {
+                    outputDir.mkdirs();
+                    System.out.println("Creado directorio de reportes: " + outputDir.getAbsolutePath());
+                }
+                compilarReporteSiEsNecesario(reporteNombre);
+                System.out.println("Ejecutando desde desarrollo - compilando reportes si es necesario");
+            } else {
+                System.out.println("Ejecutando desde JAR - usando reportes pre-compilados desde classpath");
+            }
 
             // Obtener datos específicos según el reporte
             switch (reporteNombre) {
