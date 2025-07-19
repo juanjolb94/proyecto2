@@ -201,23 +201,9 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
         cargandoDatos = true;
 
         try {
-            // ✅ VERIFICAR cache de vMenus PRIMERO
-            if (MenusCache.getInstance().isCacheValido()) {
-                List<mPermiso> menusCache = MenusCache.getInstance().getMenusDelSistema();
-                cargarMenusEnTablaDesdeCache(menusCache);
-            } else {
-                // ✅ FALLBACK: leer desde interfaz (pero con advertencia)
-                List<mPermiso> menus = obtenerMenusDesdaInterfaz();
-                cargarMenusEnTablaDesdeDB(menus);
-
-                // Mostrar advertencia una sola vez
-                if (!advertenciaMostrada) {
-                    JOptionPane.showMessageDialog(this,
-                            "Los menús no están sincronizados. Recomendado usar vMenus para sincronizar.",
-                            "Advertencia", JOptionPane.WARNING_MESSAGE);
-                    advertenciaMostrada = true;
-                }
-            }
+            // ✅ MODIFICACIÓN: SIEMPRE usar BD como fuente de verdad
+            List<mPermiso> menus = controlador.obtenerMenusDelSistemaCompleto();
+            cargarMenusEnTablaDesdeDB(menus);
 
             // Cargar permisos existentes del rol
             List<mPermiso> permisos = controlador.obtenerPermisosPorRol(idRol);

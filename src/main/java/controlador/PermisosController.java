@@ -137,4 +137,16 @@ public class PermisosController {
             return false;
         }
     }
+
+    public List<mPermiso> obtenerMenusDelSistemaCompleto() {
+        try {
+            // Usar SIEMPRE la BD como fuente de verdad
+            return dao.obtenerMenusDelSistema();
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(vista,
+                    "Error al obtener menús completos: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+            return new ArrayList<>();
+        }
+    }
 }
