@@ -7,3 +7,20 @@
 [2025-07-19T12:36:10.552863800] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario lopo inició sesión correctamente
 [2025-07-19T12:36:11.502006400] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
 [2025-07-19T12:36:20.129026600] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: lopo
+[2025-07-19T14:03:03.643887200] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario eve inició sesión correctamente
+[2025-07-19T14:03:03.686968600] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario eve inició sesión correctamente
+[2025-07-19T14:03:04.545082700] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
+[2025-07-19T14:03:18.038136900] [AUDIT] [LOGIN] LOGOUT: Usuario eve cerró la aplicación desde menú
+[2025-07-19T14:03:18.062162400] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: eve
+[2025-07-19T14:03:28.192541700] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-19T14:03:28.234087700] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-19T14:03:29.282126400] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
+[2025-07-19T14:05:23.590252500] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: admin
+[2025-07-19T14:07:12.092468200] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-19T14:07:12.131100500] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-19T14:07:13.003874200] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
+[2025-07-19T14:19:39.194204900] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-19T14:19:39.237720] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-19T14:19:40.118769600] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
+[2025-07-19T14:22:34.847372300] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: admin
+[2025-07-19T14:22:39.111833200] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: admin

@@ -115,4 +115,21 @@ public class PermisosDAO {
         }
         return false;
     }
+
+    // Buscar ID real de menú por nombre de componente
+    public int buscarIdMenuPorComponente(String nombreComponente) throws SQLException {
+        String sql = "SELECT id_menu FROM menus WHERE nombre_componente = ? AND activo = TRUE";
+
+        try (Connection conn = DatabaseConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, nombreComponente);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt("id_menu");
+                }
+            }
+        }
+        return -1; // No encontrado
+    }
 }

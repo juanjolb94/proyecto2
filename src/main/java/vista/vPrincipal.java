@@ -265,36 +265,36 @@ public class vPrincipal extends javax.swing.JFrame {
         Map<String, String> mapeoComponentes = new HashMap<>();
 
         // Menús de Compras
-        mapeoComponentes.put("Gestionar Proveedores", "mProveedores");
+        mapeoComponentes.put("Proveedores", "mProveedores");
         mapeoComponentes.put("Registrar Compra", "mRegCompras");
         mapeoComponentes.put("Reporte Compras", "mRepCompras");
 
         // Menús de Ventas
-        mapeoComponentes.put("Gestionar Clientes", "mClientes");
-        mapeoComponentes.put("Talonarios de Factura", "mTalonarios");
+        mapeoComponentes.put("Clientes", "mClientes");
+        mapeoComponentes.put("Talonarios", "mTalonarios");
         mapeoComponentes.put("Registrar Venta Directa", "mRegVentaDirecta");
         mapeoComponentes.put("Registrar Ventas", "mRegVentas");
         mapeoComponentes.put("Reporte Ventas", "mRepVentas");
         mapeoComponentes.put("Reporte Productos Más Vendidos", "mRepProductosMasVendidos");
 
         // Menús de Stock
-        mapeoComponentes.put("Gestionar Productos", "mProductos");
-        mapeoComponentes.put("Lista de Precios", "mListaPrecios");
+        mapeoComponentes.put("Productos", "mProductos");
+        mapeoComponentes.put("Lista Precios", "mListaPrecios");
         mapeoComponentes.put("Ajustar Stock", "mAjustarStock");
-        mapeoComponentes.put("Aprobar Ajuste de Stock", "mAprobarStock");
-        mapeoComponentes.put("Reporte de Inventario", "mRepInvent");
+        mapeoComponentes.put("Aprobar Stock", "mAprobarStock");
+        mapeoComponentes.put("Reporte Inventario", "mRepInvent");
 
-        // Menús de Tesorería - AJUSTAR A LOS TEXTOS REALES
-        mapeoComponentes.put("Apertura / Cierre de caja", "mAperturaCierreCaja");
-        mapeoComponentes.put("Registrar Movimiento de Caja", "mIngCaja");
-        mapeoComponentes.put("Reporte de Ingresos - Egresos", "mRepCaja");
+        // Menús de Tesorería
+        mapeoComponentes.put("Apertura/Cierre Caja", "mAperturaCierreCaja");
+        mapeoComponentes.put("Ingresar Caja", "mIngCaja");
+        mapeoComponentes.put("Reporte Caja", "mRepCaja");
 
         // Menús de Seguridad
         mapeoComponentes.put("Personas", "mPersonas");
         mapeoComponentes.put("Usuarios", "mUsuarios");
         mapeoComponentes.put("Roles", "mRoles");
         mapeoComponentes.put("Permisos", "mPermisos");
-        mapeoComponentes.put("Menus", "mMenus");
+        mapeoComponentes.put("Menús", "mMenus");
 
         // Menús de Archivo
         mapeoComponentes.put("Nuevo", "mNuevo");
@@ -309,7 +309,7 @@ public class vPrincipal extends javax.swing.JFrame {
         mapeoComponentes.put("Primero", "mPrimero");
         mapeoComponentes.put("Anterior", "mAnterior");
         mapeoComponentes.put("Siguiente", "mSiguiente");
-        mapeoComponentes.put("Ultimo", "mUltimo");
+        mapeoComponentes.put("Último", "mUltimo");
         mapeoComponentes.put("Ins. Detalle", "mInsDetalle");
         mapeoComponentes.put("Del. Detalle", "mDelDetalle");
 

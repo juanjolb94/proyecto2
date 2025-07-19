@@ -22,6 +22,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import javax.swing.JCheckBox;
+import javax.swing.JDesktopPane;
+import javax.swing.JInternalFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JTable;
@@ -53,8 +55,80 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
 
     // Método para cargar menús iniciales
     private void cargarMenusIniciales() {
-        List<mPermiso> menus = obtenerMenusDesdaInterfaz(); // Leer desde interfaz
-        cargarMenusEnTablaDesdeDB(menus);
+        // ✅ VERIFICAR si los menús están sincronizados
+        if (MenusCache.getInstance().isCacheValido()) {
+            // Usar menús ya sincronizados desde vMenus
+            List<mPermiso> menusSincronizados = MenusCache.getInstance().getMenusDelSistema();
+            cargarMenusEnTablaDesdeCache(menusSincronizados);
+        } else {
+            // Si no están sincronizados, mostrar mensaje y abrir vMenus
+            mostrarMensajeSincronizacion();
+        }
+    }
+
+    private void mostrarMensajeSincronizacion() {
+        int opcion = JOptionPane.showConfirmDialog(this,
+                "Los menús no están sincronizados con el sistema de permisos.\n\n"
+                + "¿Desea abrir la ventana de Menús para sincronizar?",
+                "Sincronización Requerida",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+
+        if (opcion == JOptionPane.YES_OPTION) {
+            abrirVentanaMenus();
+        } else {
+            // Fallback: usar menús desde interfaz pero mostrar advertencia
+            List<mPermiso> menus = obtenerMenusDesdaInterfaz();
+            cargarMenusEnTablaDesdeDB(menus);
+
+            JOptionPane.showMessageDialog(this,
+                    "ADVERTENCIA: Usando menús no sincronizados.\n"
+                    + "Pueden ocurrir errores al guardar permisos.",
+                    "Advertencia",
+                    JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    private void abrirVentanaMenus() {
+        // Buscar si ya existe una ventana vMenus abierta
+        vPrincipal ventanaPrincipal = obtenerVentanaPrincipal();
+        if (ventanaPrincipal != null) {
+            JDesktopPane desktop = ventanaPrincipal.getDesktopPane();
+            if (desktop != null) {
+                for (JInternalFrame frame : desktop.getAllFrames()) {
+                    if (frame instanceof vMenus) {
+                        frame.toFront();
+                        try {
+                            frame.setSelected(true);
+                        } catch (java.beans.PropertyVetoException e) {
+                            // Ignorar la excepción - no es crítica
+                            System.err.println("No se pudo seleccionar la ventana: " + e.getMessage());
+                        }
+                        return;
+                    }
+                }
+            }
+
+            // Si no existe, crear nueva
+            vMenus ventanaMenus = new vMenus();
+            desktop.add(ventanaMenus);
+            ventanaMenus.setVisible(true);
+            ventanaMenus.toFront();
+
+            // ✅ CORRECCIÓN: También aquí si usas setSelected
+            try {
+                ventanaMenus.setSelected(true);
+            } catch (java.beans.PropertyVetoException e) {
+                // Ignorar la excepción - no es crítica
+                System.err.println("No se pudo seleccionar la ventana nueva: " + e.getMessage());
+            }
+
+            JOptionPane.showMessageDialog(this,
+                    "Use el botón 'Sincronizar' en la ventana de Menús.\n"
+                    + "Luego cierre y vuelva a abrir esta ventana de Permisos.",
+                    "Instrucciones",
+                    JOptionPane.INFORMATION_MESSAGE);
+        }
     }
 
     // Método para configurar listeners en la tabla
@@ -117,20 +191,31 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
 
     // Método actualizado para cargar permisos del rol
     private void cargarPermisosDelRol(int idRol) {
-        // Verificar si hay cache válido de vMenus
+        // ✅ VERIFICAR cache de vMenus PRIMERO
         if (MenusCache.getInstance().isCacheValido()) {
             List<mPermiso> menusCache = MenusCache.getInstance().getMenusDelSistema();
             cargarMenusEnTablaDesdeCache(menusCache);
         } else {
-            // Fallback: usar menús desde BD o interfaz
+            // ✅ FALLBACK: leer desde interfaz (pero con advertencia)
             List<mPermiso> menus = obtenerMenusDesdaInterfaz();
             cargarMenusEnTablaDesdeDB(menus);
+
+            // Mostrar advertencia una sola vez
+            if (!advertenciaMostrada) {
+                JOptionPane.showMessageDialog(this,
+                        "Los menús no están sincronizados. Recomendado usar vMenus para sincronizar.",
+                        "Advertencia", JOptionPane.WARNING_MESSAGE);
+                advertenciaMostrada = true;
+            }
         }
 
         // Cargar permisos existentes del rol
         List<mPermiso> permisos = controlador.obtenerPermisosPorRol(idRol);
         aplicarPermisosEnTabla(permisos);
     }
+
+    // Variable para mostrar advertencia solo una vez
+    private boolean advertenciaMostrada = false;
 
     // Método para aplicar permisos en la tabla
     private void aplicarPermisosEnTabla(List<mPermiso> permisos) {
@@ -166,7 +251,7 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
         DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
         int permisosConfigurados = 0;
 
-        // 1. PASO 1: Recolectar todos los permisos (SIN guardar)
+        // 1. PASO 1: Recolectar TODOS los permisos (con valores true o false)
         for (int i = 0; i < modelo.getRowCount(); i++) {
             int idMenu = (Integer) modelo.getValueAt(i, 0);
             boolean ver = (Boolean) modelo.getValueAt(i, 2);
@@ -175,23 +260,25 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
             boolean actualizar = (Boolean) modelo.getValueAt(i, 5);
             boolean eliminar = (Boolean) modelo.getValueAt(i, 6);
 
-            // Solo agregar si al menos un permiso está marcado
-            if (ver || crear || leer || actualizar || eliminar) {
-                mPermiso permiso = new mPermiso();
-                permiso.setIdRol(rolSeleccionado.getId());
-                permiso.setIdMenu(idMenu);
-                permiso.setVer(ver);
-                permiso.setCrear(crear);
-                permiso.setLeer(leer);
-                permiso.setActualizar(actualizar);
-                permiso.setEliminar(eliminar);
+            // ✅ SIEMPRE agregar el permiso
+            mPermiso permiso = new mPermiso();
+            permiso.setIdRol(rolSeleccionado.getId());
+            permiso.setIdMenu(idMenu);
+            permiso.setVer(ver);
+            permiso.setCrear(crear);
+            permiso.setLeer(leer);
+            permiso.setActualizar(actualizar);
+            permiso.setEliminar(eliminar);
 
-                permisosAGuardar.add(permiso);
+            permisosAGuardar.add(permiso);
+
+            // Solo contar los configurados para el mensaje informativo
+            if (ver || crear || leer || actualizar || eliminar) {
                 permisosConfigurados++;
             }
         }
 
-        // 2. PASO 2: Validar 
+        // 2. PASO 2: Validar (opcional - puedes quitar esta validación)
         if (permisosConfigurados == 0) {
             int opcion = JOptionPane.showConfirmDialog(this,
                     "No hay permisos configurados para este rol.\n¿Desea guardar sin permisos?",
@@ -203,10 +290,10 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
 
         // 3. PASO 3: Guardar 
         if (controlador.guardarPermisos(permisosAGuardar)) {
-            permisosCambiados = false; // Resetear indicador
+            permisosCambiados = false;
             actualizarTitulo();
             JOptionPane.showMessageDialog(this,
-                    String.format("Permisos guardados correctamente.\n%d menús configurados para el rol %s",
+                    String.format("Permisos guardados correctamente.\n%d menús con permisos activos para el rol %s",
                             permisosConfigurados, rolSeleccionado.toString()),
                     "Éxito", JOptionPane.INFORMATION_MESSAGE);
         } else {
@@ -523,13 +610,13 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
         Map<String, String> mapeoComponentes = new HashMap<>();
 
         // Menús de Compras
-        mapeoComponentes.put("Gestionar Proveedores", "mProveedores");
+        mapeoComponentes.put("Proveedores", "mProveedores");
         mapeoComponentes.put("Registrar Compra", "mRegCompras");
         mapeoComponentes.put("Reporte Compras", "mRepCompras");
 
         // Menús de Ventas
-        mapeoComponentes.put("Gestionar Clientes", "mClientes");
-        mapeoComponentes.put("Talonarios de Factura", "mTalonarios");
+        mapeoComponentes.put("Clientes", "mClientes");
+        mapeoComponentes.put("Talonarios", "mTalonarios");
         mapeoComponentes.put("Registrar Venta Directa", "mRegVentaDirecta");
         mapeoComponentes.put("Registrar Ventas", "mRegVentas");
         mapeoComponentes.put("Reporte Ventas", "mRepVentas");
@@ -537,7 +624,7 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
 
         // Menús de Stock
         mapeoComponentes.put("Productos", "mProductos");
-        mapeoComponentes.put("Lista de Precios", "mListaPrecios");
+        mapeoComponentes.put("Lista Precios", "mListaPrecios");
         mapeoComponentes.put("Ajustar Stock", "mAjustarStock");
         mapeoComponentes.put("Aprobar Stock", "mAprobarStock");
         mapeoComponentes.put("Reporte Inventario", "mRepInvent");
@@ -552,9 +639,9 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
         mapeoComponentes.put("Usuarios", "mUsuarios");
         mapeoComponentes.put("Roles", "mRoles");
         mapeoComponentes.put("Permisos", "mPermisos");
-        mapeoComponentes.put("Menus", "mMenus");
+        mapeoComponentes.put("Menús", "mMenus");
 
-        // Menús de Archivo - TAMBIÉN verificar permisos
+        // Menús de Archivo
         mapeoComponentes.put("Nuevo", "mNuevo");
         mapeoComponentes.put("Guardar", "mGuardar");
         mapeoComponentes.put("Borrar", "mBorrar");
@@ -563,7 +650,7 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
         mapeoComponentes.put("Cerrar Ventana", "mCerrarVentana");
         mapeoComponentes.put("Salir", "mSalir");
 
-        // Menús de Edición - TAMBIÉN verificar permisos
+        // Menús de Edición
         mapeoComponentes.put("Primero", "mPrimero");
         mapeoComponentes.put("Anterior", "mAnterior");
         mapeoComponentes.put("Siguiente", "mSiguiente");
@@ -651,12 +738,13 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
 
         vPrincipal ventanaPrincipal = obtenerVentanaPrincipal();
         if (ventanaPrincipal == null) {
-            // Fallback: usar menús desde BD si no se encuentra vPrincipal
             return controlador.obtenerMenusDelSistema();
         }
 
         JMenuBar menuBar = ventanaPrincipal.getJMenuBar();
-        int menuId = 1;
+
+        // ✅ USAR IDs temporales negativos para distinguir de los reales
+        int menuIdTemporal = -1;
 
         // Recorrer cada menú principal
         for (int i = 0; i < menuBar.getMenuCount(); i++) {
@@ -664,7 +752,7 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
             if (menu != null) {
                 // Agregar menú principal
                 mPermiso menuPrincipal = new mPermiso();
-                menuPrincipal.setIdMenu(menuId++);
+                menuPrincipal.setIdMenu(menuIdTemporal--); // ✅ ID temporal negativo
                 menuPrincipal.setNombreMenu(menu.getText());
                 menuPrincipal.setNombreComponente("m" + menu.getText().replace(" ", ""));
                 menus.add(menuPrincipal);
@@ -678,7 +766,7 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
                             && !item.getText().trim().isEmpty()) {
 
                         mPermiso submenu = new mPermiso();
-                        submenu.setIdMenu(menuId++);
+                        submenu.setIdMenu(menuIdTemporal--); // ✅ ID temporal negativo
                         submenu.setNombreMenu(item.getText());
 
                         String nombreComponente = item.getActionCommand();
@@ -803,8 +891,8 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
                     .addComponent(jLabel1)
                     .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 500, javax.swing.GroupLayout.PREFERRED_SIZE)
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 566, Short.MAX_VALUE)
+                .addContainerGap())
         );
 
         pack();

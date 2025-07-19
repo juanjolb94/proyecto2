@@ -58,8 +58,19 @@ public class PermisosController {
     public boolean guardarPermisos(List<mPermiso> permisos) {
         try {
             for (mPermiso permiso : permisos) {
-                if (!dao.guardarPermiso(permiso)) {
-                    return false;
+                // ✅ BUSCAR ID REAL basándose en nombre_componente
+                int idReal = dao.buscarIdMenuPorComponente(permiso.getNombreComponente());
+
+                if (idReal > 0) {
+                    // Asignar ID real antes de guardar
+                    permiso.setIdMenu(idReal);
+
+                    if (!dao.guardarPermiso(permiso)) {
+                        return false;
+                    }
+                } else {
+                    System.err.println("No se encontró menú para componente: " + permiso.getNombreComponente());
+                    // Continuar con los demás (no fallar por uno)
                 }
             }
             return true;
