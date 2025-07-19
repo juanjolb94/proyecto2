@@ -31,12 +31,15 @@ public class PermisosDAO {
 
     // Obtener permisos de un rol específico
     public List<mPermiso> obtenerPermisosPorRol(int idRol) throws SQLException {
+        System.out.println("  → Consultando permisos en BD para rol: " + idRol);
+
         List<mPermiso> permisos = new ArrayList<>();
         String sql = "SELECT p.id_permiso, p.id_rol, p.id_menu, m.nombre_menu, "
                 + "m.nombre_componente, p.ver, p.crear, p.leer, p.actualizar, p.eliminar "
                 + "FROM permisos p "
                 + "INNER JOIN menus m ON p.id_menu = m.id_menu "
-                + "WHERE p.id_rol = ? AND m.activo = TRUE "
+                + "WHERE p.id_rol = ? "
+                + "AND m.activo = TRUE "
                 + "ORDER BY m.orden, m.id_menu";
 
         try (Connection conn = DatabaseConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -57,14 +60,21 @@ public class PermisosDAO {
                             rs.getBoolean("eliminar")
                     );
                     permisos.add(permiso);
+                    System.out.println("  → Permiso cargado: ID=" + permiso.getIdMenu()
+                            + ", '" + permiso.getNombreMenu() + "', VER=" + permiso.isVer());
                 }
             }
         }
+
+        System.out.println("  → Total permisos cargados de BD: " + permisos.size());
         return permisos;
     }
 
     // Guardar o actualizar permiso
     public boolean guardarPermiso(mPermiso permiso) throws SQLException {
+        System.out.println("  → Ejecutando INSERT/UPDATE para rol=" + permiso.getIdRol()
+                + ", menu=" + permiso.getIdMenu());
+
         String sql = "INSERT INTO permisos (id_rol, id_menu, ver, crear, leer, actualizar, eliminar) "
                 + "VALUES (?, ?, ?, ?, ?, ?, ?) "
                 + "ON DUPLICATE KEY UPDATE "
@@ -81,7 +91,16 @@ public class PermisosDAO {
             ps.setBoolean(6, permiso.isActualizar());
             ps.setBoolean(7, permiso.isEliminar());
 
-            return ps.executeUpdate() > 0;
+            int filasAfectadas = ps.executeUpdate();
+            System.out.println("  → Filas afectadas: " + filasAfectadas);
+
+            boolean exito = filasAfectadas > 0;
+            System.out.println("  → Guardado exitoso: " + exito);
+
+            return exito;
+        } catch (SQLException e) {
+            System.err.println("  → ERROR en guardarPermiso: " + e.getMessage());
+            throw e;
         }
     }
 
@@ -118,6 +137,8 @@ public class PermisosDAO {
 
     // Buscar ID real de menú por nombre de componente
     public int buscarIdMenuPorComponente(String nombreComponente) throws SQLException {
+        System.out.println("  → Buscando ID para componente: '" + nombreComponente + "'");
+
         String sql = "SELECT id_menu FROM menus WHERE nombre_componente = ? AND activo = TRUE";
 
         try (Connection conn = DatabaseConnection.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -126,7 +147,11 @@ public class PermisosDAO {
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getInt("id_menu");
+                    int id = rs.getInt("id_menu");
+                    System.out.println("  → ID encontrado: " + id);
+                    return id;
+                } else {
+                    System.out.println("  → NO se encontró ID para: '" + nombreComponente + "'");
                 }
             }
         }

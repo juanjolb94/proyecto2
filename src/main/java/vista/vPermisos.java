@@ -33,6 +33,7 @@ import util.MenusCache;
 public class vPermisos extends javax.swing.JInternalFrame implements myInterface {
 
     private boolean permisosCambiados = false;
+    private boolean cargandoDatos = false;
     private PermisosController controlador;
 
     public vPermisos() {
@@ -134,6 +135,11 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
     // Método para configurar listeners en la tabla
     private void configurarListenersTabla() {
         jTable1.getModel().addTableModelListener(e -> {
+            // ✅ IGNORAR cambios durante la carga de datos
+            if (cargandoDatos) {
+                return;
+            }
+
             if (e.getColumn() >= 2 && e.getColumn() <= 6) {
                 jTable1.getTableHeader().repaint();
                 permisosCambiados = true; // Marcar que hay cambios
@@ -191,27 +197,40 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
 
     // Método actualizado para cargar permisos del rol
     private void cargarPermisosDelRol(int idRol) {
-        // ✅ VERIFICAR cache de vMenus PRIMERO
-        if (MenusCache.getInstance().isCacheValido()) {
-            List<mPermiso> menusCache = MenusCache.getInstance().getMenusDelSistema();
-            cargarMenusEnTablaDesdeCache(menusCache);
-        } else {
-            // ✅ FALLBACK: leer desde interfaz (pero con advertencia)
-            List<mPermiso> menus = obtenerMenusDesdaInterfaz();
-            cargarMenusEnTablaDesdeDB(menus);
+        // ✅ ACTIVAR modo carga para evitar que se disparen los listeners
+        cargandoDatos = true;
 
-            // Mostrar advertencia una sola vez
-            if (!advertenciaMostrada) {
-                JOptionPane.showMessageDialog(this,
-                        "Los menús no están sincronizados. Recomendado usar vMenus para sincronizar.",
-                        "Advertencia", JOptionPane.WARNING_MESSAGE);
-                advertenciaMostrada = true;
+        try {
+            // ✅ VERIFICAR cache de vMenus PRIMERO
+            if (MenusCache.getInstance().isCacheValido()) {
+                List<mPermiso> menusCache = MenusCache.getInstance().getMenusDelSistema();
+                cargarMenusEnTablaDesdeCache(menusCache);
+            } else {
+                // ✅ FALLBACK: leer desde interfaz (pero con advertencia)
+                List<mPermiso> menus = obtenerMenusDesdaInterfaz();
+                cargarMenusEnTablaDesdeDB(menus);
+
+                // Mostrar advertencia una sola vez
+                if (!advertenciaMostrada) {
+                    JOptionPane.showMessageDialog(this,
+                            "Los menús no están sincronizados. Recomendado usar vMenus para sincronizar.",
+                            "Advertencia", JOptionPane.WARNING_MESSAGE);
+                    advertenciaMostrada = true;
+                }
             }
-        }
 
-        // Cargar permisos existentes del rol
-        List<mPermiso> permisos = controlador.obtenerPermisosPorRol(idRol);
-        aplicarPermisosEnTabla(permisos);
+            // Cargar permisos existentes del rol
+            List<mPermiso> permisos = controlador.obtenerPermisosPorRol(idRol);
+            aplicarPermisosEnTabla(permisos);
+
+            // ✅ RESETEAR estado después de cargar todo
+            permisosCambiados = false;
+            actualizarTitulo();
+
+        } finally {
+            // ✅ DESACTIVAR modo carga
+            cargandoDatos = false;
+        }
     }
 
     // Variable para mostrar advertencia solo una vez
@@ -219,22 +238,145 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
 
     // Método para aplicar permisos en la tabla
     private void aplicarPermisosEnTabla(List<mPermiso> permisos) {
+        System.out.println("\n=== APLICANDO PERMISOS EN TABLA ===");
+        System.out.println("Permisos a aplicar: " + permisos.size());
+
         DefaultTableModel modelo = (DefaultTableModel) jTable1.getModel();
+        System.out.println("Filas en tabla: " + modelo.getRowCount());
+
+        int aplicados = 0;
 
         for (mPermiso permiso : permisos) {
-            // Buscar la fila correspondiente al menú
+            System.out.println("\nBuscando fila para: ID=" + permiso.getIdMenu()
+                    + ", Menú='" + permiso.getNombreMenu() + "'");
+
+            // Buscar la fila correspondiente al menú por ID o por nombre de componente
+            boolean encontrado = false;
             for (int i = 0; i < modelo.getRowCount(); i++) {
                 int idMenuTabla = (Integer) modelo.getValueAt(i, 0);
-                if (idMenuTabla == permiso.getIdMenu()) {
+                String nombreMenuTabla = (String) modelo.getValueAt(i, 1);
+
+                // ✅ MEJORAR: buscar por ID o por nombre si coincide
+                boolean esElMismo = (idMenuTabla == permiso.getIdMenu())
+                        || (nombreMenuTabla != null && nombreMenuTabla.equals(permiso.getNombreMenu()));
+
+                if (esElMismo) {
+                    System.out.println("→ ENCONTRADO en fila " + i + ": '" + nombreMenuTabla + "'");
+                    System.out.println("  Aplicando: VER=" + permiso.isVer() + ", CREAR=" + permiso.isCrear()
+                            + ", LEER=" + permiso.isLeer() + ", ACTUALIZAR=" + permiso.isActualizar()
+                            + ", ELIMINAR=" + permiso.isEliminar());
+
                     modelo.setValueAt(permiso.isVer(), i, 2);
                     modelo.setValueAt(permiso.isCrear(), i, 3);
                     modelo.setValueAt(permiso.isLeer(), i, 4);
                     modelo.setValueAt(permiso.isActualizar(), i, 5);
                     modelo.setValueAt(permiso.isEliminar(), i, 6);
+                    aplicados++;
+                    encontrado = true;
                     break;
                 }
             }
+
+            if (!encontrado) {
+                System.out.println("→ NO ENCONTRADO menú: ID=" + permiso.getIdMenu()
+                        + ", '" + permiso.getNombreMenu() + "'");
+            }
         }
+
+        System.out.println("Permisos aplicados en tabla: " + aplicados + "/" + permisos.size());
+        System.out.println("=== FIN APLICAR PERMISOS ===\n");
+    }
+
+    // Usar nombres EXACTOS de la interfaz
+    private String generarNombreComponente(String nombreMenu) {
+        if (nombreMenu == null || nombreMenu.trim().isEmpty()) {
+            return "";
+        }
+
+        // ✅ AGREGAR LOGS PARA DEBUG
+        System.out.println("=== generarNombreComponente DEBUG ===");
+        System.out.println("Nombre recibido: '" + nombreMenu + "'");
+        System.out.println("Longitud: " + nombreMenu.length());
+
+        // Mostrar cada carácter para detectar caracteres invisibles
+        for (int i = 0; i < nombreMenu.length(); i++) {
+            char c = nombreMenu.charAt(i);
+            System.out.print("'" + c + "'(" + (int) c + ") ");
+        }
+        System.out.println();
+
+        // ✅ USAR NOMBRES EXACTOS que aparecen en la tabla
+        Map<String, String> mapeoComponentes = new HashMap<>();
+
+        // Menús de Compras
+        mapeoComponentes.put("Gestionar Proveedores", "mProveedores");
+        mapeoComponentes.put("Registrar Compra", "mRegCompras");
+        mapeoComponentes.put("Reporte Compras", "mRepCompras");
+
+        // Menús de Ventas
+        mapeoComponentes.put("Gestionar Clientes", "mClientes");
+        mapeoComponentes.put("Talonarios de Factura", "mTalonarios");
+        mapeoComponentes.put("Registrar Venta Directa", "mRegVentaDirecta");
+        mapeoComponentes.put("Registrar Ventas", "mRegVentas");
+        mapeoComponentes.put("Reporte Ventas", "mRepVentas");
+        mapeoComponentes.put("Reporte Productos Mas Vendidos", "mRepProductosMasVendidos");
+
+        // Menús de Stock
+        mapeoComponentes.put("Gestionar Productos", "mProductos");
+        mapeoComponentes.put("Lista de Precios", "mListaPrecios");
+        mapeoComponentes.put("Ajustar Stock", "mAjustarStock");
+        mapeoComponentes.put("Aprobar Ajuste de Stock", "mAprobarStock");
+        mapeoComponentes.put("Reporte de Inventario", "mRepInvent");
+
+        // Menús de Tesorería
+        mapeoComponentes.put("Apertura / Cierre de caja", "mAperturaCierreCaja");
+        mapeoComponentes.put("Registrar Movimiento de Caja", "mIngCaja");
+        mapeoComponentes.put("Reporte de Ingresos - Egresos", "mRepCaja");
+
+        // Menús de Seguridad
+        mapeoComponentes.put("Personas", "mPersonas");
+        mapeoComponentes.put("Usuarios", "mUsuarios");
+        mapeoComponentes.put("Roles", "mRoles");
+        mapeoComponentes.put("Permisos", "mPermisos");
+        mapeoComponentes.put("Menús", "mMenus");
+
+        // Menús de Archivo
+        mapeoComponentes.put("Nuevo", "mNuevo");
+        mapeoComponentes.put("Guardar", "mGuardar");
+        mapeoComponentes.put("Borrar", "mBorrar");
+        mapeoComponentes.put("Buscar", "mBuscar");
+        mapeoComponentes.put("Imprimir", "mImprimir");
+        mapeoComponentes.put("Cerrar Ventana", "mCerrarVentana");
+        mapeoComponentes.put("Salir", "mSalir");
+
+        // Menús de Edición
+        mapeoComponentes.put("Primero", "mPrimero");
+        mapeoComponentes.put("Anterior", "mAnterior");
+        mapeoComponentes.put("Siguiente", "mSiguiente");
+        mapeoComponentes.put("Último", "mUltimo");
+        mapeoComponentes.put("Ins. Detalle", "mInsDetalle");
+        mapeoComponentes.put("Del. Detalle", "mDelDetalle");
+
+        // ✅ BUSCAR en el mapeo
+        String componenteMapeado = mapeoComponentes.get(nombreMenu);
+
+        System.out.println("Componente mapeado encontrado: '" + componenteMapeado + "'");
+
+        if (componenteMapeado != null) {
+            System.out.println("→ USANDO MAPEO: " + componenteMapeado);
+            return componenteMapeado;
+        }
+
+        // ✅ FALLBACK: Generar automáticamente si no está mapeado
+        String fallback = "m" + nombreMenu
+                .replace(" ", "")
+                .replace("/", "")
+                .replace(".", "");
+
+        System.out.println("→ USANDO FALLBACK: " + fallback);
+        System.out.println("=== FIN DEBUG ===\n");
+
+        return fallback;
     }
 
     @Override
@@ -254,16 +396,21 @@ public class vPermisos extends javax.swing.JInternalFrame implements myInterface
         // 1. PASO 1: Recolectar TODOS los permisos (con valores true o false)
         for (int i = 0; i < modelo.getRowCount(); i++) {
             int idMenu = (Integer) modelo.getValueAt(i, 0);
+            String nombreMenuTabla = (String) modelo.getValueAt(i, 1);
             boolean ver = (Boolean) modelo.getValueAt(i, 2);
             boolean crear = (Boolean) modelo.getValueAt(i, 3);
             boolean leer = (Boolean) modelo.getValueAt(i, 4);
             boolean actualizar = (Boolean) modelo.getValueAt(i, 5);
             boolean eliminar = (Boolean) modelo.getValueAt(i, 6);
 
+            // ✅ GENERAR nombreComponente desde el nombre del menú
+            String nombreComponente = generarNombreComponente(nombreMenuTabla);
+
             // ✅ SIEMPRE agregar el permiso
             mPermiso permiso = new mPermiso();
             permiso.setIdRol(rolSeleccionado.getId());
             permiso.setIdMenu(idMenu);
+            permiso.setNombreComponente(nombreComponente);
             permiso.setVer(ver);
             permiso.setCrear(crear);
             permiso.setLeer(leer);
