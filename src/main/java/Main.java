@@ -48,9 +48,23 @@ public class Main {
             ex.printStackTrace();
         }
 
-        boolean reportesCompilados = ReportCompiler.compileAllReports();
-        if (!reportesCompilados) {
-            System.err.println("Advertencia: Algunos reportes no se pudieron compilar.");
+        //boolean reportesCompilados = ReportCompiler.compileAllReports();
+        //if (!reportesCompilados) {
+        //    System.err.println("Advertencia: Algunos reportes no se pudieron compilar.");
+        //}
+        
+        // Usar una verificación para determinar si estamos en JAR:
+        String jarPath = Main.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+        boolean ejecutandoDesdeJar = jarPath.endsWith(".jar");
+
+        if (!ejecutandoDesdeJar) {
+            // Solo compilar reportes en desarrollo
+            boolean reportesCompilados = ReportCompiler.compileAllReports();
+            if (!reportesCompilados) {
+                System.err.println("Advertencia: Algunos reportes no se pudieron compilar.");
+            }
+        } else {
+            System.out.println("Ejecutando desde JAR - usando reportes pre-compilados");
         }
 
         try (Connection connection = DatabaseConnection.getConnection()) {

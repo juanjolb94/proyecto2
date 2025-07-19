@@ -1,6 +1,7 @@
 package modelo.service;
 
 import java.io.File;
+import java.io.InputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -449,23 +450,45 @@ public class ReporteService {
     }
 
     /**
-     * Obtiene un reporte compilado desde el archivo .jasper
+     * Obtiene un reporte compilado desde el archivo .jasper Funciona tanto en
+     * desarrollo como en JAR empaquetado
      *
      * @param reporteNombre Nombre del reporte sin extensión
      * @return JasperReport compilado
      * @throws JRException Si hay error cargando el reporte
      */
     private JasperReport obtenerReporteCompilado(String reporteNombre) throws JRException {
-        String rutaJasper = REPORTES_DIR + reporteNombre + ".jasper";
+        try {
+            // PRIMERO: Intentar cargar desde classpath (funciona en JAR)
+            String resourcePath = "/reportes/" + reporteNombre + ".jasper";
+            InputStream jasperStream = getClass().getResourceAsStream(resourcePath);
 
-        // Verificar si el archivo .jasper existe
-        File jasperFile = new File(rutaJasper);
-        if (jasperFile.exists()) {
-            return (JasperReport) JRLoader.loadObject(jasperFile);
-        } else {
-            // Si no existe, compilar el reporte
+            if (jasperStream != null) {
+                System.out.println("Cargando reporte desde classpath: " + resourcePath);
+                return (JasperReport) JRLoader.loadObject(jasperStream);
+            }
+
+            // SEGUNDO: Fallback para desarrollo (sistema de archivos)
+            String rutaJasper = REPORTES_DIR + reporteNombre + ".jasper";
+            File jasperFile = new File(rutaJasper);
+            if (jasperFile.exists()) {
+                System.out.println("Cargando reporte desde archivo: " + rutaJasper);
+                return (JasperReport) JRLoader.loadObject(jasperFile);
+            }
+
+            // TERCERO: Si no existe .jasper, intentar compilar desde .jrxml (solo desarrollo)
             String rutaJrxml = REPORTES_DIR + reporteNombre + ".jrxml";
-            return JasperCompileManager.compileReport(rutaJrxml);
+            File jrxmlFile = new File(rutaJrxml);
+            if (jrxmlFile.exists()) {
+                System.out.println("Compilando reporte desde: " + rutaJrxml);
+                return JasperCompileManager.compileReport(rutaJrxml);
+            }
+
+            throw new JRException("No se pudo encontrar el reporte: " + reporteNombre
+                    + " (ni .jasper en classpath, ni .jasper en filesystem, ni .jrxml para compilar)");
+
+        } catch (Exception e) {
+            throw new JRException("Error al cargar reporte " + reporteNombre + ": " + e.getMessage(), e);
         }
     }
 
