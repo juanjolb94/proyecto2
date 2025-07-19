@@ -87,3 +87,7 @@
 [2025-07-19T15:58:11.891261200] [AUDIT] [LOGIN] LOGOUT: Usuario eve cerró la aplicación desde menú
 [2025-07-19T15:58:11.915350700] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: eve
 [2025-07-19T15:58:15.990630600] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: admin
+[2025-07-19T18:29:20.466314700] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-19T18:29:20.508397400] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-19T18:29:21.351505] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
+[2025-07-19T18:29:58.090582200] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: admin

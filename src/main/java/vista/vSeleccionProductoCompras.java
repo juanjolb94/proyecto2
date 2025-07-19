@@ -284,10 +284,10 @@ public class vSeleccionProductoCompras extends JDialog {
             this.impuestoCalculado = 0;
         }
     }
-    
+
     // Campo para almacenar el subtotal exacto
     private double subtotalExacto;
-    
+
     private int baseImponibleCalculada;
     private int impuestoCalculado;
 
@@ -389,7 +389,18 @@ public class vSeleccionProductoCompras extends JDialog {
     }
 
     public double getPrecio() {
-        return subtotalExacto; // Devolver el subtotal exacto en lugar del precio unitario
+        if (ultimoCampoEditadoEsSubtotal) {
+            // Usuario editó subtotal → devolver subtotal (mantiene funcionamiento actual)
+            return subtotalExacto;
+        } else {
+            // Usuario editó precio → devolver precio unitario (corrige el problema)
+            try {
+                String precioStr = txtPrecio.getText().trim().replace(".", "").replace(",", ".");
+                return Double.parseDouble(precioStr);
+            } catch (NumberFormatException e) {
+                return 0;
+            }
+        }
     }
 
     // Añadir un getter para indicar que el valor es subtotal
