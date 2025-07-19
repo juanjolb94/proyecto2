@@ -489,8 +489,14 @@ public class vPrincipal extends javax.swing.JFrame {
 
                 default:
                     // Ikon por defecto para nombres no reconocidos
-                    icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignH.HELP_CIRCLE_OUTLINE);
-                    System.out.println("Advertencia: Ikon no reconocido: " + ikonName + ". Usando ikon por defecto.");
+                    try {
+                        icon.setIkon(org.kordamp.ikonli.materialdesign2.MaterialDesignH.HELP_CIRCLE_OUTLINE);
+                        System.out.println("Advertencia: Ikon no reconocido: " + ikonName + ". Usando ikon por defecto.");
+                    } catch (Exception ex) {
+                        // Si incluso el ikon por defecto falla, no usar iconos
+                        System.err.println("Error crítico con iconos: " + ex.getMessage());
+                        return null; // Retorna null en lugar de un icono roto
+                    }
                     ikonAsignado = false;
                     break;
             }
@@ -593,15 +599,22 @@ public class vPrincipal extends javax.swing.JFrame {
     /**
      * Método auxiliar para asignar un icono de manera segura a un componente
      */
-    private void setIconSafely(JMenuItem menuItem, String ikonName, int size, Color color) {
+    private void setIconSafely(JMenuItem menuItem, String ikonName, int size, java.awt.Color color) {
+        if (menuItem == null) {
+            return;
+        }
+
         try {
             org.kordamp.ikonli.swing.FontIcon icon = getOrCreateIcon(ikonName, size, color);
             if (icon != null) {
                 menuItem.setIcon(icon);
+            } else {
+                // Si el icono es null, no establecer ningún icono (mejor sin icono que con error)
+                System.out.println("No se asignó icono a " + menuItem.getText() + " - funcionará sin icono");
             }
         } catch (Exception e) {
             System.err.println("Error al asignar icono a " + menuItem.getText() + ": " + e.getMessage());
-            // No asignar ningún icono si hay error, mejor ningún icono que una excepción
+            // No asignar ningún icono si hay error
         }
     }
 

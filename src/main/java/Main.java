@@ -25,8 +25,40 @@ public class Main {
         }));
 
         try {
-            // Inicializar el registro de iconos de Material Design
-            org.kordamp.ikonli.materialdesign2.MaterialDesignC.CACHED.getCode();
+            // Forzar inicialización completa de Material Design Icons
+            try {
+                // Detectar si estamos ejecutando desde JAR
+                String jarPath = Main.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+                boolean ejecutandoDesdeJar = jarPath.endsWith(".jar");
+
+                if (ejecutandoDesdeJar) {
+                    System.out.println("Inicializando iconos Material Design para JAR...");
+
+                    // Forzar carga de todas las categorías de iconos
+                    org.kordamp.ikonli.materialdesign2.MaterialDesignA.ACCOUNT.getCode();
+                    org.kordamp.ikonli.materialdesign2.MaterialDesignB.BARCODE_SCAN.getCode();
+                    org.kordamp.ikonli.materialdesign2.MaterialDesignC.CASH.getCode();
+                    org.kordamp.ikonli.materialdesign2.MaterialDesignD.DELETE_OUTLINE.getCode();
+                    org.kordamp.ikonli.materialdesign2.MaterialDesignE.EXIT_TO_APP.getCode();
+                    org.kordamp.ikonli.materialdesign2.MaterialDesignF.FILE_DOCUMENT_OUTLINE.getCode();
+                    org.kordamp.ikonli.materialdesign2.MaterialDesignH.HELP_CIRCLE_OUTLINE.getCode();
+                    org.kordamp.ikonli.materialdesign2.MaterialDesignK.KEY.getCode();
+                    org.kordamp.ikonli.materialdesign2.MaterialDesignM.MAGNIFY.getCode();
+                    org.kordamp.ikonli.materialdesign2.MaterialDesignP.PACKAGE.getCode();
+                    org.kordamp.ikonli.materialdesign2.MaterialDesignS.SHIELD.getCode();
+                    org.kordamp.ikonli.materialdesign2.MaterialDesignT.TAG_MULTIPLE.getCode();
+                    org.kordamp.ikonli.materialdesign2.MaterialDesignW.WINDOW_CLOSE.getCode();
+
+                    System.out.println("✅ Material Design Icons inicializados para JAR");
+                } else {
+                    // Inicialización normal para desarrollo
+                    org.kordamp.ikonli.materialdesign2.MaterialDesignC.CACHED.getCode();
+                    System.out.println("✅ Material Design Icons inicializados para desarrollo");
+                }
+            } catch (Exception e) {
+                System.err.println("⚠️ Error al inicializar iconos Material Design: " + e.getMessage());
+                e.printStackTrace();
+            }
 
             // Configurar propiedades globales de UI
             UIManager.put("Button.arc", 10); // Bordes redondeados para botones
@@ -52,7 +84,6 @@ public class Main {
         //if (!reportesCompilados) {
         //    System.err.println("Advertencia: Algunos reportes no se pudieron compilar.");
         //}
-        
         // Usar una verificación para determinar si estamos en JAR:
         String jarPath = Main.class.getProtectionDomain().getCodeSource().getLocation().getPath();
         boolean ejecutandoDesdeJar = jarPath.endsWith(".jar");
