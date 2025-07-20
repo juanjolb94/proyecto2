@@ -912,16 +912,15 @@ public class ReporteService {
             parametrosSql.add(parametros.get("fecha_hasta"));
         }
 
-        // Filtro de usuario - COMENTADO TEMPORALMENTE
-        /*
-    if (parametros.containsKey("usuario_id")) {
-        Integer usuarioId = (Integer) parametros.get("usuario_id");
-        if (usuarioId != null && usuarioId > 0) {
-            sql.append("AND ").append(alias).append(".usuario = (SELECT NombreUsuario FROM usuarios WHERE UsuarioID = ?) ");
-            parametrosSql.add(usuarioId);
+        // Filtro de usuario
+        if (parametros.containsKey("usuario_id")) {
+            Integer usuarioId = (Integer) parametros.get("usuario_id");
+            if (usuarioId != null && usuarioId > 0) {
+                sql.append("AND ").append(alias).append(".usuario = (SELECT NombreUsuario FROM usuarios WHERE UsuarioID = ?) ");
+                parametrosSql.add(usuarioId);
+            }
         }
-    }
-         */
+
         // Filtro de incluir anulados
         if (parametros.containsKey("incluir_anulados") && parametros.get("incluir_anulados") != null) {
             Boolean incluirAnulados = (Boolean) parametros.get("incluir_anulados");
@@ -929,9 +928,6 @@ public class ReporteService {
                 sql.append("AND ").append(alias).append(".anulado = 0 ");
             }
         }
-
-        // LÍNEA PROBLEMÁTICA ELIMINADA - El ordenamiento se hace después en el método principal
-        // sql.append("ORDER BY ").append(alias).append(".fecha DESC");
     }
 
     /**
