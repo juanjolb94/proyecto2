@@ -91,3 +91,24 @@
 [2025-07-19T18:29:20.508397400] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
 [2025-07-19T18:29:21.351505] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
 [2025-07-19T18:29:58.090582200] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: admin
+[2025-07-20T16:27:21.338425100] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-20T16:27:21.377696] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-20T16:27:22.373493500] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
+[2025-07-20T16:27:29.774237900] [AUDIT] [LOGIN] LOGOUT: Usuario admin cerró la aplicación desde menú
+[2025-07-20T16:27:29.806742700] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: admin
+[2025-07-20T16:27:43.906599400] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario eve inició sesión correctamente
+[2025-07-20T16:27:43.946649600] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario eve inició sesión correctamente
+[2025-07-20T16:27:44.890742600] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
+[2025-07-20T16:27:57.320437200] [AUDIT] [LOGIN] LOGOUT: Usuario eve cerró la aplicación desde menú
+[2025-07-20T16:27:57.345548100] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: eve
+[2025-07-20T16:28:19.322073200] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-20T16:28:19.361132] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-20T16:28:20.149822400] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
+[2025-07-20T16:30:13.629643800] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: admin
+[2025-07-20T16:37:07.553727200] [AUDIT] [LOGIN] LOGIN_FALLIDO: Intento de login fallido - Aplicación cerrada
+[2025-07-20T16:37:07.617295300] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: 
+[2025-07-20T16:41:22.034328100] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario eve inició sesión correctamente
+[2025-07-20T16:41:22.071329600] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario eve inició sesión correctamente
+[2025-07-20T16:41:23.203956100] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
+[2025-07-20T16:41:57.941411700] [AUDIT] [LOGIN] LOGOUT: Usuario eve cerró la aplicación desde menú
+[2025-07-20T16:41:57.964443900] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: eve

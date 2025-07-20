@@ -265,21 +265,21 @@ public class vPrincipal extends javax.swing.JFrame {
         Map<String, String> mapeoComponentes = new HashMap<>();
 
         // Menús de Compras
-        mapeoComponentes.put("Proveedores", "mProveedores");
+        mapeoComponentes.put("Gestionar Proveedores", "mProveedores");
         mapeoComponentes.put("Registrar Compra", "mRegCompras");
         mapeoComponentes.put("Reporte Compras", "mRepCompras");
 
         // Menús de Ventas
-        mapeoComponentes.put("Clientes", "mClientes");
-        mapeoComponentes.put("Talonarios", "mTalonarios");
+        mapeoComponentes.put("Gestionar Clientes", "mClientes");
+        mapeoComponentes.put("Talonarios de Factura", "mTalonarios");
         mapeoComponentes.put("Registrar Venta Directa", "mRegVentaDirecta");
         mapeoComponentes.put("Registrar Ventas", "mRegVentas");
         mapeoComponentes.put("Reporte Ventas", "mRepVentas");
-        mapeoComponentes.put("Reporte Productos Más Vendidos", "mRepProductosMasVendidos");
+        mapeoComponentes.put("Reporte Productos Mas Vendidos", "mRepProductosMasVendidos");
 
         // Menús de Stock
-        mapeoComponentes.put("Productos", "mProductos");
-        mapeoComponentes.put("Lista Precios", "mListaPrecios");
+        mapeoComponentes.put("Gestionar Productos", "mProductos");
+        mapeoComponentes.put("Lista de Precios", "mListaPrecios");
         mapeoComponentes.put("Ajustar Stock", "mAjustarStock");
         mapeoComponentes.put("Aprobar Stock", "mAprobarStock");
         mapeoComponentes.put("Reporte Inventario", "mRepInvent");
@@ -310,7 +310,7 @@ public class vPrincipal extends javax.swing.JFrame {
         mapeoComponentes.put("Primero", "mPrimero");
         mapeoComponentes.put("Anterior", "mAnterior");
         mapeoComponentes.put("Siguiente", "mSiguiente");
-        mapeoComponentes.put("Último", "mUltimo");
+        mapeoComponentes.put("Ultimo", "mUltimo");
         mapeoComponentes.put("Ins. Detalle", "mInsDetalle");
         mapeoComponentes.put("Del. Detalle", "mDelDetalle");
 
@@ -1188,7 +1188,7 @@ public class vPrincipal extends javax.swing.JFrame {
         });
         mStock.add(mAjustarStock);
 
-        mAprobarStock.setText("Aprobar Ajuste de Stock");
+        mAprobarStock.setText("Aprobar Stock");
         mAprobarStock.addActionListener(new java.awt.event.ActionListener() {
             public void actionPerformed(java.awt.event.ActionEvent evt) {
                 mAprobarStockActionPerformed(evt);
