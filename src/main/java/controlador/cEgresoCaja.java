@@ -3,8 +3,8 @@ package controlador;
 import interfaces.myInterface;
 import java.sql.SQLException;
 import java.util.Date;
+import javax.swing.JFormattedTextField;
 import javax.swing.JOptionPane;
-import modelo.DatabaseConnection;
 import modelo.EgresoCajaDAO;
 import modelo.mEgresoCaja;
 import vista.vEgresoCaja;
@@ -57,9 +57,8 @@ public class cEgresoCaja implements myInterface {
 
             double monto = 0;
             try {
-                // Eliminar caracteres no numéricos y convertir a double
-                montoTexto = montoTexto.replaceAll("[^0-9,.]", "").replace(",", ".");
-                monto = Double.parseDouble(montoTexto);
+                // CORRECCIÓN: Usar procesamiento correcto de montos
+                monto = procesarMonto(montoTexto);
             } catch (NumberFormatException e) {
                 vista.mostrarMensajeError("El monto debe ser un valor numérico válido");
                 vista.enfocarMonto();
@@ -103,43 +102,95 @@ public class cEgresoCaja implements myInterface {
 
                 if (resultado) {
                     vista.mostrarMensajeExito("Egreso actualizado correctamente");
-                    vista.limpiarCampos(); // Limpiar y volver a 0 el txtId
+                    vista.limpiarCampos();
+                    this.egresoActual = egresoExistente;
                     return true;
                 } else {
-                    vista.mostrarMensajeError("No se pudo actualizar el egreso");
+                    vista.mostrarMensajeError("Error al actualizar el egreso");
                     return false;
                 }
             } else {
-                // Es un nuevo egreso (id = 0)
-                // Crear objeto de egreso
-                egresoActual = new mEgresoCaja();
-                egresoActual.setFecha(new Date());
-                egresoActual.setMonto(monto);
-                egresoActual.setConcepto(concepto);
-                egresoActual.setUsuario(vLogin.getUsuarioAutenticado());
-                egresoActual.setAnulado(!estadoActivo);
+                // Insertar nuevo egreso
+                String usuario = vLogin.getUsuarioAutenticado();
+                Date fechaActual = new Date();
 
-                // Insertar en la base de datos
-                int nuevoId = modelo.insertarEgreso(egresoActual);
+                mEgresoCaja nuevoEgreso = new mEgresoCaja();
+                nuevoEgreso.setFecha(fechaActual);
+                nuevoEgreso.setMonto(monto);
+                nuevoEgreso.setConcepto(concepto);
+                nuevoEgreso.setUsuario(usuario);
+                nuevoEgreso.setAnulado(false);
 
-                if (nuevoId > 0) {
-                    egresoActual.setId(nuevoId);
-                    vista.mostrarMensajeExito("Egreso registrado correctamente con ID: " + nuevoId);
-                    vista.limpiarCampos(); // Limpiar y volver a 0 el txtId
+                int idGenerado = modelo.insertarEgreso(nuevoEgreso);
+
+                if (idGenerado > 0) {
+                    vista.mostrarMensajeExito("Egreso registrado correctamente con ID: " + idGenerado);
+                    nuevoEgreso.setId(idGenerado);
+                    this.egresoActual = nuevoEgreso;
+
+                    // Actualizar vista con el egreso registrado
+                    vista.mostrarEgreso(idGenerado, fechaActual, monto, concepto, usuario, false);
                     return true;
                 } else {
-                    vista.mostrarMensajeError("No se pudo registrar el egreso");
+                    vista.mostrarMensajeError("Error al registrar el egreso");
                     return false;
                 }
             }
 
         } catch (SQLException e) {
-            vista.mostrarMensajeError("Error de base de datos: " + e.getMessage());
-            return false;
-        } catch (Exception e) {
             vista.mostrarMensajeError("Error al registrar egreso: " + e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Procesa correctamente el monto ingresado considerando el formato
+     * paraguayo donde el punto (.) se usa como separador de miles y la coma (,)
+     * como decimal
+     *
+     * @param montoTexto El texto del monto a procesar
+     * @return El valor numérico del monto
+     * @throws NumberFormatException si el formato es inválido
+     */
+    private double procesarMonto(String montoTexto) throws NumberFormatException {
+        if (montoTexto == null || montoTexto.trim().isEmpty()) {
+            return 0.0;
+        }
+
+        // Procesamiento del texto del monto
+        String montoLimpio = montoTexto.trim();
+        System.out.println("Texto original: '" + montoTexto + "'");
+
+        // Remover espacios y caracteres especiales excepto números, puntos y comas
+        montoLimpio = montoLimpio.replaceAll("[^0-9,.]", "");
+        System.out.println("Después de limpiar: '" + montoLimpio + "'");
+
+        // Si está vacío después de limpiar, devolver 0
+        if (montoLimpio.isEmpty()) {
+            return 0.0;
+        }
+
+        // Determinar si usa formato paraguayo (punto como separador de miles)
+        if (montoLimpio.matches("\\d{1,3}(\\.\\d{3})+$")) {
+            // Formato con separadores de miles: 20.000, 1.500.000, etc.
+            montoLimpio = montoLimpio.replace(".", "");
+            System.out.println("Formato paraguayo detectado, resultado: " + montoLimpio);
+        } else if (montoLimpio.matches("\\d{1,3}(\\.\\d{3})+,\\d{1,2}$")) {
+            // Formato con separadores de miles y decimales: 20.000,50
+            String[] partes = montoLimpio.split(",");
+            String parteEntera = partes[0].replace(".", "");
+            String parteDecimal = partes[1];
+            montoLimpio = parteEntera + "." + parteDecimal;
+            System.out.println("Formato paraguayo con decimales, resultado: " + montoLimpio);
+        } else if (montoLimpio.contains(",")) {
+            // Solo coma decimal sin separadores de miles: 20000,50
+            montoLimpio = montoLimpio.replace(",", ".");
+            System.out.println("Solo coma decimal, resultado: " + montoLimpio);
+        }
+
+        double resultado = Double.parseDouble(montoLimpio);
+        System.out.println("Valor final procesado: " + resultado);
+        return resultado;
     }
 
     public void cargarEgreso(int id) {

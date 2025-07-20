@@ -3,8 +3,8 @@ package controlador;
 import interfaces.myInterface;
 import java.sql.SQLException;
 import java.util.Date;
+import javax.swing.JFormattedTextField;
 import javax.swing.JOptionPane;
-import modelo.DatabaseConnection;
 import modelo.IngresoCajaDAO;
 import modelo.EgresoCajaDAO;
 import modelo.mIngresoCaja;
@@ -40,7 +40,7 @@ public class cMovimientoCaja implements myInterface {
             vista.deshabilitarComponentes();
         }
     }
-    
+
     public void cambiarTipo(String nuevoTipo) {
         this.tipoActual = nuevoTipo;
         // Crear nuevos objetos según el tipo
@@ -54,9 +54,9 @@ public class cMovimientoCaja implements myInterface {
     public boolean registrarMovimiento() {
         try {
             // Verificar si hay una caja abierta
-            boolean cajaAbierta = "INGRESO".equals(tipoActual) ? 
-                modeloIngreso.existeCajaAbierta() : modeloEgreso.existeCajaAbierta();
-                
+            boolean cajaAbierta = "INGRESO".equals(tipoActual)
+                    ? modeloIngreso.existeCajaAbierta() : modeloEgreso.existeCajaAbierta();
+
             if (!cajaAbierta) {
                 vista.mostrarMensajeError("No hay una caja abierta. Debe abrir una caja para registrar movimientos.");
                 return false;
@@ -79,9 +79,7 @@ public class cMovimientoCaja implements myInterface {
 
             double monto = 0;
             try {
-                // Eliminar caracteres no numéricos y convertir a double
-                montoTexto = montoTexto.replaceAll("[^0-9,.]", "").replace(",", "");
-                monto = Double.parseDouble(montoTexto);
+                monto = procesarMonto(montoTexto);
             } catch (NumberFormatException e) {
                 vista.mostrarMensajeError("Monto inválido");
                 vista.enfocarMonto();
@@ -115,6 +113,56 @@ public class cMovimientoCaja implements myInterface {
         }
     }
 
+    /**
+     * Procesa correctamente el monto ingresado considerando el formato
+     * paraguayo donde el punto (.) se usa como separador de miles y la coma (,)
+     * como decimal
+     *
+     * @param montoTexto El texto del monto a procesar
+     * @return El valor numérico del monto
+     * @throws NumberFormatException si el formato es inválido
+     */
+    private double procesarMonto(String montoTexto) throws NumberFormatException {
+        if (montoTexto == null || montoTexto.trim().isEmpty()) {
+            return 0.0;
+        }
+
+        // Procesamiento del texto del monto
+        String montoLimpio = montoTexto.trim();
+        System.out.println("Texto original: '" + montoTexto + "'");
+
+        // Remover espacios y caracteres especiales excepto números, puntos y comas
+        montoLimpio = montoLimpio.replaceAll("[^0-9,.]", "");
+        System.out.println("Después de limpiar: '" + montoLimpio + "'");
+
+        // Si está vacío después de limpiar, devolver 0
+        if (montoLimpio.isEmpty()) {
+            return 0.0;
+        }
+
+        // Determinar si usa formato paraguayo (punto como separador de miles)
+        if (montoLimpio.matches("\\d{1,3}(\\.\\d{3})+$")) {
+            // Formato con separadores de miles: 20.000, 1.500.000, etc.
+            montoLimpio = montoLimpio.replace(".", "");
+            System.out.println("Formato paraguayo detectado, resultado: " + montoLimpio);
+        } else if (montoLimpio.matches("\\d{1,3}(\\.\\d{3})+,\\d{1,2}$")) {
+            // Formato con separadores de miles y decimales: 20.000,50
+            String[] partes = montoLimpio.split(",");
+            String parteEntera = partes[0].replace(".", "");
+            String parteDecimal = partes[1];
+            montoLimpio = parteEntera + "." + parteDecimal;
+            System.out.println("Formato paraguayo con decimales, resultado: " + montoLimpio);
+        } else if (montoLimpio.contains(",")) {
+            // Solo coma decimal sin separadores de miles: 20000,50
+            montoLimpio = montoLimpio.replace(",", ".");
+            System.out.println("Solo coma decimal, resultado: " + montoLimpio);
+        }
+
+        double resultado = Double.parseDouble(montoLimpio);
+        System.out.println("Valor final procesado: " + resultado);
+        return resultado;
+    }
+
     private boolean insertarNuevoMovimiento(double monto, String concepto) throws SQLException {
         String usuario = vLogin.getUsuarioAutenticado();
         Date fechaActual = new Date();
@@ -133,7 +181,7 @@ public class cMovimientoCaja implements myInterface {
                 vista.mostrarMensajeExito("Ingreso registrado correctamente con ID: " + idGenerado);
                 nuevoIngreso.setId(idGenerado);
                 this.ingresoActual = nuevoIngreso;
-                
+
                 // Actualizar vista con el ID generado
                 vista.mostrarMovimiento(idGenerado, fechaActual, monto, concepto, usuario, false, "INGRESO");
                 return true;
@@ -152,7 +200,7 @@ public class cMovimientoCaja implements myInterface {
                 vista.mostrarMensajeExito("Egreso registrado correctamente con ID: " + idGenerado);
                 nuevoEgreso.setId(idGenerado);
                 this.egresoActual = nuevoEgreso;
-                
+
                 // Actualizar vista con el ID generado
                 vista.mostrarMovimiento(idGenerado, fechaActual, monto, concepto, usuario, false, "EGRESO");
                 return true;
@@ -165,7 +213,7 @@ public class cMovimientoCaja implements myInterface {
 
     private boolean actualizarMovimiento(int id, double monto, String concepto, boolean anulado) throws SQLException {
         boolean resultado = false;
-        
+
         if ("INGRESO".equals(tipoActual)) {
             if (ingresoActual != null && ingresoActual.getId() == id) {
                 ingresoActual.setMonto(monto);
@@ -194,19 +242,19 @@ public class cMovimientoCaja implements myInterface {
     public void cargarMovimiento(int id) {
         try {
             String tipoMovimiento = vista.getTipoMovimiento();
-            
+
             if ("INGRESO".equals(tipoMovimiento)) {
                 mIngresoCaja ingreso = modeloIngreso.obtenerIngresoPorId(id);
                 if (ingreso != null) {
                     this.ingresoActual = ingreso;
                     vista.mostrarMovimiento(
-                        ingreso.getId(),
-                        ingreso.getFecha(),
-                        ingreso.getMonto(),
-                        ingreso.getConcepto(),
-                        ingreso.getUsuario(),
-                        ingreso.isAnulado(),
-                        "INGRESO"
+                            ingreso.getId(),
+                            ingreso.getFecha(),
+                            ingreso.getMonto(),
+                            ingreso.getConcepto(),
+                            ingreso.getUsuario(),
+                            ingreso.isAnulado(),
+                            "INGRESO"
                     );
                 } else {
                     vista.mostrarMensajeInfo("No se encontró un ingreso con ID: " + id);
@@ -217,13 +265,13 @@ public class cMovimientoCaja implements myInterface {
                 if (egreso != null) {
                     this.egresoActual = egreso;
                     vista.mostrarMovimiento(
-                        egreso.getId(),
-                        egreso.getFecha(),
-                        egreso.getMonto(),
-                        egreso.getConcepto(),
-                        egreso.getUsuario(),
-                        egreso.isAnulado(),
-                        "EGRESO"
+                            egreso.getId(),
+                            egreso.getFecha(),
+                            egreso.getMonto(),
+                            egreso.getConcepto(),
+                            egreso.getUsuario(),
+                            egreso.isAnulado(),
+                            "EGRESO"
                     );
                 } else {
                     vista.mostrarMensajeInfo("No se encontró un egreso con ID: " + id);
@@ -245,7 +293,7 @@ public class cMovimientoCaja implements myInterface {
 
             String tipoMovimiento = vista.getTipoMovimiento();
             Object movimiento = null;
-            
+
             if ("INGRESO".equals(tipoMovimiento)) {
                 movimiento = ingresoActual;
             } else {
@@ -271,15 +319,15 @@ public class cMovimientoCaja implements myInterface {
             }
 
             int confirmacion = JOptionPane.showConfirmDialog(
-                vista,
-                "¿Está seguro que desea anular este " + tipoMovimiento.toLowerCase() + "?",
-                "Confirmar",
-                JOptionPane.YES_NO_OPTION
+                    vista,
+                    "¿Está seguro que desea anular este " + tipoMovimiento.toLowerCase() + "?",
+                    "Confirmar",
+                    JOptionPane.YES_NO_OPTION
             );
 
             if (confirmacion == JOptionPane.YES_OPTION) {
                 boolean resultado = false;
-                
+
                 if ("INGRESO".equals(tipoMovimiento)) {
                     resultado = modeloIngreso.anularIngreso(id);
                     if (resultado) {
@@ -297,7 +345,7 @@ public class cMovimientoCaja implements myInterface {
                 if (resultado) {
                     vista.mostrarMensajeExito(tipoMovimiento + " anulado correctamente");
                     vista.actualizarEstadoAnulado(true);
-                    
+
                     // Limpiar campos después de un breve retraso
                     new javax.swing.Timer(1500, e -> {
                         ((javax.swing.Timer) e.getSource()).stop();
@@ -316,7 +364,7 @@ public class cMovimientoCaja implements myInterface {
     private void buscarPrimerMovimiento() {
         try {
             String tipoMovimiento = vista.getTipoMovimiento();
-            
+
             if ("INGRESO".equals(tipoMovimiento)) {
                 mIngresoCaja primer = modeloIngreso.obtenerPrimerIngreso();
                 if (primer != null) {
@@ -340,7 +388,7 @@ public class cMovimientoCaja implements myInterface {
     private void buscarUltimoMovimiento() {
         try {
             String tipoMovimiento = vista.getTipoMovimiento();
-            
+
             if ("INGRESO".equals(tipoMovimiento)) {
                 mIngresoCaja ultimo = modeloIngreso.obtenerUltimoIngreso();
                 if (ultimo != null) {
@@ -370,7 +418,7 @@ public class cMovimientoCaja implements myInterface {
             }
 
             String tipoMovimiento = vista.getTipoMovimiento();
-            
+
             if ("INGRESO".equals(tipoMovimiento)) {
                 mIngresoCaja siguiente = modeloIngreso.obtenerIngresoSiguiente(idActual);
                 if (siguiente != null) {
@@ -400,7 +448,7 @@ public class cMovimientoCaja implements myInterface {
             }
 
             String tipoMovimiento = vista.getTipoMovimiento();
-            
+
             if ("INGRESO".equals(tipoMovimiento)) {
                 mIngresoCaja anterior = modeloIngreso.obtenerIngresoAnterior(idActual);
                 if (anterior != null) {
@@ -459,8 +507,8 @@ public class cMovimientoCaja implements myInterface {
     @Override
     public void imBuscar() {
         try {
-            String idStr = JOptionPane.showInputDialog(vista, 
-                "Ingrese el ID del " + vista.getTipoMovimiento().toLowerCase() + " a buscar:");
+            String idStr = JOptionPane.showInputDialog(vista,
+                    "Ingrese el ID del " + vista.getTipoMovimiento().toLowerCase() + " a buscar:");
             if (idStr != null && !idStr.trim().isEmpty()) {
                 try {
                     int id = Integer.parseInt(idStr);

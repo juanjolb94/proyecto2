@@ -1,12 +1,10 @@
 package controlador;
 
 import interfaces.myInterface;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Date;
+import javax.swing.JFormattedTextField;
 import javax.swing.JOptionPane;
-import modelo.DatabaseConnection;
 import modelo.IngresoCajaDAO;
 import modelo.mIngresoCaja;
 import vista.vIngresoCaja;
@@ -59,9 +57,8 @@ public class cIngresoCaja implements myInterface {
 
             double monto = 0;
             try {
-                // Eliminar caracteres no numéricos y convertir a double
-                montoTexto = montoTexto.replaceAll("[^0-9,.]", "").replace(",", ".");
-                monto = Double.parseDouble(montoTexto);
+                // CORRECCIÓN: Usar procesamiento correcto de montos
+                monto = procesarMonto(montoTexto);
             } catch (NumberFormatException e) {
                 vista.mostrarMensajeError("El monto debe ser un valor numérico válido");
                 vista.enfocarMonto();
@@ -105,43 +102,95 @@ public class cIngresoCaja implements myInterface {
 
                 if (resultado) {
                     vista.mostrarMensajeExito("Ingreso actualizado correctamente");
-                    vista.limpiarCampos(); // Limpiar y volver a 0 el txtId
+                    vista.limpiarCampos();
+                    this.ingresoActual = ingresoExistente;
                     return true;
                 } else {
-                    vista.mostrarMensajeError("No se pudo actualizar el ingreso");
+                    vista.mostrarMensajeError("Error al actualizar el ingreso");
                     return false;
                 }
             } else {
-                // Es un nuevo ingreso (id = 0)
-                // Crear objeto de ingreso
-                ingresoActual = new mIngresoCaja();
-                ingresoActual.setFecha(new Date());
-                ingresoActual.setMonto(monto);
-                ingresoActual.setConcepto(concepto);
-                ingresoActual.setUsuario(vLogin.getUsuarioAutenticado());
-                ingresoActual.setAnulado(!estadoActivo);
+                // Insertar nuevo ingreso
+                String usuario = vLogin.getUsuarioAutenticado();
+                Date fechaActual = new Date();
 
-                // Insertar en la base de datos
-                int nuevoId = modelo.insertarIngreso(ingresoActual);
+                mIngresoCaja nuevoIngreso = new mIngresoCaja();
+                nuevoIngreso.setFecha(fechaActual);
+                nuevoIngreso.setMonto(monto);
+                nuevoIngreso.setConcepto(concepto);
+                nuevoIngreso.setUsuario(usuario);
+                nuevoIngreso.setAnulado(false);
 
-                if (nuevoId > 0) {
-                    ingresoActual.setId(nuevoId);
-                    vista.mostrarMensajeExito("Ingreso registrado correctamente con ID: " + nuevoId);
-                    vista.limpiarCampos(); // Limpiar y volver a 0 el txtId
+                int idGenerado = modelo.insertarIngreso(nuevoIngreso);
+
+                if (idGenerado > 0) {
+                    vista.mostrarMensajeExito("Ingreso registrado correctamente con ID: " + idGenerado);
+                    nuevoIngreso.setId(idGenerado);
+                    this.ingresoActual = nuevoIngreso;
+
+                    // Actualizar vista con el ingreso registrado
+                    vista.mostrarIngreso(idGenerado, fechaActual, monto, concepto, usuario, false);
                     return true;
                 } else {
-                    vista.mostrarMensajeError("No se pudo registrar el ingreso");
+                    vista.mostrarMensajeError("Error al registrar el ingreso");
                     return false;
                 }
             }
 
         } catch (SQLException e) {
-            vista.mostrarMensajeError("Error de base de datos: " + e.getMessage());
-            return false;
-        } catch (Exception e) {
             vista.mostrarMensajeError("Error al registrar ingreso: " + e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Procesa correctamente el monto ingresado considerando el formato
+     * paraguayo donde el punto (.) se usa como separador de miles y la coma (,)
+     * como decimal
+     *
+     * @param montoTexto El texto del monto a procesar
+     * @return El valor numérico del monto
+     * @throws NumberFormatException si el formato es inválido
+     */
+    private double procesarMonto(String montoTexto) throws NumberFormatException {
+        if (montoTexto == null || montoTexto.trim().isEmpty()) {
+            return 0.0;
+        }
+
+        // Procesamiento del texto del monto
+        String montoLimpio = montoTexto.trim();
+        System.out.println("Texto original: '" + montoTexto + "'");
+
+        // Remover espacios y caracteres especiales excepto números, puntos y comas
+        montoLimpio = montoLimpio.replaceAll("[^0-9,.]", "");
+        System.out.println("Después de limpiar: '" + montoLimpio + "'");
+
+        // Si está vacío después de limpiar, devolver 0
+        if (montoLimpio.isEmpty()) {
+            return 0.0;
+        }
+
+        // Determinar si usa formato paraguayo (punto como separador de miles)
+        if (montoLimpio.matches("\\d{1,3}(\\.\\d{3})+$")) {
+            // Formato con separadores de miles: 20.000, 1.500.000, etc.
+            montoLimpio = montoLimpio.replace(".", "");
+            System.out.println("Formato paraguayo detectado, resultado: " + montoLimpio);
+        } else if (montoLimpio.matches("\\d{1,3}(\\.\\d{3})+,\\d{1,2}$")) {
+            // Formato con separadores de miles y decimales: 20.000,50
+            String[] partes = montoLimpio.split(",");
+            String parteEntera = partes[0].replace(".", "");
+            String parteDecimal = partes[1];
+            montoLimpio = parteEntera + "." + parteDecimal;
+            System.out.println("Formato paraguayo con decimales, resultado: " + montoLimpio);
+        } else if (montoLimpio.contains(",")) {
+            // Solo coma decimal sin separadores de miles: 20000,50
+            montoLimpio = montoLimpio.replace(",", ".");
+            System.out.println("Solo coma decimal, resultado: " + montoLimpio);
+        }
+
+        double resultado = Double.parseDouble(montoLimpio);
+        System.out.println("Valor final procesado: " + resultado);
+        return resultado;
     }
 
     public void cargarIngreso(int id) {
