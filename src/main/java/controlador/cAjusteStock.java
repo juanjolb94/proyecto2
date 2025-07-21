@@ -38,14 +38,38 @@ public class cAjusteStock implements myInterface {
         ajusteActual = new mAjusteStock();
         ajusteActual.setUsuarioId(1); // Temporal - obtener del login actual
         ajusteActual.setFecha(new Date());
+
+        // ASEGURAR valores correctos para nuevo ajuste
+        ajusteActual.setIdAjuste(0);
+        ajusteActual.setAprobado(false);
+        ajusteActual.setEstado(true);
+
         vista.limpiarFormulario();
         vista.actualizarTablaDetalles(); // Actualizar tabla vacía
+
+        // DEBUG: Confirmar inicialización correcta
+        System.out.println("Nuevo ajuste inicializado - ID: " + ajusteActual.getIdAjuste()
+                + ", Aprobado: " + ajusteActual.isAprobado());
     }
 
     // Buscar producto por código de barras y agregarlo al detalle
     public void agregarProductoPorCodigo(String codigoBarra) {
         if (codigoBarra == null || codigoBarra.trim().isEmpty()) {
             vista.mostrarError("Debe ingresar un código de barras válido.");
+            return;
+        }
+
+        // DEBUG TEMPORAL - REMOVER DESPUÉS
+        System.out.println("=== DEBUG VALIDACIÓN ===");
+        System.out.println("ajusteActual.getIdAjuste(): " + ajusteActual.getIdAjuste());
+        System.out.println("ajusteActual.isAprobado(): " + ajusteActual.isAprobado());
+        System.out.println("Condición (ID > 0): " + (ajusteActual.getIdAjuste() > 0));
+        System.out.println("Condición completa: " + (ajusteActual.getIdAjuste() > 0 && ajusteActual.isAprobado()));
+        System.out.println("========================");
+
+        if (ajusteActual.getIdAjuste() > 0 && ajusteActual.isAprobado()) {
+            vista.mostrarError("No se pueden agregar productos a un ajuste ya aprobado.\n"
+                    + "Para modificar, debe desaprobar el ajuste primero desde 'Aprobar Ajuste de Stock'.");
             return;
         }
 
@@ -99,6 +123,12 @@ public class cAjusteStock implements myInterface {
             return;
         }
 
+        if (ajusteActual.getIdAjuste() > 0 && ajusteActual.isAprobado()) {
+            vista.mostrarError("No se pueden agregar productos a un ajuste ya aprobado.\n"
+                    + "Para modificar, debe desaprobar el ajuste primero desde 'Aprobar Ajuste de Stock'.");
+            return;
+        }
+
         try {
             String codBarra = (String) producto[2];
 
@@ -140,6 +170,12 @@ public class cAjusteStock implements myInterface {
     // Eliminar detalle seleccionado
     public void eliminarDetalleSeleccionado(int indiceSeleccionado) {
         if (indiceSeleccionado >= 0 && indiceSeleccionado < ajusteActual.getDetalles().size()) {
+            if (ajusteActual.getIdAjuste() > 0 && ajusteActual.isAprobado()) {
+                vista.mostrarError("No se pueden eliminar productos de un ajuste ya aprobado.\n"
+                        + "Para modificar, debe desaprobar el ajuste primero desde 'Aprobar Ajuste de Stock'.");
+                return;
+            }
+
             String descripcion = ajusteActual.getDetalles().get(indiceSeleccionado).getDescripcionCompleta();
 
             int opcion = JOptionPane.showConfirmDialog(
@@ -163,6 +199,12 @@ public class cAjusteStock implements myInterface {
     // Actualizar cantidad de ajuste desde la tabla
     public void actualizarCantidadAjuste(int indice, double nuevaCantidad) {
         if (indice >= 0 && indice < ajusteActual.getDetalles().size()) {
+            if (ajusteActual.getIdAjuste() > 0 && ajusteActual.isAprobado()) {
+                vista.mostrarError("No se pueden modificar cantidades en un ajuste aprobado.\n"
+                        + "Para modificar, debe desaprobar el ajuste primero desde 'Aprobar Ajuste de Stock'.");
+                return;
+            }
+
             if (nuevaCantidad >= 0) {
                 // Validación adicional: verificar límites razonables
                 if (nuevaCantidad > 999999) {
@@ -184,6 +226,12 @@ public class cAjusteStock implements myInterface {
     // Actualizar observaciones de detalle desde la tabla
     public void actualizarObservacionesDetalle(int indice, String observaciones) {
         if (indice >= 0 && indice < ajusteActual.getDetalles().size()) {
+            if (ajusteActual.getIdAjuste() > 0 && ajusteActual.isAprobado()) {
+                vista.mostrarError("No se pueden modificar observaciones en un ajuste aprobado.\n"
+                        + "Para modificar, debe desaprobar el ajuste primero desde 'Aprobar Ajuste de Stock'.");
+                return;
+            }
+
             ajusteActual.getDetalles().get(indice).setObservaciones(observaciones);
         }
     }
@@ -195,14 +243,18 @@ public class cAjusteStock implements myInterface {
             vista.setObservaciones(ajuste.getObservaciones() != null ? ajuste.getObservaciones() : "");
             vista.cargarDatosAjuste(ajuste);
             vista.actualizarTablaDetalles();
-            System.out.println("Ajuste cargado: ID " + ajuste.getIdAjuste());
+
+            // Mostrar estado del ajuste al cargarlo
+            if (ajuste.isAprobado()) {
+                vista.mostrarMensaje("AJUSTE APROBADO - No se pueden realizar modificaciones.\n"
+                        + "Para editar, desapruebe el ajuste desde 'Aprobar Ajuste de Stock'.");
+            }
+
+            System.out.println("Ajuste cargado: ID " + ajuste.getIdAjuste()
+                    + " - Estado: " + (ajuste.isAprobado() ? "APROBADO" : "PENDIENTE"));
         } else {
             vista.mostrarError("No se encontró el ajuste especificado.");
-
-            // Limpiar formulario y tabla cuando no se encuentra el ajuste
             inicializarNuevoAjuste();
-
-            // Enfocar el campo ID para facilitar nueva búsqueda
             SwingUtilities.invokeLater(() -> {
                 vista.enfocarIdAjuste();
             });
@@ -212,7 +264,13 @@ public class cAjusteStock implements myInterface {
     // Guardar ajuste
     private void guardarAjuste() {
         try {
-            // Validaciones
+            //  Verificar si el ajuste está aprobado antes de permitir modificaciones
+            if (ajusteActual.getIdAjuste() > 0 && ajusteActual.isAprobado()) {
+                vista.mostrarError("No se puede modificar un ajuste ya aprobado.\n"
+                        + "Para modificar, debe desaprobar el ajuste primero desde 'Aprobar Ajuste de Stock'.");
+                return;
+            }
+
             if (!ajusteActual.tieneDetalles()) {
                 vista.mostrarError("Debe agregar al menos un producto al ajuste.");
                 return;
@@ -237,7 +295,7 @@ public class cAjusteStock implements myInterface {
 
                     vista.mostrarMensaje("Ajuste guardado exitosamente. ID: " + idGenerado);
 
-                    // IMPORTANTE: Limpiar después de guardar exitosamente
+                    // Limpiar después de guardar exitosamente
                     inicializarNuevoAjuste();
 
                 } else {
@@ -268,7 +326,9 @@ public class cAjusteStock implements myInterface {
     // Buscar ajuste por ID
     public void buscarAjustePorId(int idAjuste) {
         if (idAjuste <= 0) {
-            vista.mostrarError("Ingrese un ID válido.");
+            // Cuando ID es 0, reinicializar completamente
+            inicializarNuevoAjuste();
+            vista.mostrarMensaje("Formulario preparado para nuevo ajuste.");
             return;
         }
 
@@ -278,7 +338,7 @@ public class cAjusteStock implements myInterface {
         } catch (SQLException e) {
             vista.mostrarError("Error al buscar ajuste: " + e.getMessage());
 
-            // También limpiar en caso de error de base de datos
+            // También reinicializar en caso de error de base de datos
             inicializarNuevoAjuste();
             SwingUtilities.invokeLater(() -> {
                 vista.enfocarIdAjuste();
@@ -295,7 +355,7 @@ public class cAjusteStock implements myInterface {
         ) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return column == 3; //Solo cantidad ajuste es editable (era column == 3 || column == 5)
+                return column == 3; //Solo cantidad ajuste es editable
             }
 
             @Override

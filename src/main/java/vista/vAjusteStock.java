@@ -97,12 +97,66 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
         tblDetalles.getColumnModel().getColumn(3).setPreferredWidth(100); // Cant. Ajuste
         tblDetalles.getColumnModel().getColumn(4).setPreferredWidth(100); // Diferencia
 
-        // Configurar alineación para columnas numéricas
+        // Configurar alineación para columnas numéricas (Cant. Sistema y Cant. Ajuste)
         DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
         rightRenderer.setHorizontalAlignment(JLabel.RIGHT);
         tblDetalles.getColumnModel().getColumn(2).setCellRenderer(rightRenderer);
         tblDetalles.getColumnModel().getColumn(3).setCellRenderer(rightRenderer);
-        tblDetalles.getColumnModel().getColumn(4).setCellRenderer(rightRenderer);
+
+        // Renderer personalizado para la columna Diferencia con colores y símbolos
+        DefaultTableCellRenderer diferenciaRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public java.awt.Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+                // Alinear a la derecha
+                setHorizontalAlignment(JLabel.RIGHT);
+
+                if (value instanceof Integer) {
+                    int diferencia = (Integer) value;
+
+                    if (diferencia > 0) {
+                        // Diferencia positiva: verde con símbolo +
+                        setText("+" + diferencia);
+                        if (!isSelected) {
+                            setForeground(new java.awt.Color(0, 128, 0)); // Verde oscuro
+                        }
+                    } else if (diferencia < 0) {
+                        // Diferencia negativa: rojo con símbolo - (ya incluido en el número)
+                        setText(String.valueOf(diferencia)); // El número negativo ya tiene el símbolo -
+                        if (!isSelected) {
+                            setForeground(java.awt.Color.RED);
+                        }
+                    } else {
+                        // Sin diferencia: color normal
+                        setText("0");
+                        if (!isSelected) {
+                            setForeground(table.getForeground()); // Color por defecto
+                        }
+                    }
+                } else {
+                    // Valor no numérico o null
+                    setText(value != null ? value.toString() : "0");
+                    if (!isSelected) {
+                        setForeground(table.getForeground());
+                    }
+                }
+
+                // Mantener el color de fondo de selección
+                if (isSelected) {
+                    setBackground(table.getSelectionBackground());
+                    setForeground(table.getSelectionForeground());
+                } else {
+                    setBackground(table.getBackground());
+                }
+
+                return this;
+            }
+        };
+
+        // Aplicar el renderer personalizado a la columna Diferencia (columna 4)
+        tblDetalles.getColumnModel().getColumn(4).setCellRenderer(diferenciaRenderer);
 
         // Configurar selección
         tblDetalles.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -375,13 +429,6 @@ public class vAjusteStock extends javax.swing.JInternalFrame implements myInterf
         if (!idTexto.isEmpty()) {
             try {
                 int id = Integer.parseInt(idTexto);
-
-                if (id == 0) {
-                    limpiarFormulario();
-                    mostrarMensaje("Formulario limpiado para nuevo ajuste.");
-                    return;
-                }
-
                 controlador.buscarAjustePorId(id);
             } catch (NumberFormatException e) {
                 mostrarError("ID debe ser un número válido.");

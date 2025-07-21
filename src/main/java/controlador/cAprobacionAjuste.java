@@ -108,7 +108,19 @@ public class cAprobacionAjuste implements myInterface {
             if (ajustes.isEmpty()) {
                 vista.mostrarMensaje("No se encontraron ajustes con los filtros especificados.");
             } else {
-                vista.mostrarMensaje(ajustes.size() + " ajuste(s) encontrado(s).");
+                // Obtener ID del filtro para personalizar mensaje
+                Integer idBusqueda = vista.getIdAjuste();
+
+                if (idBusqueda != null && idBusqueda > 0) {
+                    // Búsqueda específica por ID - mensaje más informativo
+                    mAprobacionAjuste ajuste = ajustes.get(0);
+                    vista.mostrarMensaje(String.format("Ajuste ID %d cargado - Estado: %s",
+                            ajuste.getIdAjuste(),
+                            ajuste.isAprobado() ? "APROBADO" : "PENDIENTE"));
+                } else {
+                    // Búsqueda general - mostrar cantidad total
+                    vista.mostrarMensaje(ajustes.size() + " ajuste(s) encontrado(s).");
+                }
             }
 
         } catch (SQLException e) {
