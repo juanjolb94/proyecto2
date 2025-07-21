@@ -14,6 +14,7 @@ import java.awt.event.MouseEvent;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.util.List;
+import javax.swing.Timer;
 
 public class vSeleccionProductoAjuste extends javax.swing.JDialog {
 
@@ -150,30 +151,50 @@ public class vSeleccionProductoAjuste extends javax.swing.JDialog {
     }
 
     private void configurarEventos() {
-        // Evento de búsqueda al escribir
+        // ===== BÚSQUEDA DINÁMICA CON TIMER =====
+        Timer timerBusqueda = new Timer(300, e -> buscarProductos()); // Esperar 300ms después del último keypress
+        timerBusqueda.setRepeats(false);
+
+        // Búsqueda dinámica mientras se escribe
         txtBusqueda.addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
+                // Reiniciar el timer cada vez que se presiona una tecla
+                timerBusqueda.restart();
+            }
+        });
+
+        // Búsqueda inmediata con Enter
+        txtBusqueda.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    buscarProductos();
-                } else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                    dispose();
+                    timerBusqueda.stop(); // Detener timer
+                    buscarProductos(); // Buscar inmediatamente
                 }
             }
         });
 
+        // Seleccionar todo el texto al hacer focus
+        txtBusqueda.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent evt) {
+                SwingUtilities.invokeLater(() -> txtBusqueda.selectAll());
+            }
+        });
+
+        // ===== EVENTOS DE TABLA =====
         // Evento de selección en tabla
         tblProductos.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 int filaSeleccionada = tblProductos.getSelectedRow();
                 btnAgregar.setEnabled(filaSeleccionada >= 0);
 
+                // Mostrar información del producto seleccionado
                 if (filaSeleccionada >= 0) {
-                    // Mostrar información del producto seleccionado
                     String codigo = (String) modeloTabla.getValueAt(filaSeleccionada, 0);
                     String nombre = (String) modeloTabla.getValueAt(filaSeleccionada, 1);
                     String descripcion = (String) modeloTabla.getValueAt(filaSeleccionada, 2);
-                    // Manejar tanto Integer como Double
                     Object stockObj = modeloTabla.getValueAt(filaSeleccionada, 3);
                     int stock = 0;
                     if (stockObj instanceof Integer) {
@@ -199,7 +220,7 @@ public class vSeleccionProductoAjuste extends javax.swing.JDialog {
             }
         });
 
-        // Eventos de botones
+        // ===== EVENTOS DE BOTONES =====
         btnAgregar.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -214,7 +235,7 @@ public class vSeleccionProductoAjuste extends javax.swing.JDialog {
             }
         });
 
-        // Teclas de acceso rápido
+        // ===== TECLAS DE ACCESO RÁPIDO =====
         InputMap inputMap = getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
         ActionMap actionMap = getRootPane().getActionMap();
 
@@ -231,6 +252,17 @@ public class vSeleccionProductoAjuste extends javax.swing.JDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (btnAgregar.isEnabled()) {
+                    agregarProductoSeleccionado();
+                }
+            }
+        });
+
+        // Enter en tabla para agregar producto
+        tblProductos.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_ENTER && tblProductos.getSelectedRow() >= 0) {
+                    e.consume(); // Evitar propagación
                     agregarProductoSeleccionado();
                 }
             }
@@ -253,25 +285,36 @@ public class vSeleccionProductoAjuste extends javax.swing.JDialog {
     private void buscarProductos() {
         String termino = txtBusqueda.getText().trim();
 
-        if (termino.length() < 2 && !termino.isEmpty()) {
-            lblResultados.setText("Ingrese al menos 2 caracteres para buscar");
-            return;
-        }
-
         try {
-            List<Object[]> productos = modelo.buscarProductos(termino);
-            actualizarTablaProductos(productos);
+            List<Object[]> productos;
 
-            if (productos.isEmpty()) {
-                lblResultados.setText("No se encontraron productos con: '" + termino + "'");
+            if (termino.isEmpty()) {
+                // Si está vacío, cargar todos los productos
+                productos = modelo.buscarProductos("");
+                lblResultados.setText("Todos los productos (" + productos.size() + " encontrados)");
+            } else if (termino.length() == 1) {
+                // Con 1 carácter, buscar normalmente pero con mensaje informativo
+                productos = modelo.buscarProductos(termino);
+                lblResultados.setText(productos.size() + " producto(s) con '" + termino + "'");
             } else {
-                lblResultados.setText(productos.size() + " producto(s) encontrado(s)");
+                // Búsqueda normal con 2 o más caracteres
+                productos = modelo.buscarProductos(termino);
 
-                // Seleccionar primer resultado si hay búsqueda específica
-                if (!termino.isEmpty() && tblProductos.getRowCount() > 0) {
-                    tblProductos.setRowSelectionInterval(0, 0);
+                if (productos.isEmpty()) {
+                    lblResultados.setText("No se encontraron productos con: '" + termino + "'");
+                } else {
+                    lblResultados.setText(productos.size() + " producto(s) encontrado(s)");
+
+                    // Auto-seleccionar primer resultado si hay búsqueda específica
+                    if (tblProductos.getRowCount() > 0) {
+                        SwingUtilities.invokeLater(() -> {
+                            tblProductos.setRowSelectionInterval(0, 0);
+                        });
+                    }
                 }
             }
+
+            actualizarTablaProductos(productos);
 
         } catch (SQLException e) {
             mostrarError("Error en la búsqueda: " + e.getMessage());
@@ -345,11 +388,24 @@ public class vSeleccionProductoAjuste extends javax.swing.JDialog {
                 );
 
                 if (opcion == JOptionPane.YES_OPTION) {
-                    // Enviar producto al controlador
-                    controladorAjuste.agregarProductoSeleccionado(productoCompleto);
+                    // Solo cerrar si fue exitoso
+                    boolean agregadoExitosamente = controladorAjuste.agregarProductoSeleccionado(productoCompleto);
 
-                    productoSeleccionado = true;
-                    dispose();
+                    if (agregadoExitosamente) {
+                        // Éxito: cerrar ventana
+                        productoSeleccionado = true;
+                        dispose();
+                    } else {
+                        // Error: mantener ventana abierta para permitir seleccionar otro producto
+                        // El mensaje de error ya se mostró en el controlador
+                        // Limpiar selección para que el usuario pueda elegir otro
+                        tblProductos.clearSelection();
+                        btnAgregar.setEnabled(false);
+                        lblResultados.setText("Seleccione otro producto para agregar al ajuste");
+
+                        // Opcional: enfocar en el campo de búsqueda para facilitar nueva búsqueda
+                        txtBusqueda.requestFocus();
+                    }
                 }
 
             } else {
@@ -357,7 +413,8 @@ public class vSeleccionProductoAjuste extends javax.swing.JDialog {
             }
 
         } catch (SQLException e) {
-            mostrarError("Error al agregar producto: " + e.getMessage());
+            mostrarError("Error de base de datos: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

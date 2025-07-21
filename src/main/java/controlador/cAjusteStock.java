@@ -118,15 +118,16 @@ public class cAjusteStock implements myInterface {
     }
 
     // Agregar producto seleccionado desde ventana de selección
-    public void agregarProductoSeleccionado(Object[] producto) {
+    public boolean agregarProductoSeleccionado(Object[] producto) {
         if (producto == null) {
-            return;
+            return false;
         }
 
+        // VALIDACIÓN: Verificar si el ajuste está aprobado antes de permitir modificaciones
         if (ajusteActual.getIdAjuste() > 0 && ajusteActual.isAprobado()) {
             vista.mostrarError("No se pueden agregar productos a un ajuste ya aprobado.\n"
                     + "Para modificar, debe desaprobar el ajuste primero desde 'Aprobar Ajuste de Stock'.");
-            return;
+            return false;
         }
 
         try {
@@ -136,7 +137,7 @@ public class cAjusteStock implements myInterface {
             for (mAjusteStock.DetalleAjuste detalle : ajusteActual.getDetalles()) {
                 if (detalle.getCodBarra().equals(codBarra)) {
                     vista.mostrarError("El producto ya está agregado al ajuste.");
-                    return;
+                    return false; // ❌ RETORNAR false en lugar de return void
                 }
             }
 
@@ -161,9 +162,12 @@ public class cAjusteStock implements myInterface {
             vista.actualizarTablaDetalles();
 
             System.out.println("Producto seleccionado agregado: " + detalle.getDescripcionCompleta());
+            return true; // ✅ RETORNAR true cuando es exitoso
+
         } catch (Exception e) {
             vista.mostrarError("Error al agregar producto: " + e.getMessage());
             e.printStackTrace();
+            return false; // ❌ RETORNAR false en caso de excepción
         }
     }
 
