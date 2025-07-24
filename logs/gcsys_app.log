@@ -243,3 +243,13 @@
 [2025-07-24T00:36:32.774817700] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
 [2025-07-24T00:36:33.599367900] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
 [2025-07-24T00:38:07.724204300] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: admin
+[2025-07-24T16:00:12.551295300] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-24T16:00:12.589297400] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-24T16:00:14.044138600] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
+[2025-07-24T16:07:47.193502900] [AUDIT] [LOGIN] LOGOUT: Usuario admin cerró la aplicación desde menú
+[2025-07-24T16:07:47.217537700] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: admin
+[2025-07-24T16:11:37.433631200] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-24T16:11:37.474527800] [AUDIT] [LOGIN] LOGIN_EXITOSO: Usuario admin inició sesión correctamente
+[2025-07-24T16:11:40.917261200] [INFO] [SISTEMA] APLICACION_INICIADA: Ventana principal abierta correctamente
+[2025-07-24T16:20:59.406283700] [AUDIT] [LOGIN] LOGOUT: Usuario admin cerró la aplicación desde menú
+[2025-07-24T16:20:59.428285] [AUDIT] [LOGIN] LOGOUT: Aplicación cerrada - Usuario: admin

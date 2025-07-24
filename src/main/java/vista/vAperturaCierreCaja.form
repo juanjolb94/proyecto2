@@ -334,11 +334,12 @@
                       <EmptySpace max="32767" attributes="0"/>
                       <Component id="panelBilletes" min="-2" max="-2" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
-                      <Group type="103" groupAlignment="0" attributes="0">
+                      <Group type="103" groupAlignment="0" max="-2" attributes="0">
                           <Component id="panelMonedas" min="-2" max="-2" attributes="0"/>
                           <Group type="102" attributes="0">
                               <EmptySpace min="6" pref="6" max="-2" attributes="0"/>
-                              <Component id="btnCalcular" min="-2" pref="75" max="-2" attributes="0"/>
+                              <Component id="btnCalcular" max="32767" attributes="0"/>
+                              <EmptySpace max="-2" attributes="0"/>
                           </Group>
                       </Group>
                   </Group>
