@@ -88,6 +88,17 @@ public class cRegVentas implements myInterface {
             if (servicioTalonarios.isTimbradoVencido(datosTalonarioActual.getFechaVencimiento())) {
                 vista.mostrarAdvertencia("¡ATENCIÓN! El timbrado está VENCIDO. "
                         + "Contacte con la administración antes de continuar.");
+            } else {
+                // *** NUEVA FUNCIONALIDAD: Verificar facturas restantes ***
+                Object[] verificacion = servicioTalonarios.verificarFacturasRestantes();
+                boolean tienePocasFacturas = (Boolean) verificacion[0];
+                int facturasRestantes = (Integer) verificacion[1];
+
+                if (tienePocasFacturas) {
+                    vista.mostrarAdvertencia("⚠️ ADVERTENCIA: Quedan solo " + facturasRestantes
+                            + " facturas en el talonario activo.\n\n"
+                            + "Se recomienda preparar un nuevo talonario para evitar interrupciones.");
+                }
             }
 
         } catch (SQLException e) {

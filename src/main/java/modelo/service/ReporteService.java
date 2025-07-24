@@ -1031,19 +1031,25 @@ public class ReporteService {
         sql.append("LEFT JOIN categoria_producto cp ON pc.id_categoria = cp.id_categoria ");
         sql.append("LEFT JOIN marca_producto mp ON pc.id_marca = mp.id_marca ");
 
-        // Aplicar filtro de ordenamiento
+        // 1: Aplicar filtro de ordenamiento con valores corregidos**
         String ordenamiento = (String) parametros.get("tipo_ordenamiento");
+        System.out.println("=== ORDENAMIENTO RECIBIDO: '" + ordenamiento + "' ===");
+
         if ("monto_total".equals(ordenamiento)) {
             sql.append("ORDER BY pv.monto_total_vendido DESC ");
+            System.out.println("=== APLICANDO ORDEN: Por monto total vendido ===");
         } else if ("numero_ventas".equals(ordenamiento)) {
             sql.append("ORDER BY pv.numero_ventas DESC ");
+            System.out.println("=== APLICANDO ORDEN: Por número de ventas ===");
         } else {
+            // Por defecto: cantidad_vendida o cualquier otro valor
             sql.append("ORDER BY pv.cantidad_total_vendida DESC ");
+            System.out.println("=== APLICANDO ORDEN: Por cantidad vendida (default) ===");
         }
 
         // Aplicar límite
         if (parametros.containsKey("limite_productos") && parametros.get("limite_productos") != null) {
-            sql.append("LIMIT ? ");
+            sql.append("LIMIT ?");
         }
 
         System.out.println("SQL con categorías y marcas: " + sql.toString());
@@ -1059,15 +1065,16 @@ public class ReporteService {
 
             try (ResultSet rs = ps.executeQuery()) {
                 System.out.println("Ejecutando consulta con categorías y marcas...");
-                int contador = 0;
+
+                //2: Usar ranking basado en el orden de la consulta SQL**
+                int ranking = 1;
                 while (rs.next()) {
-                    contador++;
                     String categoria = rs.getString("categoria");
                     String marca = rs.getString("marca");
                     String nombreProducto = rs.getString("nombre_producto");
                     String descripcionProducto = rs.getString("descripcion_producto");
 
-                    System.out.println("Producto " + contador + ": "
+                    System.out.println("Producto " + ranking + ": "
                             + rs.getString("codigo_barra") + " - "
                             + descripcionProducto + " - "
                             + rs.getInt("cantidad_total_vendida")
@@ -1075,7 +1082,7 @@ public class ReporteService {
                             + " - Marca: " + marca);
 
                     Map<String, Object> producto = new HashMap<>();
-                    producto.put("ranking", contador);
+                    producto.put("ranking", ranking); // Mantener orden SQL**
                     producto.put("codigo_barra", rs.getString("codigo_barra"));
                     producto.put("nombre_producto", nombreProducto);
                     producto.put("descripcion_producto", descripcionProducto);
@@ -1087,34 +1094,41 @@ public class ReporteService {
                     producto.put("precio_promedio", rs.getBigDecimal("precio_promedio"));
 
                     productos.add(producto);
+                    ranking++; // Incrementar después de agregar**
                 }
-                System.out.println("Productos encontrados (con categorías): " + contador);
+                System.out.println("Productos encontrados (con categorías): " + (ranking - 1));
                 consultaExitosa = true;
             }
         } catch (SQLException e) {
             System.out.println("ERROR en consulta con categorías: " + e.getMessage());
             e.printStackTrace();
-            consultaExitosa = false;
         }
 
-        // PASO 3: Si falló la consulta con categorías, usar la consulta simplificada como respaldo
+        // PASO 3: Si falló la consulta anterior, usar consulta de respaldo
         if (!consultaExitosa || productos.isEmpty()) {
-            System.out.println("=== PASO 3: RESPALDO - Usando consulta simplificada ===");
-            productos.clear(); // Limpiar cualquier resultado parcial
+            System.out.println("=== PASO 3: Usando consulta de respaldo ===");
 
             StringBuilder sqlSimple = new StringBuilder();
             sqlSimple.append("SELECT ");
-            sqlSimple.append("    pv.codigo_barra, ");
-            sqlSimple.append("    pv.descripcion_producto, ");
-            sqlSimple.append("    pv.cantidad_total_vendida, ");
-            sqlSimple.append("    pv.monto_total_vendido, ");
-            sqlSimple.append("    pv.numero_ventas, ");
-            sqlSimple.append("    pv.precio_promedio ");
-            sqlSimple.append("FROM v_productos_mas_vendidos pv ");
-            sqlSimple.append("ORDER BY pv.cantidad_total_vendida DESC ");
+            sqlSimple.append("    codigo_barra, ");
+            sqlSimple.append("    descripcion_producto, ");
+            sqlSimple.append("    cantidad_total_vendida, ");
+            sqlSimple.append("    monto_total_vendido, ");
+            sqlSimple.append("    numero_ventas, ");
+            sqlSimple.append("    precio_promedio ");
+            sqlSimple.append("FROM v_productos_mas_vendidos ");
+
+            //3: Aplicar el mismo ordenamiento en la consulta de respaldo**
+            if ("monto_total".equals(ordenamiento)) {
+                sqlSimple.append("ORDER BY monto_total_vendido DESC ");
+            } else if ("numero_ventas".equals(ordenamiento)) {
+                sqlSimple.append("ORDER BY numero_ventas DESC ");
+            } else {
+                sqlSimple.append("ORDER BY cantidad_total_vendida DESC ");
+            }
 
             if (parametros.containsKey("limite_productos") && parametros.get("limite_productos") != null) {
-                sqlSimple.append("LIMIT ? ");
+                sqlSimple.append("LIMIT ?");
             }
 
             try (Connection connection = DatabaseConnection.getConnection(); PreparedStatement ps = connection.prepareStatement(sqlSimple.toString())) {
@@ -1125,12 +1139,12 @@ public class ReporteService {
 
                 try (ResultSet rs = ps.executeQuery()) {
                     System.out.println("Ejecutando consulta de respaldo...");
-                    int contador = 0;
-                    while (rs.next()) {
-                        contador++;
 
+                    //4: Usar ranking basado en el orden SQL también en respaldo**
+                    int ranking = 1;
+                    while (rs.next()) {
                         Map<String, Object> producto = new HashMap<>();
-                        producto.put("ranking", contador);
+                        producto.put("ranking", ranking); // **CORRECCIÓN: Mantener orden SQL**
                         producto.put("codigo_barra", rs.getString("codigo_barra"));
                         producto.put("nombre_producto", rs.getString("descripcion_producto"));
                         producto.put("descripcion_producto", rs.getString("descripcion_producto"));
@@ -1142,8 +1156,9 @@ public class ReporteService {
                         producto.put("precio_promedio", rs.getBigDecimal("precio_promedio"));
 
                         productos.add(producto);
+                        ranking++; // Incrementar después de agregar**
                     }
-                    System.out.println("Productos encontrados (respaldo): " + contador);
+                    System.out.println("Productos encontrados (respaldo): " + (ranking - 1));
                 }
             } catch (SQLException e2) {
                 System.out.println("ERROR también en consulta de respaldo: " + e2.getMessage());

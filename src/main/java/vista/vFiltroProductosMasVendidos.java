@@ -107,7 +107,18 @@ public class vFiltroProductosMasVendidos extends javax.swing.JDialog {
     }
 
     public String getTipoOrdenamiento() {
-        return (String) comboOrdenamiento.getSelectedItem();
+        String seleccion = (String) comboOrdenamiento.getSelectedItem();
+
+        // Convertir la selección del usuario a los valores esperados por el ReporteService
+        switch (seleccion) {
+            case "Por monto vendido":
+                return "monto_total";
+            case "Por número de ventas":
+                return "numero_ventas";
+            case "Por cantidad vendida":
+            default:
+                return "cantidad_vendida";
+        }
     }
 
     public boolean getIncluirAnulados() {
