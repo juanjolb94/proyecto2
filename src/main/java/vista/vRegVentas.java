@@ -32,6 +32,8 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         try {
             initComponents();
 
+            txtIdVenta.setText("0");
+
             setClosable(true);
             setMaximizable(true);
             setResizable(true);
@@ -325,10 +327,18 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         txtTimbrado.setText(numeroTimbrado);
     }
 
-    // Método para limpiar el número de factura
-    private void limpiarDatosFacturacion() {
+    // Método para limpiar datos de facturación solo en casos de error o falta de talonario
+    public void limpiarDatosFacturacion() {
+        System.out.println("DEBUG: Limpiando datos de facturación por error/falta de talonario");
         txtNumeroFactura.setText("");
         txtTimbrado.setText("");
+    }
+
+    // Método adicional para mostrar mensajes de error en campos de facturación
+    public void mostrarErrorEnFacturacion(String mensajeFactura, String mensajeTimbrado) {
+        System.out.println("DEBUG: Mostrando error en campos de facturación");
+        txtNumeroFactura.setText(mensajeFactura != null ? mensajeFactura : "ERROR");
+        txtTimbrado.setText(mensajeTimbrado != null ? mensajeTimbrado : "SIN TIMBRADO");
     }
 
     // Configurar la tabla de detalles
@@ -491,6 +501,15 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
     // Método para procesar el ID de venta ingresado
     private void procesarIdVenta() {
+        // DEBUG
+        System.out.println("🔧 DEBUG procesarIdVenta: txtIdVenta.getText() = '" + txtIdVenta.getText() + "'");
+        System.out.println("🔧 Llamado desde:");
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        for (int i = 1; i <= Math.min(5, stackTrace.length - 1); i++) {
+            System.out.println("  " + i + ": " + stackTrace[i].getClassName() + "."
+                    + stackTrace[i].getMethodName() + ":" + stackTrace[i].getLineNumber());
+        }
+
         try {
             String idTexto = txtIdVenta.getText().trim();
 
@@ -501,13 +520,15 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
             }
 
             int id = Integer.parseInt(idTexto);
+            System.out.println("🔧 ID parseado: " + id);
 
             if (id == 0) {
-                // Limpiar formulario
-                limpiarFormulario();
+                // Llamar al controlador, no a la vista
+                controlador.limpiarFormulario();
                 mostrarMensaje("Formulario limpiado para nueva venta.");
             } else if (id > 0) {
                 // Buscar venta
+                System.out.println("🔧 Buscando venta ID: " + id);
                 controlador.buscarVentaPorId(id);
             } else {
                 mostrarError("El ID debe ser un número positivo o 0 para limpiar.");
@@ -891,6 +912,16 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
     }
 
     public void cargarDatosVenta(mVentas venta) {
+        // DEBUG PARA RASTREAR LLAMADAS AUTOMÁTICAS
+        System.out.println("🔍 DEBUG cargarDatosVenta: Llamado desde:");
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        for (int i = 1; i <= Math.min(7, stackTrace.length - 1); i++) {
+            System.out.println("  " + i + ": " + stackTrace[i].getClassName() + "."
+                    + stackTrace[i].getMethodName() + ":" + stackTrace[i].getLineNumber());
+        }
+        System.out.println("🔍 Venta ID: " + venta.getIdVenta() + ", Factura: " + venta.getNumeroFactura());
+        System.out.println("=====================================");
+
         // Cargar datos básicos
         txtIdVenta.setText(String.valueOf(venta.getIdVenta()));
         txtFecha.setText(sdf.format(venta.getFecha()));
@@ -925,7 +956,8 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         // Debug para ver desde dónde se llama
         StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
         for (int i = 1; i <= Math.min(5, stackTrace.length - 1); i++) {
-            System.out.println("  " + i + ": " + stackTrace[i].getClassName() + "." + stackTrace[i].getMethodName() + ":" + stackTrace[i].getLineNumber());
+            System.out.println("  " + i + ": " + stackTrace[i].getClassName() + "."
+                    + stackTrace[i].getMethodName() + ":" + stackTrace[i].getLineNumber());
         }
 
         txtIdVenta.setText("0");
@@ -934,9 +966,7 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
         // Mantener cliente ocasional seleccionado por defecto
         seleccionarClientePorId(2);
 
-        limpiarDatosFacturacion();
-        controlador.cargarDatosTalonarioActivo();
-
+        // Los datos del talonario se cargarán desde el controlador
         txtCodigoBarra.setText("");
         spinnerCantidad.setValue(1);
 
@@ -958,7 +988,7 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
         chkAnulado.setSelected(false);
 
-        //Debug cuando se limpia la tabla:**
+        // Debug cuando se limpia la tabla
         System.out.println("DEBUG LIMPIAR: Limpiando tabla con " + modeloTablaDetalles.getRowCount() + " filas");
         modeloTablaDetalles.setRowCount(0);
         System.out.println("DEBUG LIMPIAR: Tabla limpiada");

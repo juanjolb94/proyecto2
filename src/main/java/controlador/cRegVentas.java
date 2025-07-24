@@ -78,9 +78,15 @@ public class cRegVentas implements myInterface {
     // Carga los datos del talonario activo para mostrar en pantalla
     public void cargarDatosTalonarioActivo() {
         try {
+            System.out.println("🔍 DEBUG TALONARIO: ventaCargadaDesdeBD = " + ventaCargadaDesdeBD);
+
             // Solo cargar talonario activo para NUEVAS ventas
             if (!ventaCargadaDesdeBD) {
+                System.out.println("✅ DEBUG TALONARIO: Cargando datos del talonario activo...");
+
                 datosTalonarioActual = servicioTalonarios.obtenerDatosTalonarioActivo();
+
+                System.out.println("📊 DEBUG TALONARIO: Número obtenido = " + datosTalonarioActual.getNumeroFactura());
 
                 // Actualizar vista con los datos del talonario activo
                 vista.actualizarNumeroFactura(datosTalonarioActual.getNumeroFactura());
@@ -101,16 +107,16 @@ public class cRegVentas implements myInterface {
                                 + "Se recomienda preparar un nuevo talonario para evitar interrupciones.");
                     }
                 }
+            } else {
+                System.out.println("❌ DEBUG TALONARIO: NO cargando porque ventaCargadaDesdeBD = true");
             }
-            // ✅ Si ventaCargadaDesdeBD = true, NO hacer nada aquí
-            // Los datos de factura/timbrado se cargan desde cargarDatosVenta()
 
         } catch (SQLException e) {
+            System.err.println("⚠️ DEBUG TALONARIO: Error = " + e.getMessage());
             // Solo mostrar error para nuevas ventas
             if (!ventaCargadaDesdeBD) {
                 vista.mostrarError("Error al cargar datos del talonario: " + e.getMessage());
-                vista.actualizarNumeroFactura("ERROR-NO-TALONARIO");
-                vista.actualizarTimbrado("SIN TIMBRADO");
+                vista.mostrarErrorEnFacturacion("ERROR-NO-TALONARIO", "SIN TIMBRADO");
             }
         }
     }
@@ -673,8 +679,10 @@ public class cRegVentas implements myInterface {
     public void limpiarFormulario() {
         verificarCajaAbierta();
 
-        // Marcar como nueva venta (no cargada desde BD)
+        // Marcar como nueva venta ANTES de cargar talonario
         this.ventaCargadaDesdeBD = false;
+
+        System.out.println("DEBUG LIMPIAR: ventaCargadaDesdeBD reseteado a false");
 
         // Crear nueva venta limpia
         this.ventaActual = new mVentas();
@@ -692,7 +700,7 @@ public class cRegVentas implements myInterface {
             }
         }
 
-        // Cargar datos del talonario activo para nueva venta
+        // Cargar datos del talonario activo (con ventaCargadaDesdeBD = false)
         cargarDatosTalonarioActivo();
 
         // Limpiar la vista
