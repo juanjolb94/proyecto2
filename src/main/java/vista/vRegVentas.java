@@ -902,8 +902,14 @@ public class vRegVentas extends javax.swing.JInternalFrame implements myInterfac
 
         // Actualizar datos del talonario si existen
         if (venta.getNumeroFactura() != null) {
-            // Puedes mostrar el número de factura en algún label si existe
+            actualizarNumeroFactura(venta.getNumeroFactura());
             System.out.println("Factura cargada: " + venta.getNumeroFactura());
+        }
+
+        // Actualizar número de timbrado si existe
+        if (venta.getNumeroTimbrado() != null) {
+            actualizarTimbrado(venta.getNumeroTimbrado());
+            System.out.println("Timbrado cargado: " + venta.getNumeroTimbrado());
         }
 
         // Actualizar totales

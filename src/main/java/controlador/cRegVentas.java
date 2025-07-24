@@ -78,33 +78,40 @@ public class cRegVentas implements myInterface {
     // Carga los datos del talonario activo para mostrar en pantalla
     public void cargarDatosTalonarioActivo() {
         try {
-            datosTalonarioActual = servicioTalonarios.obtenerDatosTalonarioActivo();
+            // Solo cargar talonario activo para NUEVAS ventas
+            if (!ventaCargadaDesdeBD) {
+                datosTalonarioActual = servicioTalonarios.obtenerDatosTalonarioActivo();
 
-            // Actualizar vista con los datos
-            vista.actualizarNumeroFactura(datosTalonarioActual.getNumeroFactura());
-            vista.actualizarTimbrado(datosTalonarioActual.getNumeroTimbrado());
+                // Actualizar vista con los datos del talonario activo
+                vista.actualizarNumeroFactura(datosTalonarioActual.getNumeroFactura());
+                vista.actualizarTimbrado(datosTalonarioActual.getNumeroTimbrado());
 
-            // Verificar si está vencido y mostrar advertencia
-            if (servicioTalonarios.isTimbradoVencido(datosTalonarioActual.getFechaVencimiento())) {
-                vista.mostrarAdvertencia("¡ATENCIÓN! El timbrado está VENCIDO. "
-                        + "Contacte con la administración antes de continuar.");
-            } else {
-                // *** NUEVA FUNCIONALIDAD: Verificar facturas restantes ***
-                Object[] verificacion = servicioTalonarios.verificarFacturasRestantes();
-                boolean tienePocasFacturas = (Boolean) verificacion[0];
-                int facturasRestantes = (Integer) verificacion[1];
-
-                if (tienePocasFacturas) {
-                    vista.mostrarAdvertencia("⚠️ ADVERTENCIA: Quedan solo " + facturasRestantes
-                            + " facturas en el talonario activo.\n\n"
-                            + "Se recomienda preparar un nuevo talonario para evitar interrupciones.");
+                // Verificar si está vencido y mostrar advertencia
+                if (servicioTalonarios.isTimbradoVencido(datosTalonarioActual.getFechaVencimiento())) {
+                    vista.mostrarAdvertencia("¡ATENCIÓN! El timbrado está VENCIDO. "
+                            + "Contacte con la administración antes de continuar.");
+                } else {
+                    // Verificar facturas restantes
+                    Object[] verificacion = servicioTalonarios.verificarFacturasRestantes();
+                    boolean tienePocasFacturas = (Boolean) verificacion[0];
+                    int facturasRestantes = (Integer) verificacion[1];
+                    if (tienePocasFacturas) {
+                        vista.mostrarAdvertencia("⚠️ ADVERTENCIA: Quedan solo " + facturasRestantes
+                                + " facturas en el talonario activo.\n\n"
+                                + "Se recomienda preparar un nuevo talonario para evitar interrupciones.");
+                    }
                 }
             }
+            // ✅ Si ventaCargadaDesdeBD = true, NO hacer nada aquí
+            // Los datos de factura/timbrado se cargan desde cargarDatosVenta()
 
         } catch (SQLException e) {
-            vista.mostrarError("Error al cargar datos del talonario: " + e.getMessage());
-            vista.actualizarNumeroFactura("ERROR-NO-TALONARIO");
-            vista.actualizarTimbrado("SIN TIMBRADO");
+            // Solo mostrar error para nuevas ventas
+            if (!ventaCargadaDesdeBD) {
+                vista.mostrarError("Error al cargar datos del talonario: " + e.getMessage());
+                vista.actualizarNumeroFactura("ERROR-NO-TALONARIO");
+                vista.actualizarTimbrado("SIN TIMBRADO");
+            }
         }
     }
 
@@ -665,7 +672,30 @@ public class cRegVentas implements myInterface {
     // Método para limpiar el formulario
     public void limpiarFormulario() {
         verificarCajaAbierta();
+
+        // Marcar como nueva venta (no cargada desde BD)
         this.ventaCargadaDesdeBD = false;
+
+        // Crear nueva venta limpia
+        this.ventaActual = new mVentas();
+        this.ventaActual.setFecha(new Date());
+        this.ventaActual.setAnulado(false);
+
+        // Configurar datos de la caja y usuario si está disponible
+        if (cajaAbierta) {
+            try {
+                int idCaja = modelo.obtenerIdCajaActiva();
+                this.ventaActual.setIdCaja(idCaja);
+                this.ventaActual.setIdUsuario(vLogin.getIdUsuarioAutenticado());
+            } catch (SQLException e) {
+                System.err.println("Error al configurar caja en nueva venta: " + e.getMessage());
+            }
+        }
+
+        // Cargar datos del talonario activo para nueva venta
+        cargarDatosTalonarioActivo();
+
+        // Limpiar la vista
         vista.limpiarFormulario();
         vista.actualizarTablaDetalles();
         vista.actualizarTotalVenta(0);
